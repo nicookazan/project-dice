@@ -24,6 +24,7 @@ const DebugModeTests = preload("res://tests/debug_mode_tests.gd")
 const DragGroupTests = preload("res://tests/drag_group_tests.gd")
 const CoinDragTests = preload("res://tests/coin_drag_tests.gd")
 const GlobalNumbersTests = preload("res://tests/global_numbers_tests.gd")
+const EncounterChoiceTests = preload("res://tests/encounter_choice_tests.gd")
 const PurchaseTests = preload("res://tests/purchase_tests.gd")
 const ShopTests = preload("res://tests/shop_tests.gd")
 const CoinTests = preload("res://tests/coin_tests.gd")
@@ -487,6 +488,7 @@ func _initialize() -> void:
 	DragGroupTests.run(scene, check)
 	CoinDragTests.run(scene, check)
 	GlobalNumbersTests.run(scene, check)
+	EncounterChoiceTests.run(scene, check)
 	for state in ["play", "hand_result", "reward", "shop", "won", "lost"]:
 		scene.game.phase = state
 		scene.game.last_score = {"total": 0, "rows": [], "served": false}

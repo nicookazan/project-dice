@@ -647,6 +647,13 @@ func sell(coin: String) -> bool:
 
 func leave_shop() -> bool:
 	if phase != "shop" or not has_next_encounter(): return false
+	return _advance_encounter()
+
+func skip_shop() -> bool:
+	if phase != "reward" or not has_next_encounter(): return false
+	return _advance_encounter()
+
+func _advance_encounter() -> bool:
 	if rival == level_encounters.size() - 1:
 		level_index += 1
 		_enter_campaign_level()

@@ -1554,6 +1554,9 @@ func render_result() -> void:
 	if game.phase == "repair":
 		render_repairs()
 		return
+	if game.phase == "reward":
+		render_encounter_choice()
+		return
 	var modal := panel(ui, Rect2(400, 240, 640, 480), Color("263c3d"), gold)
 	if game.phase == "lost":
 		label(modal, "ESTA VEZ, GANÓ EL AZAR", Vector2(36, 33), 29, gold)
@@ -1565,11 +1568,38 @@ func render_result() -> void:
 		if game.phase == "won": label(modal, "VICTORIA · 21 ENCUENTROS COMPLETADOS" if not game.campaign.is_empty() else "VICTORIA · NIVEL DE PRUEBA COMPLETADO", Vector2(36, 69), 16, cream)
 		var p: Dictionary = game.payout
 		label(modal, "%d / %d puntos\n\nVictoria                              $%d\nManos sobrantes                  $%d\nExceso de puntos                 $%d\nIntereses                             $%d\n\nTOTAL COBRADO                  $%d" % [game.points, game.target(), p.base, p.hands, p.excess, p.interest, p.total], Vector2(36, 90), 21, cream)
-		if game.phase == "reward":
-			button(modal, "Ir a la tienda →", Rect2(36, 371, 566, 49), func(): act(game.open_shop), false, true)
-		else:
-			button(modal, "Prototipo completado · volver a jugar", Rect2(36, 371, 566, 49), start_new_run, false, true)
+		button(modal, "Prototipo completado · volver a jugar", Rect2(36, 371, 566, 49), start_new_run, false, true)
 	button(modal, "Volver al menú", Rect2(36, 437, 566, 36), func(): request_navigation("menu"))
+
+func render_encounter_choice() -> void:
+	var modal := panel(ui, Rect2(290, 130, 860, 640), Color.TRANSPARENT)
+	modal.name = "EncounterChoice"
+	modal.add_theme_stylebox_override("panel", ItemTooltip.skin())
+	modal.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	modal.theme = theme.duplicate()
+	modal.theme.default_font = ItemTooltip.pixel_font()
+	shop_caption(modal, "ENCUENTRO GANADO", Rect2(32, 25, 796, 42), 30, gold)
+	shop_caption(modal, "%d / %d puntos" % [game.points, game.target()], Rect2(32, 75, 796, 30), 20)
+	var p: Dictionary = game.payout
+	var names := ["Victoria", "Manos sobrantes", "Exceso de puntos", "Intereses"]
+	var values: Array = [p.base, p.hands, p.excess, p.interest]
+	for i in range(names.size()):
+		label(modal, names[i], Vector2(200, 133 + i * 32), 18, cream, 360)
+		var amount := label(modal, "$%d" % values[i], Vector2(580, 133 + i * 32), 18, cream, 80)
+		amount.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	shop_caption(modal, "TOTAL COBRADO: $%d   ·   SALDO: %s" % [p.total, money_text(game.cash)], Rect2(32, 272, 796, 34), 20, gold)
+	shop_caption(modal, "¿CÓMO QUERÉS SEGUIR?", Rect2(32, 335, 796, 32), 22, gold)
+	var next_text := "Próximo: %s" % ("jefe" if game.is_boss(game.rival + 1) else "rival %d" % [game.rival + 2]) if game.rival + 1 < game.level_encounters.size() else "Entrar al nivel %d" % [game.level_index + 2]
+	shop_caption(modal, "Comprá mejoras para tus dados.", Rect2(42, 390, 374, 28), 16)
+	shop_caption(modal, next_text, Rect2(444, 390, 374, 28), 16)
+	var visit := button(modal, "Ir a la tienda →", Rect2(48, 435, 366, 56), func(): act(game.open_shop), false, true)
+	var advance := button(modal, "Seguir sin tienda →", Rect2(446, 435, 366, 56), func(): act(game.skip_shop))
+	for node in [visit, advance]:
+		skin_shop_button(node)
+		node.add_theme_font_size_override("font_size", 19)
+	shop_caption(modal, "La recompensa ya está acreditada. Elegí tu próximo destino.", Rect2(32, 516, 796, 26), 16)
+	var menu := button(modal, "Volver al menú", Rect2(250, 571, 360, 38), func(): request_navigation("menu"))
+	skin_shop_button(menu)
 
 func render_repairs() -> void:
 	var modal := panel(ui, Rect2(350, 160, 740, 580), Color("263c3d"), gold)

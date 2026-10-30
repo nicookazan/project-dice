@@ -7,7 +7,10 @@ const TABLE_PROPS = preload("res://assets/art/environment-v2/mesa-proporciones-v
 const CLEAN_TABLE = preload("res://assets/art/environment-v2/mesa-libreta-frontal-v1.png")
 const CUP_TABLE_ART = preload("res://assets/art/environment-v2/vaso-cuero-negro-mesa-v2.png")
 const CUP_SHOP_ART = preload("res://assets/art/environment-v2/vaso-cuero-negro-tienda-v1.png")
-const STICKER_ART = preload("res://assets/art/shop-items-v1.png")
+const StickerArt = preload("res://scripts/sticker_art.gd")
+const StickerDefinitions = preload("res://scripts/stickers.gd")
+const Tooltip = preload("res://scripts/item_tooltip.gd")
+var sticker_font: Font = Tooltip.pixel_font()
 var stickers: Dictionary = {}
 const THERMOS_RECT = Rect2(1180, 170, 135, 225)
 const SHOP_THERMOS_RECT = Rect2(65, 525, 145, 330)
@@ -96,15 +99,12 @@ func _draw() -> void:
 	if shop_mode:
 		# Restore the shop's leather cup without its former oversized notebook.
 		draw_recovered_figure([Vector2(184, 719), Vector2(218, 726), Vector2(254, 734), Vector2(286, 748), Vector2(310, 767), Vector2(331, 792), Vector2(347, 825), Vector2(349, 868), Vector2(337, 903), Vector2(312, 932), Vector2(278, 950), Vector2(240, 950), Vector2(205, 940), Vector2(169, 928), Vector2(130, 915), Vector2(103, 901), Vector2(83, 875), Vector2(79, 844), Vector2(84, 809), Vector2(95, 779), Vector2(112, 754), Vector2(133, 738), Vector2(154, 726)], Vector2.ZERO, CUP_SHOP_ART)
-	var sticker_ids := ["pair_loose", "trio", "straight", "full", "poker", "generala"]
-	var icon_cell := Vector2(STICKER_ART.get_size()) / 4.0
 	var occupied := 0
-	for id in sticker_ids:
-		if not shop_mode: break # Visual sticker placement on the new thermos is a later pass.
+	for id in StickerDefinitions.NAMES:
 		if not stickers.has(id): continue
-		var index_art := 12 if id == "trio" else 13
-		var target := Rect2(208 + (occupied % 2) * 20, 285 + int(occupied / 2.0) * 24, 20, 20)
-		draw_texture_rect_region(STICKER_ART, target, Rect2(Vector2(index_art % 4, int(index_art / 4.0)) * icon_cell, icon_cell))
+		var target := Rect2(1227 + (occupied % 2) * 36, 257 + int(occupied / 2.0) * 34, 28, 28)
+		StickerArt.draw_sticker(self, target, id)
+		draw_string(sticker_font, target.position + Vector2(20, 29), str(stickers[id]), HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color("fff0c7"))
 		occupied += 1
 	# God remains a provisional silhouette; ordinary hands retain existing art.
 	var center := Vector2(667, 105 + (sin(elapsed * 1.1) * 3 if motion else 0))
