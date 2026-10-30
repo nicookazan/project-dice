@@ -28,6 +28,22 @@ func _initialize() -> void:
 	await click_object(scene.ui.get_node("Shop_numbers/Offer_0/ObjectHover"))
 	verify(scene.game.phase == "purchase_target" and scene.game.cash == 100, "Native face object click opens target selection without premature charge")
 	await capture("objetivo")
+	await click_object(scene.ui.get_node("PurchaseTarget/Die_2"))
+	verify(scene.game.pending_purchase.target == {"die_id": 2} and scene.game.cash == 100, "Dice artwork selects target without charging")
+	await click_object(scene.ui.get_node("PurchaseTarget/Face_1"))
+	verify(scene.game.pending_purchase.target == {"die_id": 2, "face_index": 1} and scene.game.purchase_preview().ok, "Face artwork selects exact face for confirmation")
+	await capture("cara-elegida")
+	await click_object(scene.ui.get_node("PurchaseTarget/Die_3"))
+	verify(scene.game.pending_purchase.target == {"die_id": 3} and not scene.game.purchase_preview().ok, "Changing die clears previous face selection")
+	scene.game = Purchases.fixture("shell", {"id": "sapphire", "intact": true})
+	scene.game.dice[1].material = "steel"
+	scene.game.dice[1].shell = "ruby"
+	scene.game.dice[1].element = "fire"
+	scene.game.begin_purchase("components", "fixture:1")
+	scene.render()
+	await click_object(scene.ui.get_node("PurchaseTarget/Die_1"))
+	verify(scene.game.purchase_preview().ok and scene.game.cash == 100, "Component dice artwork selects a valid target")
+	await capture("boost-elegido")
 	print("OBJECT PURCHASE REVIEW: artwork purchase, global upgrade and face confirmation; ", errors, " errors")
 	quit(0 if errors == 0 else 1)
 

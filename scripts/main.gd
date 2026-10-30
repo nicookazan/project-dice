@@ -1412,43 +1412,79 @@ func sell_dragged_coin(data: Dictionary) -> void:
 
 func render_purchase_target() -> void:
 	panel(ui, Rect2(0, 0, 1440, 900), Color(0.04, 0.06, 0.07, 0.84))
-	var modal := panel(ui, Rect2(350, 170, 740, 560), Color("263c3d"), gold)
-	modal.add_theme_stylebox_override("panel", shop_skin(true))
+	var modal := panel(ui, Rect2(290, 105, 860, 690), Color.TRANSPARENT)
+	modal.name = "PurchaseTarget"
+	modal.add_theme_stylebox_override("panel", ItemTooltip.skin())
+	modal.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	var pending: Dictionary = game.pending_purchase
 	var offer: Dictionary = pending.offer
 	var text: Array = shop_offer_text(offer)
-	label(modal, text[0], Vector2(24, 22), 29, gold, 690)
-	label(modal, "%s\nPrecio: $%d · Saldo: %s" % [text[1], offer.price, money_text(game.cash)], Vector2(24, 67), 20, cream, 690)
+	shop_caption(modal, text[0].to_upper(), Rect2(32, 24, 796, 38), 28, gold)
+	shop_caption(modal, "Precio: $%d   ·   Saldo: %s" % [offer.price, money_text(game.cash)], Rect2(32, 68, 796, 28), 18)
+	shop_caption(modal, "1. ELEGÍ UN DADO", Rect2(32, 114, 796, 26), 18, gold)
 	var target: Dictionary = pending.target
 	for id in range(5):
 		var die_id := id
-		button(modal, "Dado %d" % [id + 1], Rect2(24 + id * 139, 150, 132, 46), func():
+		var state: Dictionary = game.dice[id].duplicate(true)
+		if state.value == 0: state.value = state.faces[0]
+		purchase_die_choice(modal, "Die_%d" % id, state, Rect2(72 + id * 146, 151, 132, 116), "DADO %d" % [id + 1], target.get("die_id", -1) == id, func():
 			game.set_purchase_target({"die_id": die_id})
 			purchase_error = ""
-			render(), target.get("die_id", -1) == id)
+			render())
+	var description := "Elegí el dado que recibirá la mejora."
 	if target.has("die_id"):
 		var die: Dictionary = game.dice[target.die_id]
 		var material := "Acero" if die.material == "steel" else ("Cobre" if die.material == "copper" else "Base")
 		var shell: String = Gems.definition(die.shell).get("name", "Sin carcasa")
 		var element: String = Elements.definition(die.element).get("name", "Sin elemento")
-		label(modal, "Dado %d: %s · %s%s · %s" % [die.id + 1, material, shell, " (resquebrajada)" if die.shell_broken else "", element], Vector2(24, 215), 19, cream, 690)
+		description = "Dado %d · %s · %s%s · %s" % [die.id + 1, material, shell, " (rota)" if die.shell_broken else "", element]
 		if offer.kind == "face":
+			shop_caption(modal, "2. ELEGÍ LA CARA A REEMPLAZAR", Rect2(32, 326, 796, 26), 18, gold)
 			for index in range(6):
 				var face_index := index
-				button(modal, "Cara %d · %d" % [index + 1, die.faces[index]], Rect2(24 + index * 116, 270, 108, 45), func():
+				var face_state: Dictionary = die.duplicate(true)
+				face_state.value = die.faces[index]
+				purchase_die_choice(modal, "Face_%d" % index, face_state, Rect2(72 + index * 120, 366, 116, 116), "CARA %d" % [index + 1], target.get("face_index", -1) == index, func():
 					game.set_purchase_target({"die_id": die.id, "face_index": face_index})
 					purchase_error = ""
-					render(), target.get("face_index", -1) == index)
+					render())
+	shop_caption(modal, description, Rect2(32, 282, 796, 32), 17)
+	if offer.kind != "face":
+		var summary := label(modal, text[1], Vector2(64, 347), 18, cream, 732)
+		summary.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	elif not target.has("die_id"):
+		shop_caption(modal, "Después elegí qué cara cambiar por un %d." % offer.effect.number, Rect2(32, 378, 796, 40), 19)
 	var preview: Dictionary = game.purchase_preview()
-	label(modal, "Se reemplaza solo esta familia; no se guarda la pieza anterior." if offer.kind in ["material", "shell", "element"] else "La mejora se aplica al objetivo elegido al confirmar.", Vector2(24, 340), 19, cream, 690)
-	button(modal, "Confirmar · $%d" % offer.price, Rect2(24, 435, 690, 45), func():
+	var hint := "Reemplaza solo esta familia. Las otras mejoras se conservan."
+	if offer.kind == "face": hint = "La cara elegida pasará a tener un %d." % offer.effect.number
+	shop_caption(modal, hint, Rect2(32, 500, 796, 32), 17)
+	button(modal, "Confirmar · $%d" % offer.price, Rect2(64, 554, 732, 46), func():
 		var result: Dictionary = game.confirm_purchase()
 		purchase_error = "" if result.ok else result.message
 		render(), not preview.ok, true)
-	button(modal, "Cancelar compra", Rect2(24, 497, 690, 40), func():
+	button(modal, "Cancelar compra", Rect2(64, 620, 732, 40), func():
 		game.cancel_purchase()
 		purchase_error = ""
 		render())
+
+func purchase_die_choice(parent: Control, node_name: String, state: Dictionary, rect: Rect2, caption: String, picked: bool, action: Callable) -> Button:
+	var choice := button(parent, "", rect, action)
+	choice.name = node_name
+	choice.tooltip_text = caption.capitalize()
+	for mode in ["normal", "hover", "pressed"]:
+		choice.add_theme_stylebox_override(mode, box(Color("153c50") if picked else Color("091923"), Color("68d8ef") if picked else gold if mode != "normal" else Color("785335"), 2))
+	var icon := Die.new()
+	icon.name = "DieArtwork"
+	icon.configure_appearance(state)
+	icon.position = Vector2((rect.size.x - 74.4) / 2, 8)
+	icon.scale = Vector2(1.2, 1.2)
+	icon.locked = true
+	icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	for mode in ["normal", "hover", "pressed", "disabled"]: icon.add_theme_stylebox_override(mode, StyleBoxEmpty.new())
+	choice.add_child(icon)
+	icon.tooltip_text = ""
+	shop_caption(choice, caption, Rect2(0, 85, rect.size.x, 25), 15, Color("8ae6f2") if picked else cream)
+	return choice
 
 func render_pack_choice() -> void:
 	panel(ui, Rect2(0, 0, 1440, 900), Color(0.04, 0.06, 0.07, 0.84))

@@ -149,8 +149,8 @@ static func buy_controlled(scene, kind: String, id: String, check: Callable, die
 	var before_cash: int = scene.game.cash
 	purchase.pressed.emit()
 	if kind in ["material", "element", "shell", "face"]:
-		Flow.click(scene, "Dado %d" % (die_id + 1))
-		if kind == "face": Flow.click(scene, "Cara %d · %d" % [face_index + 1, scene.game.dice[die_id].faces[face_index]])
+		scene.ui.get_node("PurchaseTarget/Die_%d" % die_id).pressed.emit()
+		if kind == "face": scene.ui.get_node("PurchaseTarget/Face_%d" % face_index).pressed.emit()
 		reload_ui(scene, check, "pending target " + kind + ":" + id)
 		check.call(scene.game.cash == before_cash, "Integral: selecting/reloading target does not charge " + kind)
 		Flow.click(scene, "Confirmar · $%d" % candidate.price)
