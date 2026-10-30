@@ -1,0 +1,9 @@
+# Dado básico v3
+
+Recurso generado con la herramienta integrada imagegen. Referencia de estilo: captura `test-results/grupos.png` de la interfaz v2. Archivo integrado: `assets/art/ivory-die-v3.png`.
+
+Prompt completo:
+
+Use case: stylized-concept. Asset type: a single production-ready transparent sprite for the blank basic die in the supplied Argentine club dice game. Input image is STYLE REFERENCE ONLY. Match the warm detailed medium-resolution pixel art of the leather cup, engraved coins and illustrated club. Create exactly ONE beautiful ivory/bone six-sided die body, no pips anywhere, no text, no symbols. Hand-crafted 16-bit pixel art with deliberate crisp pixel clusters, rounded beveled edges, layered cream highlights, subtle warm amber shading on side faces, restrained tiny ivory texture, thin dark brown pixel outline. Not a simplistic polygon, not a smooth vector, not photorealistic. Orientation: dominant large nearly square upward-facing blank face, only slightly tilted in perspective, narrow front and right faces below it to show volume. Upper-left light. Crucial main face must be large flat clean ivory so Godot can draw the EXACT rolled pips programmatically; no embossed graphics or scratches in its center. Square canvas, cube fills about 90% of width/height, modest 5% transparent margin, bottom soft compact pixel-art cast shadow. Keep all four corners visible and no cropping. Main face should occupy roughly x15%-83%, y10%-74%; secondary side faces are confined to bottom/right outer edge. Real transparent alpha outside the die, NO checkerboard, NO scene, NO other objects.
+
+La base no contiene puntos pregrabados. `scripts/die.gd` dibuja exactamente entre uno y seis puntos sobre la cara principal y conserva la interacción de selección y arrastre. Las marcas azules indican selección y las doradas indican hover; no se altera la puntuación ni las reglas.

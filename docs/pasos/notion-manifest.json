@@ -1,0 +1,430 @@
+{
+  "version": 1,
+  "project": "404c28142b558067ab00ef1f23dbbecb",
+  "database": "404c28142b55801bb144dacac6f0f68a",
+  "dataSource": "404c2814-2b55-806f-9a95-000b09203d17",
+  "hub": {
+    "id": "404c2814-2b55-81cb-83f6-d6e0dac2b518",
+    "url": "https://app.notion.com/p/404c28142b5581cb83f6d6e0dac2b518?pvs=204",
+    "properties": {
+      "title": "Plan de desarrollo — guía e índice"
+    }
+  },
+  "decisions": {
+    "id": "404c2814-2b55-811a-a9a9-deb54343f361",
+    "url": "https://app.notion.com/p/404c28142b55811aa9a9deb54343f361?pvs=204",
+    "properties": {
+      "title": "Decisiones pendientes — D01 a D13"
+    }
+  },
+  "coverage": {
+    "id": "404c2814-2b55-81eb-b59c-ea284bd2d11e",
+    "url": "https://app.notion.com/p/404c28142b5581ebb59cea284bd2d11e?pvs=204",
+    "properties": {
+      "title": "Cobertura del PRD y reglas reemplazadas"
+    }
+  },
+  "views": {
+    "board": "404c2814-2b55-8096-8f14-000cbe304990",
+    "order": "404c2814-2b55-81f2-ae56-000cd346d2b7",
+    "ready": "404c2814-2b55-818f-982e-000c3f7c6826",
+    "decisions": "404c2814-2b55-8194-9397-000cae78b377",
+    "future": "404c2814-2b55-8171-97b0-000ccc23298e",
+    "linkedBoard": "404c2814-2b55-81ab-a9f7-000c28a62a06"
+  },
+  "steps": [
+    {
+      "id": "00",
+      "title": "Base recuperada y reglas vigentes",
+      "file": "00-base-verificada.md",
+      "dependsOn": [],
+      "decisions": [],
+      "notion": {
+        "id": "404c2814-2b55-8142-b7d5-d3c98c997ae7",
+        "url": "https://app.notion.com/p/404c28142b558142b7d5d3c98c997ae7?pvs=204"
+      }
+    },
+    {
+      "id": "01",
+      "title": "Estado persistente de partida y dados",
+      "file": "01-estado-dados.md",
+      "dependsOn": [
+        "00"
+      ],
+      "decisions": [],
+      "notion": {
+        "id": "404c2814-2b55-8193-b702-f1400b22d114",
+        "url": "https://app.notion.com/p/404c28142b558193b702f1400b22d114?pvs=204"
+      }
+    },
+    {
+      "id": "02",
+      "title": "Cálculo de puntos y eventos sin efectos secundarios",
+      "file": "02-puntuacion-eventos.md",
+      "dependsOn": [
+        "01"
+      ],
+      "decisions": [],
+      "notion": {
+        "id": "404c2814-2b55-81b8-a58d-f21f7d4124d3",
+        "url": "https://app.notion.com/p/404c28142b5581b8a58df21f7d4124d3?pvs=204"
+      }
+    },
+    {
+      "id": "03",
+      "title": "Mejoras globales, locales y cambios de cara",
+      "file": "03-numeros-caras.md",
+      "dependsOn": [
+        "01",
+        "02"
+      ],
+      "decisions": [
+        "D01"
+      ],
+      "notion": {
+        "id": "404c2814-2b55-8153-8586-d426d84cb51b",
+        "url": "https://app.notion.com/p/404c28142b5581538586d426d84cb51b?pvs=204"
+      }
+    },
+    {
+      "id": "04",
+      "title": "Acero y cobre con duración por encuentro",
+      "file": "04-metales.md",
+      "dependsOn": [
+        "02",
+        "03"
+      ],
+      "decisions": [],
+      "notion": {
+        "id": "404c2814-2b55-81cc-9f22-e62f8da2d86f",
+        "url": "https://app.notion.com/p/404c28142b5581cc9f22e62f8da2d86f?pvs=204"
+      }
+    },
+    {
+      "id": "05",
+      "title": "Fuego, agua y electricidad",
+      "file": "05-elementos-condicionales.md",
+      "dependsOn": [
+        "02",
+        "03"
+      ],
+      "decisions": [],
+      "notion": {
+        "id": "404c2814-2b55-8183-90d6-f75ac2d3344f",
+        "url": "https://app.notion.com/p/404c28142b55818390d6f75ac2d3344f?pvs=204"
+      }
+    },
+    {
+      "id": "06",
+      "title": "Tierra y viento con duración por mano",
+      "file": "06-elementos-acumulativos.md",
+      "dependsOn": [
+        "04",
+        "05"
+      ],
+      "decisions": [],
+      "notion": {
+        "id": "404c2814-2b55-811c-bfe4-fb145757ee27",
+        "url": "https://app.notion.com/p/404c28142b55811cbfe4fb145757ee27?pvs=204"
+      }
+    },
+    {
+      "id": "07",
+      "title": "Poderes de esmeralda, rubí, zafiro y diamante",
+      "file": "07-poderes-gemas.md",
+      "dependsOn": [
+        "02",
+        "04",
+        "05",
+        "06"
+      ],
+      "decisions": [],
+      "notion": {
+        "id": "404c2814-2b55-8132-92e0-c13163041011",
+        "url": "https://app.notion.com/p/404c28142b55813292e0c13163041011?pvs=204"
+      }
+    },
+    {
+      "id": "08",
+      "title": "Rotura de carcasas y reparación opcional",
+      "file": "08-rotura-reparacion.md",
+      "dependsOn": [
+        "07"
+      ],
+      "decisions": [
+        "D08"
+      ],
+      "notion": {
+        "id": "404c2814-2b55-812a-801e-fd55f31d93bd",
+        "url": "https://app.notion.com/p/404c28142b55812a801efd55f31d93bd?pvs=204"
+      }
+    },
+    {
+      "id": "09",
+      "title": "Stickers por categoría y paquetes",
+      "file": "09-stickers-paquetes.md",
+      "dependsOn": [
+        "02"
+      ],
+      "decisions": [
+        "D02"
+      ],
+      "notion": {
+        "id": "404c2814-2b55-81f7-9625-cffeafdcaff2",
+        "url": "https://app.notion.com/p/404c28142b5581f79625cffeafdcaff2?pvs=204"
+      }
+    },
+    {
+      "id": "10",
+      "title": "Monedas iniciales e inventario extensible",
+      "file": "10-monedas-inventario.md",
+      "dependsOn": [
+        "01",
+        "02"
+      ],
+      "decisions": [
+        "D03"
+      ],
+      "notion": {
+        "id": "404c2814-2b55-8133-972a-cafa40ca32ef",
+        "url": "https://app.notion.com/p/404c28142b558133972acafa40ca32ef?pvs=204"
+      }
+    },
+    {
+      "id": "11",
+      "title": "Generación de tienda y renovación por sección",
+      "file": "11-tienda-ofertas.md",
+      "dependsOn": [
+        "03",
+        "09",
+        "10"
+      ],
+      "decisions": [
+        "D01",
+        "D02",
+        "D04"
+      ],
+      "notion": {
+        "id": "404c2814-2b55-8139-82bc-fbec44d67f24",
+        "url": "https://app.notion.com/p/404c28142b55813982bcfbec44d67f24?pvs=204"
+      }
+    },
+    {
+      "id": "12",
+      "title": "Compras, selección de objetivos y reemplazos",
+      "file": "12-compras-aplicacion.md",
+      "dependsOn": [
+        "08",
+        "09",
+        "10",
+        "11"
+      ],
+      "decisions": [
+        "D01",
+        "D02",
+        "D04"
+      ],
+      "notion": {
+        "id": "404c2814-2b55-81e0-b8dc-c60b1f283370",
+        "url": "https://app.notion.com/p/404c28142b5581e0b8dcc60b1f283370?pvs=204"
+      }
+    },
+    {
+      "id": "13",
+      "title": "Mesa, libreta, inspección y tienda jugable",
+      "file": "13-interfaz-inspeccion.md",
+      "dependsOn": [
+        "12"
+      ],
+      "decisions": [
+        "D08"
+      ],
+      "notion": {
+        "id": "404c2814-2b55-81ce-a7a4-e13f8b817aec",
+        "url": "https://app.notion.com/p/404c28142b5581cea7a4e13f8b817aec?pvs=204"
+      }
+    },
+    {
+      "id": "14",
+      "title": "Menú y recorrido de un nivel completo",
+      "file": "14-flujo-nivel-menu.md",
+      "dependsOn": [
+        "08",
+        "13"
+      ],
+      "decisions": [
+        "D05"
+      ],
+      "notion": {
+        "id": "404c2814-2b55-8165-b8ff-f353bb0348c4",
+        "url": "https://app.notion.com/p/404c28142b558165b8fff353bb0348c4?pvs=204"
+      }
+    },
+    {
+      "id": "15",
+      "title": "Guardado versionado y continuar partida",
+      "file": "15-guardado-continuar.md",
+      "dependsOn": [
+        "14"
+      ],
+      "decisions": [
+        "D06"
+      ],
+      "notion": {
+        "id": "404c2814-2b55-8196-ba9c-cf758b133923",
+        "url": "https://app.notion.com/p/404c28142b558196ba9ccf758b133923?pvs=204"
+      }
+    },
+    {
+      "id": "16",
+      "title": "Validación integral del primer nivel",
+      "file": "16-validar-nivel.md",
+      "dependsOn": [
+        "15"
+      ],
+      "decisions": [
+        "D01",
+        "D02",
+        "D04",
+        "D05",
+        "D06",
+        "D08"
+      ],
+      "notion": {
+        "id": "404c2814-2b55-8140-978e-e9aa8864392a",
+        "url": "https://app.notion.com/p/404c28142b558140978ee9aa8864392a?pvs=204"
+      }
+    },
+    {
+      "id": "17",
+      "title": "Reglas de jefe y efectos suspendidos",
+      "file": "17-motor-jefes.md",
+      "dependsOn": [
+        "10",
+        "15"
+      ],
+      "decisions": [
+        "D07",
+        "D09"
+      ],
+      "notion": {
+        "id": "404c2814-2b55-8105-9765-efdd77ed2d82",
+        "url": "https://app.notion.com/p/404c28142b5581059765efdd77ed2d82?pvs=204"
+      }
+    },
+    {
+      "id": "18",
+      "title": "Progresión de siete niveles hasta Dios",
+      "file": "18-campana-dios.md",
+      "dependsOn": [
+        "16",
+        "17"
+      ],
+      "decisions": [
+        "D07"
+      ],
+      "notion": {
+        "id": "404c2814-2b55-8179-b72f-db4c16dd46a9",
+        "url": "https://app.notion.com/p/404c28142b558179b72fdb4c16dd46a9?pvs=204"
+      }
+    },
+    {
+      "id": "19",
+      "title": "Ambientes, narrativa breve, audio y accesibilidad",
+      "file": "19-presentacion-ambientes.md",
+      "dependsOn": [
+        "13",
+        "18"
+      ],
+      "decisions": [
+        "D10"
+      ],
+      "notion": {
+        "id": "404c2814-2b55-81b1-a4a8-f96dca21fc36",
+        "url": "https://app.notion.com/p/404c28142b5581b1a4a8f96dca21fc36?pvs=204"
+      }
+    },
+    {
+      "id": "20",
+      "title": "Balance, pruebas finales y entrega ejecutable",
+      "file": "20-balance-entrega.md",
+      "dependsOn": [
+        "18",
+        "19"
+      ],
+      "decisions": [
+        "D07",
+        "D11"
+      ],
+      "notion": {
+        "id": "404c2814-2b55-8115-afb1-ea4f9eb6eaa1",
+        "url": "https://app.notion.com/p/404c28142b558115afb1ea4f9eb6eaa1?pvs=204"
+      }
+    },
+    {
+      "id": "F01",
+      "title": "Monedas activas, copias y rescates",
+      "file": "F01-monedas-avanzadas.md",
+      "dependsOn": [
+        "10",
+        "15",
+        "17"
+      ],
+      "decisions": [
+        "D03",
+        "D09"
+      ],
+      "notion": {
+        "id": "404c2814-2b55-81f0-b8bd-fa57fc596383",
+        "url": "https://app.notion.com/p/404c28142b5581f0b8bdfa57fc596383?pvs=204"
+      }
+    },
+    {
+      "id": "F02",
+      "title": "Nivel 8, simulación y jefe CMD",
+      "file": "F02-simulacion-cmd.md",
+      "dependsOn": [
+        "20"
+      ],
+      "decisions": [
+        "D06",
+        "D07",
+        "D10"
+      ],
+      "notion": {
+        "id": "404c2814-2b55-812e-8234-fceb677a5b7f",
+        "url": "https://app.notion.com/p/404c28142b55812e8234fceb677a5b7f?pvs=204"
+      }
+    },
+    {
+      "id": "F03",
+      "title": "Vasos, colección y progreso permanente",
+      "file": "F03-vasos-progreso.md",
+      "dependsOn": [
+        "F02"
+      ],
+      "decisions": [
+        "D12"
+      ],
+      "notion": {
+        "id": "404c2814-2b55-81bb-a1da-e33a6a55554f",
+        "url": "https://app.notion.com/p/404c28142b5581bba1dae33a6a55554f?pvs=204"
+      }
+    },
+    {
+      "id": "F04",
+      "title": "Otros materiales y sinergias futuras",
+      "file": "F04-materiales-sinergias-futuras.md",
+      "dependsOn": [
+        "20"
+      ],
+      "decisions": [
+        "D13"
+      ],
+      "notion": {
+        "id": "404c2814-2b55-81c5-b70b-d5b2ea0f9b18",
+        "url": "https://app.notion.com/p/404c28142b5581c5b70bd5b2ea0f9b18?pvs=204"
+      }
+    }
+  ]
+}

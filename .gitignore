@@ -1,0 +1,13 @@
+.godot/
+.godot-runtime/
+build/
+test-results/
+*.tmp
+/backups/
+/tmp/
+/export_templates/
+/feature_profiles/
+/script_templates/
+/text_editor_themes/
+.DS_Store
+*.log
