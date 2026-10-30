@@ -216,7 +216,8 @@ static func run(scene, check: Callable) -> Dictionary:
 	var received_button = find_button(scene, "$7")
 	received_button.pressed.emit()
 	received_button.pressed.emit()
-	check.call(scene.detail.title == "Paquete recibido" and "Trío · nivel 1" in scene.detail_text and "Full · nivel 1" in scene.detail_text and scene.game.cash == 93, "UI: receive-two pack reports both granted stickers and modal prevents a repeated click")
+	check.call(scene.sticker_animation_active() and scene.sticker_animation.items == ["trio", "full"] and scene.game.cup.stickers == {"trio": 1, "full": 1} and scene.game.cash == 93, "UI: receive-two reveals both stickers and blocks repeated purchase")
+	scene.sticker_animation.finish()
 	scene.detail.hide()
 	scene.game = Game.new(153)
 	scene.game.rival = 2

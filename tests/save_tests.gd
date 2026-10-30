@@ -303,7 +303,7 @@ static func _test_ui(scene, check: Callable) -> void:
 	Flow.click(scene, "Continuar")
 	check.call(scene.checkpoint_data() == saved and not scene.pack_panel_open and scene.game.cash == 95, "Save UI: closed paid pack panel reopens without new candidates or payment")
 	Flow.click(scene, "Elegir sticker pendiente")
-	Flow.click(scene, "Trío · nivel 0 → 1")
+	scene.ui.get_node("StickerChoice/Sticker_trio").pressed.emit()
 	check.call(scene.save_store.inspect().data.game.cup.stickers == {"trio": 1} and scene.game.cash == 95, "Save UI: loaded pack choice is saved once")
 	scene.start_new_run(3)
 	Flow.click(scene, "Empezar primer encuentro")

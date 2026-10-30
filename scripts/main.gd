@@ -46,6 +46,7 @@ var repair_selection: Array = []
 var shop_section := "coins"
 var purchase_error := ""
 var pack_panel_open := true
+var sticker_animation: Control
 var ui: Control
 var coin_sale_overlay
 var coin_sale_caption: Label
@@ -139,6 +140,10 @@ func toggle_die(index: int) -> void:
 	render()
 
 func _unhandled_key_input(event: InputEvent) -> void:
+	if sticker_animation_active():
+		if event is InputEventKey and event.pressed and event.keycode in [KEY_ESCAPE, KEY_ENTER, KEY_SPACE]: sticker_animation.finish()
+		get_viewport().set_input_as_handled()
+		return
 	if throwing: return
 	if not event is InputEventKey or not event.pressed or event.echo or detail.visible or confirmation.visible: return
 	if event.keycode == KEY_F1:
@@ -307,7 +312,7 @@ func button(parent: Node, text_value: String, rect: Rect2, action: Callable, dis
 	node.add_theme_stylebox_override("focus", box(Color.TRANSPARENT, Color.WHITE, 3))
 	if is_instance_valid(background) and background.shop_mode: skin_shop_button(node)
 	node.pressed.connect(func():
-		if not throwing and not detail.visible and not confirmation.visible: action.call())
+		if not throwing and not sticker_animation_active() and not detail.visible and not confirmation.visible: action.call())
 	parent.add_child(node)
 	return node
 
@@ -739,6 +744,7 @@ func render_entry() -> void:
 		button(card, "Volver al menú", Rect2(150, 565, 540, 45), func(): request_navigation("pause"))
 
 func render() -> void:
+	sticker_animation = null
 	if is_instance_valid(hover_description):
 		hover_description.free()
 	finish_throw()
@@ -1199,6 +1205,13 @@ func shop_caption(parent: Node, text_value: String, rect: Rect2, font_size := 18
 	return caption
 
 func shop_icon(parent: Node, offer: Dictionary, rect: Rect2) -> void:
+	if offer.kind == "sticker":
+		var sticker := preload("res://scripts/sticker_art.gd").new()
+		sticker.sticker_id = offer.effect.id
+		sticker.position = rect.position
+		sticker.size = rect.size
+		parent.add_child(sticker)
+		return
 	if offer.kind == "coin":
 		add_coin(parent, offer.effect.coin_id, rect)
 		return
@@ -1259,13 +1272,12 @@ func shop_card(parent: Node, section: String, index: int, rect: Rect2) -> void:
 	if offer.kind == "coin": unavailable = unavailable or not Coins.can_store(game.coin_inventory, offer.effect.coin_id)
 	var id: String = offer.offer_id
 	var purchase := button(card, "$%d" % offer.price, Rect2((rect.size.x - minf(102, rect.size.x - 8)) / 2, 109, minf(102, rect.size.x - 8), 30), func():
+		var previous_stickers: Dictionary = game.cup.stickers.duplicate(true)
 		var result: Dictionary = game.begin_purchase(section, id)
 		purchase_error = "" if result.ok else result.message
 		render()
 		if result.ok and offer.kind == "pack" and offer.effect.pack_kind == "receive_two":
-			var received: Array[String] = []
-			for sticker_id in offer.effect.items: received.append("%s · nivel %d" % [Stickers.NAMES[sticker_id], game.cup.stickers[sticker_id]])
-			present_detail("Paquete recibido", "Pagaste $%d una sola vez.\n\n%s" % [offer.price, "\n".join(received)], true), unavailable, true)
+			show_sticker_reveal(offer.effect.items, previous_stickers), unavailable, true)
 	purchase.name = "Price"
 	object_hover.activated.connect(func():
 		if not purchase.disabled: purchase.pressed.emit())
@@ -1488,24 +1500,51 @@ func purchase_die_choice(parent: Control, node_name: String, state: Dictionary, 
 
 func render_pack_choice() -> void:
 	panel(ui, Rect2(0, 0, 1440, 900), Color(0.04, 0.06, 0.07, 0.84))
-	var modal := panel(ui, Rect2(350, 210, 740, 450), Color("263c3d"), gold)
-	modal.add_theme_stylebox_override("panel", shop_skin(true))
-	label(modal, "ELEGÍ UN STICKER", Vector2(24, 24), 30, gold)
-	label(modal, "Paquete ya pagado: $%d. Solo se aplica el elegido." % game.pending_sticker_pack.paid, Vector2(24, 80), 20, cream, 690)
+	var modal := panel(ui, Rect2(290, 160, 860, 580), Color.TRANSPARENT)
+	modal.name = "StickerChoice"
+	modal.add_theme_stylebox_override("panel", ItemTooltip.skin())
+	modal.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	shop_caption(modal, "ELEGÍ UN STICKER", Rect2(32, 24, 796, 44), 28, gold)
+	shop_caption(modal, "Paquete pagado: $%d · Tocá el sticker que querés llevar al termo." % game.pending_sticker_pack.paid, Rect2(32, 80, 796, 36), 17)
 	var index := 0
 	for id in game.pending_sticker_pack.items:
 		var sticker_id: String = id
 		var level: int = game.cup.stickers.get(id, 0)
-		var choice := button(modal, "%s · nivel %d → %d" % [Stickers.NAMES[id], level, level + 1], Rect2(24, 140 + index * 65, 690, 48), func():
-			game.choose_sticker(sticker_id)
+		var choice := button(modal, "", Rect2(58 + index * 254, 147, 236, 325), func():
+			var previous: Dictionary = game.cup.stickers.duplicate(true)
+			if not game.choose_sticker(sticker_id): return
 			purchase_error = ""
-			render())
+			render()
+			show_sticker_reveal([sticker_id], previous))
+		choice.name = "Sticker_" + id
+		for mode in ["normal", "hover", "pressed"]:
+			choice.add_theme_stylebox_override(mode, box(Color("091923") if mode == "normal" else Color("153c50"), gold if mode != "normal" else Color("785335"), 2))
+		shop_icon(choice, {"kind": "sticker", "effect": {"id": id}}, Rect2(46, 14, 144, 144))
+		shop_caption(choice, Stickers.NAMES[id], Rect2(8, 164, 220, 30), 18, gold)
+		shop_caption(choice, "Nivel %d → %d" % [level, level + 1], Rect2(8, 202, 220, 26), 17)
 		var growth: Dictionary = game.sticker_catalog[id]
+		var effect := label(choice, "+%s puntos\n+%s al multiplicador\npor nivel" % [number(growth.points_per_level), number(growth.multiplier_per_level)], Vector2(12, 242), 16, cream, 212)
+		effect.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		choice.tooltip_text = "Por nivel: +%s puntos y +%s al multiplicador. Categorías: %s." % [number(growth.points_per_level), number(growth.multiplier_per_level), ", ".join(Stickers.CATEGORIES[id])]
 		index += 1
-	button(modal, "Cerrar panel", Rect2(24, 365, 690, 44), func():
+	button(modal, "Cerrar panel", Rect2(64, 506, 732, 42), func():
 		pack_panel_open = false
 		render())
+
+func sticker_animation_active() -> bool:
+	return is_instance_valid(sticker_animation) and not sticker_animation.finished and not sticker_animation.is_queued_for_deletion()
+
+func show_sticker_reveal(items: Array, previous: Dictionary) -> void:
+	sticker_animation = preload("res://scripts/sticker_reveal.gd").new()
+	sticker_animation.items = items.duplicate()
+	sticker_animation.before = previous.duplicate(true)
+	sticker_animation.after = game.cup.stickers.duplicate(true)
+	sticker_animation.thermos = ui.get_node("Shop_cup/ThermosArtwork")
+	sticker_animation.still = preferences.reduced_motion or preferences.speed == 0
+	sticker_animation.fast = preferences.speed == 2
+	ui.add_child(sticker_animation)
+	skin_shop_button(sticker_animation.get_node("Continue"))
+	hover_description.hide()
 
 func render_result() -> void:
 	panel(ui, Rect2(0, 0, 1440, 900), Color(0.04, 0.06, 0.07, 0.84))

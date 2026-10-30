@@ -95,7 +95,7 @@ El [contrato de gemas](docs/GEMAS.md) documenta los poderes de esmeralda, zafiro
 
 El [contrato de rotura y reparación](docs/ROTURA-Y-REPARACION.md) documenta riesgos, cobro único, selección, costos y deuda. Capturas revisadas: test-results/reparacion-seleccion.png y reparacion-cobrada.png.
 
-El [contrato de stickers y paquetes](docs/STICKERS-Y-PAQUETES.md) documenta niveles, ofertas explícitas, pagos y elección pendiente. Capturas revisadas: test-results/stickers-categorias.png y sticker-desglose.png. D02 sigue pendiente; los valores se usan solo en pruebas. La tienda normal todavía vende monedas.
+El [contrato de stickers y paquetes](docs/STICKERS-Y-PAQUETES.md) documenta niveles, ofertas explícitas, pagos y elección pendiente. Los paquetes aleatorios revelan sus stickers y los llevan automáticamente hasta el termo; se puede omitir la animación. Con movimiento reducido se muestran estáticos. Los paquetes de elección muestran tres tarjetas ilustradas con nombre, nivel y efecto; tocar una otorga solo ese sticker. La compra se guarda antes de animarse y cerrar/reabrir la selección conserva las mismas opciones sin volver a cobrar. Revisión visual y de interacción: `godot --path . --script res://tests/sticker_pack_review.gd`. D02 sigue pendiente; la campaña usa valores provisionales explícitos.
 
 El [contrato de monedas e inventario](docs/MONEDAS-E-INVENTARIO.md) documenta definiciones e instancias, límites, consumo y contextos. Capturas revisadas: test-results/monedas-inventario.png, moneda-inspeccion.png y monedas-limites-tienda.png. Las ocho monedas actuales ya usan este modelo en la tienda normal; D03 conserva el catálogo futuro.
 

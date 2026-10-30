@@ -158,9 +158,9 @@ static func buy_controlled(scene, kind: String, id: String, check: Callable, die
 	if scene.detail.visible: scene.detail.hide()
 	if kind == "pack" and id == "choose_one":
 		reload_ui(scene, check, "paid choose pack")
-		var choice = UI.find_button(scene.ui, "Trío · nivel %d → %d" % [scene.game.cup.stickers.get("trio", 0), scene.game.cup.stickers.get("trio", 0) + 1])
+		var choice = scene.ui.get_node("StickerChoice/Sticker_trio")
 		check.call("+3 puntos" in choice.tooltip_text and "+0.5" in choice.tooltip_text, "Integral: paid pack exposes candidate growth before choosing")
-		Flow.click(scene, "Trío · nivel %d → %d" % [scene.game.cup.stickers.get("trio", 0), scene.game.cup.stickers.get("trio", 0) + 1])
+		choice.pressed.emit()
 	var snapshot: Dictionary = scene.game.snapshot()
 	purchase.pressed.emit()
 	if scene.detail.visible: scene.detail.hide()

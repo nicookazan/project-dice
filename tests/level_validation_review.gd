@@ -56,7 +56,8 @@ func _initialize() -> void:
 	scene.render()
 	Tests.reload_ui(scene, verify, "review paid pack")
 	await capture("pack-reanudado")
-	Flow.click(scene, "Trío · nivel 0 → 1")
+	scene.ui.get_node("StickerChoice/Sticker_trio").pressed.emit()
+	if scene.sticker_animation_active(): scene.sticker_animation.finish()
 	Flow.click(scene, "Ir al siguiente rival →")
 	Flow.click(scene, "TIRAR (3)")
 	scene.game.global_points = {"4": 10} # Explicit lab fixture to reach the second target.
