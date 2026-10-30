@@ -2,11 +2,17 @@ extends Control
 ## Reuses the match's silver thermos artwork with the same stickers as the shop.
 const ART = preload("res://assets/art/environment-v2/mesa-libreta-frontal-v1.png")
 const Stickers = preload("res://scripts/stickers.gd")
-const Tooltip = preload("res://scripts/item_tooltip.gd")
 const StickerArt = preload("res://scripts/sticker_art.gd")
 const ORIGIN = Vector2(1180, 160)
+const AXIS := 86.0
+const RADIUS := 46.0
 var stickers: Dictionary = {}
-var badge_font: Font = Tooltip.pixel_font()
+
+static func badge_hit_rect(id: String, levels: Dictionary) -> Rect2:
+	var rect := badge_rect(id, levels)
+	var start := StickerArt.surface_point(rect.position, AXIS, RADIUS)
+	var end := StickerArt.surface_point(rect.end, AXIS, RADIUS)
+	return Rect2(start, end - start).grow(2)
 
 static func badge_rect(id: String, levels: Dictionary) -> Rect2:
 	var index := 0
@@ -41,5 +47,4 @@ func _draw() -> void:
 	for id in Stickers.NAMES:
 		if not stickers.has(id): continue
 		var rect := badge_rect(id, stickers)
-		StickerArt.draw_sticker(self, rect, id)
-		draw_string(badge_font, rect.position + Vector2(19, 30), str(stickers[id]), HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color("fff0c7"))
+		StickerArt.draw_sticker(self, rect, id, AXIS, RADIUS)

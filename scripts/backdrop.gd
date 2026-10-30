@@ -9,8 +9,6 @@ const CUP_TABLE_ART = preload("res://assets/art/environment-v2/vaso-cuero-negro-
 const CUP_SHOP_ART = preload("res://assets/art/environment-v2/vaso-cuero-negro-tienda-v1.png")
 const StickerArt = preload("res://scripts/sticker_art.gd")
 const StickerDefinitions = preload("res://scripts/stickers.gd")
-const Tooltip = preload("res://scripts/item_tooltip.gd")
-var sticker_font: Font = Tooltip.pixel_font()
 var stickers: Dictionary = {}
 const THERMOS_RECT = Rect2(1180, 170, 135, 225)
 const SHOP_THERMOS_RECT = Rect2(65, 525, 145, 330)
@@ -103,8 +101,7 @@ func _draw() -> void:
 	for id in StickerDefinitions.NAMES:
 		if not stickers.has(id): continue
 		var target := Rect2(1227 + (occupied % 2) * 36, 257 + int(occupied / 2.0) * 34, 28, 28)
-		StickerArt.draw_sticker(self, target, id)
-		draw_string(sticker_font, target.position + Vector2(20, 29), str(stickers[id]), HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color("fff0c7"))
+		StickerArt.draw_sticker(self, target, id, 1266, 46)
 		occupied += 1
 	# God remains a provisional silhouette; ordinary hands retain existing art.
 	var center := Vector2(667, 105 + (sin(elapsed * 1.1) * 3 if motion else 0))

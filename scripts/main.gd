@@ -55,6 +55,7 @@ var hover_description_body: Label
 var detail: AcceptDialog
 var detail_body: RichTextLabel
 var detail_text := ""
+var thermos_panel: Control
 var confirmation: ConfirmationDialog
 var pending_navigation := ""
 var windowed_mode := DisplayServer.WINDOW_MODE_WINDOWED
@@ -119,6 +120,8 @@ func _ready() -> void:
 		get_tree().quit()
 
 func present_detail(title: String, text: String, compact := false) -> void:
+	if is_instance_valid(thermos_panel): thermos_panel.hide()
+	detail.remove_theme_stylebox_override("panel")
 	if is_instance_valid(settings_panel): settings_panel.hide()
 	if is_instance_valid(dice_gallery): dice_gallery.hide()
 	detail_body.show()
@@ -251,6 +254,16 @@ func inspect_thermos() -> void:
 			lines.append("+%s puntos de grupo y +%s al multiplicador de su categoría." % [number(data.points_per_level * level), number(data.multiplier_per_level * level)])
 		else: lines.append("Efectos pendientes de definición.")
 	present_detail("Termo y stickers", "\n".join(lines), true)
+	detail_body.hide()
+	if is_instance_valid(thermos_panel):
+		detail.remove_child(thermos_panel)
+		thermos_panel.queue_free()
+	thermos_panel = preload("res://scripts/thermos_inspector.gd").new()
+	thermos_panel.levels = game.cup.stickers.duplicate(true)
+	thermos_panel.catalog = game.sticker_catalog.duplicate(true)
+	detail.add_child(thermos_panel)
+	detail.add_theme_stylebox_override("panel", box(Color("091923"), gold, 2))
+	detail.popup_centered(Vector2i(680, 510))
 
 func box(bg: Color, border := Color.TRANSPARENT, width := 0) -> StyleBoxFlat:
 	var s := StyleBoxFlat.new()
@@ -1111,7 +1124,7 @@ func move_selected(destination: String) -> void:
 	render()
 
 func render_inventory() -> void:
-	label(ui, "MONEDAS %d / %d" % [game.passives.size(), game.coin_inventory.shared_capacity], Vector2(42, 750), 14, gold)
+	label(ui, "%d/%d" % [game.passives.size(), game.coin_inventory.shared_capacity], Vector2(42, 750), 14, gold)
 	for i in range(game.passives.size()):
 		var coin: String = game.passives[i]
 		var b := button(ui, "", Rect2(175 + i * 90, 748, 64, 60), func(): inspect_coin(coin))
