@@ -111,3 +111,10 @@ Ejecutar solo la **Fase 0**: medir, proponer paleta y píxel lógico, y mostrar 
 
 **Fase 1 — hecha, pendiente de aprobación del autor:** las 8 monedas rehechas a 32×32 px lógicos en `assets/art/pixel-v3/coins-v3.png` (`tools/art/make_coins.gd`), cargadas desde `scripts/coin_art.gd`. Los originales `assets/art/coins-v2.png` se conservan; para revertir basta cambiar la ruta de `SHEET`. Suite: 2195 comprobaciones, 0 fallos. Captura: tienda (inventario, ofertas, vista de monedas).
 - Pendiente de revisión: ¿se aprueba esta dirección (contorno oscuro, 3 tonos por metal, emblema grande autosombreado, sin laureles)? Si sí, se aplica a las fases 2–8.
+
+**Fase 2 — hecha, pendiente de aprobación (rama `feature/pixel-termo-vaso`):**
+- Termo plateado nuevo (`pixel-v3/termo-v3.png`, 72×165 px lógicos) en la tienda, el inspector de stickers y la animación de paquetes.
+- Seis stickers nuevos (`pixel-v3/stickers-v3.png`, 19×19): insignia redonda con borde marfil, color por categoría y dados planos; en el termo se comprimen por columna con sombreado de tres pasos (sin degradados). Ya no se renderizan con polígonos suavizados.
+- Stickers en grilla par (38 px, paso 42) tanto en el termo nuevo como sobre el termo de la mesa.
+- **Cambio de alcance:** el termo de la mesa de juego, el mate y el vaso están integrados en la imagen de la mesa (`mesa-libreta-frontal-v1.png`), por lo que **solo pueden reemplazarse junto con la mesa en la Fase 3**. El vaso pasa a la Fase 3; en la mesa seguirá visible el termo viejo con los stickers nuevos hasta entonces.
+- Suite: 2195 comprobaciones, 0 fallos.

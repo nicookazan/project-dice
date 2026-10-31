@@ -31,3 +31,5 @@ El cuerpo del dado ahora usa el sprite transparente `assets/art/ivory-die-v3.png
 ## pixel-v3 (31/10/2026) — arte generado por código
 
 `assets/art/pixel-v3/coins-v3.png`: generado con `tools/art/make_coins.gd` (máscaras por primitivas + `pixel_lib.gd`), sin IA de imagen; basado en los emblemas de `coins-v2.png` (cinco puntos, escalera, corona, cuatro cuadrados, sol, luna y estrella, dos dados, dado con flecha). Ver `docs/PLAN-ARTE-PIXEL.md`.
+
+`assets/art/pixel-v3/termo-v3.png` y `stickers-v3.png`: generados con `tools/art/make_thermos_stickers.gd` (sin IA de imagen), a partir del termo plateado con asa negra y de los seis stickers (par, trío, escalera, full, póker, generala) existentes.

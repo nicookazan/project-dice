@@ -100,7 +100,7 @@ func _draw() -> void:
 	var occupied := 0
 	for id in StickerDefinitions.NAMES:
 		if not stickers.has(id): continue
-		var target := Rect2(1227 + (occupied % 2) * 36, 257 + int(occupied / 2.0) * 34, 28, 28)
+		var target := Rect2(1226 + (occupied % 2) * 42, 252 + int(occupied / 2.0) * 42, 38, 38)
 		StickerArt.draw_sticker(self, target, id, 1266, 46)
 		occupied += 1
 	# God remains a provisional silhouette; ordinary hands retain existing art.

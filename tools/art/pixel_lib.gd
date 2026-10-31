@@ -69,3 +69,36 @@ static func coin(img: Image, ox: int, oy: int, size: int, rim: Array, face: Colo
 			else:
 				c = face
 			put(img, ox + x, oy + y, c)
+
+const BLACK := [Color("14141a"), Color("2a2a32"), Color("44444e"), Color("6a6a76"), Color("9a9aa6")]
+
+## Contorno de 1 px alrededor de todo lo opaco (pixeles transparentes con vecino opaco).
+static func outline(img: Image, color: Color = OUTLINE) -> void:
+	var w := img.get_width()
+	var h := img.get_height()
+	var marks: Array[Vector2i] = []
+	for y in range(h):
+		for x in range(w):
+			if img.get_pixel(x, y).a > 0: continue
+			for d in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]:
+				var nx: int = x + d.x
+				var ny: int = y + d.y
+				if nx >= 0 and ny >= 0 and nx < w and ny < h and img.get_pixel(nx, ny).a > 0:
+					marks.append(Vector2i(x, y))
+					break
+	for m in marks: img.set_pixel(m.x, m.y, color)
+
+## Relleno rectangular con sombreado cilíndrico por columnas (luz a la izquierda).
+static func cylinder(img: Image, x0: int, y0: int, x1: int, y1: int, ramp: Array) -> void:
+	var half := (x1 - x0) / 2.0
+	var cx := (x0 + x1) / 2.0
+	for x in range(x0, x1 + 1):
+		var t := (x - cx) / half
+		var c: Color
+		if t < -0.78: c = ramp[1]
+		elif t < -0.4: c = ramp[3]
+		elif t < -0.05: c = ramp[4]
+		elif t < 0.45: c = ramp[3]
+		elif t < 0.8: c = ramp[2]
+		else: c = ramp[1]
+		for y in range(y0, y1 + 1): put(img, x, y, c)
