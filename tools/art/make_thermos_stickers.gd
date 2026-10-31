@@ -7,43 +7,65 @@ const Mask = preload("res://tools/art/mask.gd")
 const STICKER_IDS = ["pair_loose", "trio", "straight", "full", "poker", "generala"]
 const STICKER_COLORS = {"pair_loose": "c7a25b", "trio": "c77849", "straight": "70a5c0", "full": "6da77e", "poker": "b578ac", "generala": "e0b445"}
 
+const STEEL_WARM := [Color("3c3834"), Color("7a746e"), Color("a9a299"), Color("d3cdc3"), Color("f6f1e8")]
+const RED := [Color("5a1426"), Color("a02a40"), Color("e0506a")]
+
+# Franjas de acero cepillado: [tono 0-4, ancho]; suman 48 columnas.
+const BODY_BANDS := [[1, 2], [2, 2], [3, 3], [4, 3], [3, 2], [2, 5], [3, 2], [2, 4], [1, 1], [2, 6], [3, 3], [2, 5], [1, 2], [2, 4], [1, 4]]
+
+func band_tone(x: int) -> int:
+	var cursor := 0
+	for band in BODY_BANDS:
+		cursor += band[1]
+		if x < cursor: return band[0]
+	return 1
+
 func make_thermos() -> Image:
 	var img := PixelLib.make(72, 165)
-	var steel := PixelLib.SILVER
+	var steel := STEEL_WARM
 	var blk := PixelLib.BLACK
-	# Asa negra a la izquierda.
-	PixelLib.cylinder(img, 3, 38, 8, 104, blk)
-	PixelLib.cylinder(img, 3, 38, 20, 45, blk)
-	PixelLib.cylinder(img, 3, 97, 20, 104, blk)
-	for p in [Vector2i(3, 38), Vector2i(3, 104)]: img.set_pixel(p.x, p.y, Color(0, 0, 0, 0))
-	for y in range(38, 105):
-		for x in range(3, 21):
-			if img.get_pixel(x, y).a > 0 and x > 8 and y > 45 and y < 97: img.set_pixel(x, y, Color(0, 0, 0, 0))
-	for x in range(9, 21):  # sombras de las uniones
-		PixelLib.put(img, x, 45, blk[0])
-		PixelLib.put(img, x, 97, blk[2])
-	# Cuerpo.
-	PixelLib.cylinder(img, 19, 40, 66, 162, steel)
+	# Cuerpo recto de acero cepillado (x 19..66, y 29..162).
+	for x in range(48):
+		var tone: Color = steel[band_tone(x)]
+		for y in range(31, 163): PixelLib.put(img, 19 + x, y, tone)
 	for x in range(19, 67):
-		PixelLib.put(img, x, 40, steel[0])
-		PixelLib.put(img, x, 41, steel[1])
-		for y in range(152, 163): PixelLib.put(img, x, y, steel[1] if (x < 24 or x > 60) else steel[2])
-		PixelLib.put(img, x, 152, steel[0])
+		PixelLib.put(img, x, 31, steel[0])
+		PixelLib.put(img, x, 32, steel[1])
+		PixelLib.put(img, x, 33, steel[1] if band_tone(x - 19) < 3 else steel[2])
+		PixelLib.put(img, x, 149, steel[0])
+		PixelLib.put(img, x, 150, steel[4] if band_tone(x - 19) >= 3 else steel[3])
+		for y in range(151, 163): PixelLib.put(img, x, y, steel[maxi(1, band_tone(x - 19) - 1)])
 		PixelLib.put(img, x, 162, steel[0])
 	for p in [Vector2i(19, 162), Vector2i(66, 162)]: img.set_pixel(p.x, p.y, Color(0, 0, 0, 0))
-	# Hombros escalonados.
-	PixelLib.cylinder(img, 21, 31, 64, 39, steel)
-	for x in range(21, 65): PixelLib.put(img, x, 31, steel[0])
-	PixelLib.cylinder(img, 24, 24, 61, 30, steel)
-	for x in range(24, 62): PixelLib.put(img, x, 24, steel[0])
-	PixelLib.cylinder(img, 27, 17, 58, 23, steel)
-	for x in range(27, 59): PixelLib.put(img, x, 17, steel[0])
-	# Tapa negra con estrías.
-	PixelLib.cylinder(img, 29, 3, 56, 16, blk)
-	for x in range(31, 56, 3):
-		for y in range(6, 16): PixelLib.put(img, x, y, blk[0])
-	for x in range(29, 57): PixelLib.put(img, x, 3, blk[3])
-	for p in [Vector2i(29, 3), Vector2i(56, 3)]: img.set_pixel(p.x, p.y, Color(0, 0, 0, 0))
+	# Collar negro ancho.
+	PixelLib.cylinder(img, 19, 20, 66, 30, blk)
+	for x in range(19, 67): PixelLib.put(img, x, 30, blk[0])
+	for x in range(19, 67): PixelLib.put(img, x, 20, blk[3] if x < 32 else blk[2])
+	# Anillo fino entre collar y tapa.
+	PixelLib.cylinder(img, 23, 17, 62, 19, blk)
+	for x in range(23, 63): PixelLib.put(img, x, 19, blk[0])
+	# Tapa con estrías verticales y borde superior luminoso.
+	PixelLib.cylinder(img, 25, 9, 60, 16, blk)
+	for x in range(27, 59, 2):
+		for y in range(11, 17): PixelLib.put(img, x, y, blk[0])
+	for x in range(25, 61): PixelLib.put(img, x, 16, blk[0])
+	PixelLib.cylinder(img, 27, 6, 58, 8, blk)
+	for x in range(27, 59): PixelLib.put(img, x, 6, blk[4] if x < 38 else blk[3])
+	for p in [Vector2i(25, 9), Vector2i(60, 9), Vector2i(27, 6), Vector2i(58, 6)]: img.set_pixel(p.x, p.y, Color(0, 0, 0, 0))
+	# Pico rojo inclinado sobre la tapa (escalera de 4 pasos).
+	for i in range(4):
+		PixelLib.put(img, 43 - i, 1 + i, RED[2])
+		PixelLib.put(img, 44 - i, 1 + i, RED[2])
+		PixelLib.put(img, 45 - i, 1 + i, RED[1])
+	PixelLib.put(img, 41, 5, RED[0])
+	PixelLib.put(img, 42, 5, RED[0])
+	# Asa de gancho: sale del collar por la izquierda y cuelga libre.
+	PixelLib.cylinder(img, 3, 22, 7, 86, blk)
+	PixelLib.cylinder(img, 3, 21, 19, 25, blk)
+	for p in [Vector2i(3, 21), Vector2i(3, 86), Vector2i(7, 86), Vector2i(3, 85)]: img.set_pixel(p.x, p.y, Color(0, 0, 0, 0))
+	for y in range(26, 86):
+		for x in range(8, 19): img.set_pixel(x, y, Color(0, 0, 0, 0))
+	for x in range(8, 19): PixelLib.put(img, x, 25, blk[0])
 	PixelLib.outline(img)
 	return img
 
