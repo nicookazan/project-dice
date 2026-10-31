@@ -3,7 +3,6 @@ extends SceneTree
 ##   mesa-v3.png        madera + paño bordó + frente + piso (720×314 lógicos, desde la fila 136)
 ##   termo-mesa-v3.png  el termo de la tienda alargado para la mesa (72×175)
 ##   mate-v3.png, vaso-v3.png  objetos sobre el paño
-##   mesa-parche-v3.png fondo reconstruido detrás del termo viejo (hasta la Fase 4)
 ## Ejecutar: godot --path . --script res://tools/art/make_mesa.gd   (con GPU no hace falta; headless sirve)
 
 const PixelLib = preload("res://tools/art/pixel_lib.gd")
@@ -351,22 +350,6 @@ func make_cup() -> Image:
 	PixelLib.outline(img)
 	return img
 
-# ---------- parche del fondo detrás del termo viejo ----------
-func make_patch() -> Image:
-	var src := Image.load_from_file(ProjectSettings.globalize_path(BASE_PLATE))
-	var sx := float(src.get_width()) / 1440.0
-	var sy := float(src.get_height()) / 900.0
-	var img := PixelLib.make(90, 64)
-	for ly in range(64):
-		var py := 168 + ly * 2 + 1
-		var left := src.get_pixel(int(1170 * sx), int(py * sy))
-		var right := src.get_pixel(int(1360 * sx), int(py * sy))
-		for lx in range(90):
-			var t := (lx + 0.5) / 90.0
-			var c := left.lerp(right, t)
-			c = Color(roundf(c.r * 20.0) / 20.0, roundf(c.g * 20.0) / 20.0, roundf(c.b * 20.0) / 20.0, 1.0)
-			img.set_pixel(lx, ly, c)
-	return img
 
 func upscale(img: Image, k: int) -> Image:
 	var big := img.duplicate() as Image
@@ -381,17 +364,14 @@ func _init() -> void:
 	var thermos := make_thermos_table()
 	var mate := make_mate()
 	var cup := make_cup()
-	var patch := make_patch()
 	table.get_region(Rect2i(0, TOP, W, H - TOP)).save_png(OUT + "mesa-v3.png")
 	thermos.save_png(OUT + "termo-mesa-v3.png")
 	mate.save_png(OUT + "mate-v3.png")
 	cup.save_png(OUT + "vaso-v3.png")
-	patch.save_png(OUT + "mesa-parche-v3.png")
 	# vista previa 1440×900 con las mismas posiciones que usa backdrop.gd
 	var plate := Image.load_from_file(ProjectSettings.globalize_path(BASE_PLATE))
 	plate.resize(1440, 900, Image.INTERPOLATE_NEAREST)
 	plate.convert(Image.FORMAT_RGBA8)
-	blit(plate, patch, 1176, 168)
 	blit(plate, table, 0, 0)
 	blit(plate, thermos, 1203, 168)
 	blit(plate, mate, 1088, 310)

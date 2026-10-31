@@ -35,3 +35,5 @@ El cuerpo del dado ahora usa el sprite transparente `assets/art/ivory-die-v3.png
 `assets/art/pixel-v3/termo-v3.png` y `stickers-v3.png`: generados con `tools/art/make_thermos_stickers.gd` (sin IA de imagen), a partir del termo plateado con asa negra y de los seis stickers (par, trío, escalera, full, póker, generala) existentes.
 
 `assets/art/pixel-v3/mesa-v3.png`, `termo-mesa-v3.png`, `mate-v3.png`, `vaso-v3.png` y `mesa-parche-v3.png`: generados con `tools/art/make_mesa.gd` (sin IA de imagen), tomando como referencia la composición de `mesa-libreta-frontal-v1.png` (paño con tres paneles, mate de madera con virola, termo de acero, vaso de cuero negro con costuras doradas).
+
+`assets/art/pixel-v3/salon-v3.png`: generado con `tools/art/make_salon.gd` (sin IA de imagen), con la distribución del salón de `mesa-libreta-frontal-v1.png` (ventanas, lámparas, cuadros, sillas, banderín argentino, planta).
