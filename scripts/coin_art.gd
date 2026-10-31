@@ -1,5 +1,5 @@
 extends TextureRect
-const SHEET = preload("res://assets/art/coins-v2.png")
+const SHEET = preload("res://assets/art/pixel-v3/coins-v3.png")
 const IDS = ["full", "straight", "generala", "poker", "even", "odd", "boost", "roll"]
 var coin_id := "full"
 

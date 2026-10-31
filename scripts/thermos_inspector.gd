@@ -16,9 +16,9 @@ func _ready() -> void:
 	theme.default_font_size = 18
 	artwork = Thermos.new()
 	artwork.name = "ThermosArtwork"
-	artwork.position = Vector2(28, 32)
-	artwork.scale = Vector2(1.15, 1.15)
-	artwork.size = Vector2(145, 330)
+	artwork.position = Vector2(36, 50)
+	artwork.scale = Vector2.ONE
+	artwork.size = Vector2(144, 330)
 	artwork.stickers = levels.duplicate(true)
 	add_child(artwork)
 	var heading := make_label("TU TERMO", Rect2(215, 20, 390, 38), 26)

@@ -27,3 +27,9 @@ El atlas se consume como ocho regiones (cuatro columnas por dos filas), sin modi
 El cuerpo del dado ahora usa el sprite transparente `assets/art/ivory-die-v3.png`, generado con imagegen. El prompt completo está en `assets/art/ivory-die-v3-prompt.md`. Se conserva el renderizado dinámico de los puntos exactos desde Godot. Las imágenes de revisión de las seis caras y su integración real están en `test-results/dados-seis-caras.png` y `test-results/dados-en-mesa.png`.
 
 28/10/2026: exteriores ilustrados y termo generados con Imagegen integrado. Prompts completos: assets/art/environment-v2/PROMPTS.md. Gemas con facetas estáticas nativas de Godot según referencia brillante adjunta; documentación: docs/CAMBIOS-VISUALES-2026-10-28.md.
+
+## pixel-v3 (31/10/2026) — arte generado por código
+
+`assets/art/pixel-v3/coins-v3.png`: generado con `tools/art/make_coins.gd` (máscaras por primitivas + `pixel_lib.gd`), sin IA de imagen; basado en los emblemas de `coins-v2.png` (cinco puntos, escalera, corona, cuatro cuadrados, sol, luna y estrella, dos dados, dado con flecha). Ver `docs/PLAN-ARTE-PIXEL.md`.
+
+`assets/art/pixel-v3/termo-v3.png` y `stickers-v3.png`: generados con `tools/art/make_thermos_stickers.gd` (sin IA de imagen), a partir del termo plateado con asa negra y de los seis stickers (par, trío, escalera, full, póker, generala) existentes.
