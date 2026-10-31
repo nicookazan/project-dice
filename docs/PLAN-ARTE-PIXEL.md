@@ -131,3 +131,4 @@ Ejecutar solo la **Fase 0**: medir, proponer paleta y píxel lógico, y mostrar 
 - Salón rehecho (`pixel-v3/salon-v3.png`, 720×150 px lógicos, `tools/art/make_salon.gd`): paredes con friso de madera, vigas, marcos de ventana con alféizar, lámparas colgantes y de mesa con halo en tres niveles, cuadros simplificados a siluetas (bailarines, edificio con cúpula, retratos), sillas y mesas del fondo, banderín y planta.
 - Las ventanas (panorama animado) y su posición no cambian; el salón solo dibuja el marco. La mano y la nube se conservan hasta la Fase 7.
 - Se eliminó `mesa-parche-v3.png` (ya no hace falta). Suite: 2195 comprobaciones, 0 fallos.
+- **Mate y vaso rehechos (opción A aprobada):** forma original, rampas de 7 tonos (madera, plata, cuero) y 5 (yerba, fieltro), sombreado esférico y bombilla con anillos. Generados con `tools/art/make_mate_vaso.gd` (la variante fina B quedó descartada).
