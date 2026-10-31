@@ -8,84 +8,98 @@ const STICKER_IDS = ["pair_loose", "trio", "straight", "full", "poker", "general
 const STICKER_COLORS = {"pair_loose": "c7a25b", "trio": "c77849", "straight": "70a5c0", "full": "6da77e", "poker": "b578ac", "generala": "e0b445"}
 
 const RED := [Color("5a1426"), Color("a02a40"), Color("e0506a")]
-const AMBER := Color("e8a860")
-const CREAM := Color("fff4d8")
-const WINDOW_BLUE := Color("5f86b8")
-const CLOTH_RED := Color("c0503c")
+const COOL_HINT := Color("8a98b0")
+const WARM_HINT := Color("a07468")
 
-# Franjas del acero, de izquierda a derecha: [color, ancho]. Reflejos de color del entorno:
-# madera oscura, lámparas ámbar, brillo crema, acero violáceo, ventana azul y paño bordó.
+# Acero en escala de grises, de izquierda a derecha: [color, ancho]. Un toque cálido en el
+# reflejo izquierdo y frío en el borde derecho; el resto es gris puro para dar volumen.
 const BODY_BANDS := [
-	["4a2e2e", 1], ["7a4a38", 2], ["c98a4a", 2], ["e8b070", 2], ["fff4d8", 1], ["f2dcb0", 2],
-	["d2c8b8", 3], ["aeaabc", 4], ["8e8ca8", 3], ["88aed0", 2], ["a6c4dc", 2], ["9890a4", 4],
-	["6a6076", 1], ["8a8296", 4], ["a0949a", 3], ["8a7078", 3], ["b05a4e", 3], ["7a3a42", 2], ["3c2430", 2]]
+	["32323a", 1], ["50505a", 2], ["74747e", 2], ["9c9ca4", 2], ["c6c4c4", 2], ["e8e4de", 2], ["fbf9f4", 1],
+	["dedee0", 2], ["b8b8bc", 3], ["9c9ca4", 3], ["8c8c96", 4], ["a0a0aa", 3], ["84848e", 3],
+	["70707a", 3], ["60606a", 3], ["52525c", 3], ["6a707c", 1], ["44444e", 2], ["2c2c34", 2]]
 
 func body_colors() -> Array:
 	var out: Array = []
 	for band in BODY_BANDS:
 		for i in range(band[1]): out.append(Color(band[0]))
-	while out.size() < 48: out.insert(out.size() / 2, Color("9890a4"))
-	var steel_base := Color("a8a098")
-	var mixed: Array = []
-	for c in out.slice(0, 48): mixed.append(c.lerp(steel_base, 0.25))
-	return mixed
+	while out.size() < 48: out.insert(out.size() / 2, Color("8c8c96"))
+	return out.slice(0, 48)
 
-## Tiñe según la altura (ventana arriba, paño abajo) con transición dithereada de 1 px.
+## Desplazamiento en arco (borde inferior de un cilindro visto desde arriba): 0 en los
+## extremos y `depth` en el centro.
+func arc(x: int, depth: float, x0: int, x1: int) -> int:
+	var t := (x - (x0 + x1) / 2.0) / ((x1 - x0) / 2.0)
+	return roundi(depth * (1.0 - t * t))
+
 func tint(c: Color, x: int, y: int) -> Color:
-	var shade := [0.42, 0.28, 0.16, 0.07]
-	if y < 35: return c.darkened(shade[y - 31])
 	var amount := 0.0
-	var color := WINDOW_BLUE
-	if y < 57: amount = 0.12
-	elif y < 59: amount = 0.12 if (x + y) % 2 == 0 else 0.0
-	
-	elif y >= 150: amount = 0.34; color = CLOTH_RED
-	elif y >= 126: amount = 0.2; color = CLOTH_RED
-	elif y >= 124: amount = 0.2 if (x + y) % 2 == 0 else 0.0; color = CLOTH_RED
-	
+	var color := COOL_HINT
+	if y < 44: amount = 0.08
+	elif y < 46: amount = 0.08 if (x + y) % 2 == 0 else 0.0
+	elif y >= 128: amount = 0.09; color = WARM_HINT
+	elif y >= 126: amount = 0.09 if (x + y) % 2 == 0 else 0.0; color = WARM_HINT
 	return c.lerp(color, amount)
+
+## Cilindro con sombreado por columnas y borde inferior en arco.
+func shaped_cylinder(img: Image, x0: int, x1: int, y0: int, y1: int, depth: float, ramp: Array) -> void:
+	var half := (x1 - x0) / 2.0
+	var cx := (x0 + x1) / 2.0
+	for x in range(x0, x1 + 1):
+		var t := (x - cx) / half
+		var c: Color
+		if t < -0.78: c = ramp[1]
+		elif t < -0.4: c = ramp[3]
+		elif t < -0.05: c = ramp[4]
+		elif t < 0.45: c = ramp[3]
+		elif t < 0.8: c = ramp[2]
+		else: c = ramp[1]
+		var bottom := y1 + arc(x, depth, x0, x1)
+		for y in range(y0, bottom + 1): PixelLib.put(img, x, y, c)
+		PixelLib.put(img, x, bottom, ramp[0])
 
 func make_thermos() -> Image:
 	var img := PixelLib.make(72, 165)
 	var blk := PixelLib.BLACK
 	var cols := body_colors()
-	# Cuerpo de acero con reflejos de color (x 19..66, y 31..162).
+	# Cuerpo cilíndrico: base redondeada en arco y pie con aro curvo.
 	for x in range(48):
-		for y in range(31, 163): PixelLib.put(img, 19 + x, y, tint(cols[x], x, y))
-	# Labio superior brillante y rayones finos.
-	for x in range(48):
-		PixelLib.put(img, 19 + x, 35, cols[x].lightened(0.3))
+		var px := 19 + x
+		var collar_bottom := 29 + arc(px, 2, 19, 66)
+		var bottom := 159 + arc(px, 3, 19, 66)
+		var foot := 146 + arc(px, 3, 19, 66)
+		for y in range(24, bottom + 1):
+			var c := tint(cols[x], x, y)
+			if y > foot + 1: c = c.darkened(0.22)
+			if y == foot: c = cols[x].darkened(0.55)
+			if y == foot + 1: c = cols[x].lightened(0.3)
+			if y == bottom: c = cols[x].darkened(0.6)
+			var under := y - collar_bottom
+			if under >= 0 and under < 4: c = c.darkened([0.45, 0.3, 0.18, 0.08][under])
+			if under == 4: c = c.lightened(0.15)
+			PixelLib.put(img, px, y, c)
+	for p in [Vector2i(19, 158), Vector2i(66, 158), Vector2i(19, 159), Vector2i(66, 159), Vector2i(20, 160), Vector2i(65, 160)]:
+		img.set_pixel(p.x, p.y, Color(0, 0, 0, 0))
 	for p in [Vector2i(30, 70), Vector2i(30, 71), Vector2i(48, 88), Vector2i(48, 89), Vector2i(55, 104), Vector2i(36, 128)]:
-		PixelLib.put(img, p.x, p.y, img.get_pixel(p.x, p.y).lightened(0.22))
-	# Pie: anillo con reflejo y banda inferior bronce.
-	for x in range(48):
-		PixelLib.put(img, 19 + x, 149, Color("3c2430"))
-		PixelLib.put(img, 19 + x, 150, cols[x].lightened(0.35))
-		for y in range(151, 163): PixelLib.put(img, 19 + x, y, tint(cols[x].darkened(0.3), x, y))
-		PixelLib.put(img, 19 + x, 162, Color("2a1a20"))
-	for p in [Vector2i(19, 162), Vector2i(66, 162)]: img.set_pixel(p.x, p.y, Color(0, 0, 0, 0))
-	# Collar negro con aro de latón.
-	PixelLib.cylinder(img, 19, 20, 66, 30, blk)
-	for x in range(19, 67):
+		PixelLib.put(img, p.x, p.y, img.get_pixel(p.x, p.y).lightened(0.18))
+	# Collar negro (más angosto que el cuerpo) con aro de latón tenue, ambos en arco.
+	shaped_cylinder(img, 20, 65, 20, 28, 2, blk)
+	for x in range(20, 66):
 		PixelLib.put(img, x, 20, blk[3] if x < 32 else blk[2])
-		PixelLib.put(img, x, 30, blk[0])
-	for x in range(21, 25): for y in range(21, 24): PixelLib.put(img, x, y, Color("6a5a48"))  # reflejo ámbar en el collar
-	var gold := PixelLib.GOLD
-	for x in range(19, 67):
-		var t := float(x - 19) / 47.0
-		PixelLib.put(img, x, 27, gold[4] if t < 0.3 else (gold[3] if t < 0.6 else gold[1]))
-		PixelLib.put(img, x, 28, gold[3] if t < 0.3 else (gold[2] if t < 0.6 else gold[0]))
-	# Anillo fino y tapa estriada con luz ámbar.
-	PixelLib.cylinder(img, 23, 17, 62, 19, blk)
-	for x in range(23, 63): PixelLib.put(img, x, 19, blk[0])
-	PixelLib.cylinder(img, 25, 9, 60, 16, blk)
-	for x in range(27, 59, 2):
-		for y in range(11, 17): PixelLib.put(img, x, y, blk[0])
-	for y in range(10, 15): PixelLib.put(img, 26, y, Color("a5703c"))
-	for x in range(25, 61): PixelLib.put(img, x, 16, blk[0])
-	PixelLib.cylinder(img, 27, 6, 58, 8, blk)
-	for x in range(27, 59): PixelLib.put(img, x, 6, Color("d8b080") if x < 36 else blk[3])
-	for p in [Vector2i(25, 9), Vector2i(60, 9), Vector2i(27, 6), Vector2i(58, 6)]: img.set_pixel(p.x, p.y, Color(0, 0, 0, 0))
+		var t := float(x - 20) / 45.0
+		var brass := PixelLib.GOLD[3].lerp(Color("a8a098"), 0.35)
+		var shade := brass if t < 0.3 else (brass.darkened(0.2) if t < 0.65 else brass.darkened(0.5))
+		var ring_y := 24 + arc(x, 2, 20, 65)
+		PixelLib.put(img, x, ring_y, shade.lightened(0.15))
+		PixelLib.put(img, x, ring_y + 1, shade.darkened(0.15))
+	# Anillo fino y tapa estriada.
+	shaped_cylinder(img, 24, 61, 16, 18, 1, blk)
+	shaped_cylinder(img, 26, 59, 9, 15, 1, blk)
+	for x in range(28, 58, 2):
+		for y in range(11, 15 + arc(x, 1, 26, 59)): PixelLib.put(img, x, y, blk[0])
+	for x in range(28, 58):
+		var top := 6 - arc(x, 1, 28, 57)
+		for y in range(top, 9): PixelLib.put(img, x, y, blk[4] if (x < 38 and y == top) else (blk[3] if y == top else blk[2]))
+	for p in [Vector2i(28, 8), Vector2i(57, 8), Vector2i(28, 7), Vector2i(57, 7)]: img.set_pixel(p.x, p.y, Color(0, 0, 0, 0))
 	# Pico rojo inclinado sobre la tapa (escalera de 4 pasos).
 	for i in range(4):
 		PixelLib.put(img, 43 - i, 1 + i, RED[2])
@@ -93,15 +107,13 @@ func make_thermos() -> Image:
 		PixelLib.put(img, 45 - i, 1 + i, RED[1])
 	PixelLib.put(img, 41, 5, RED[0])
 	PixelLib.put(img, 42, 5, RED[0])
-	# Asa de gancho con luz ámbar a la izquierda y reflejo frío a la derecha.
+	# Asa de gancho negra, redondeada, que cuelga libre.
 	PixelLib.cylinder(img, 3, 22, 7, 86, blk)
-	PixelLib.cylinder(img, 3, 21, 19, 25, blk)
-	for p in [Vector2i(3, 21), Vector2i(3, 86), Vector2i(7, 86), Vector2i(3, 85)]: img.set_pixel(p.x, p.y, Color(0, 0, 0, 0))
+	PixelLib.cylinder(img, 3, 21, 20, 25, blk)
+	for p in [Vector2i(3, 21), Vector2i(3, 86), Vector2i(7, 86), Vector2i(3, 85), Vector2i(7, 85), Vector2i(3, 22)]: img.set_pixel(p.x, p.y, Color(0, 0, 0, 0))
 	for y in range(26, 86):
 		for x in range(8, 19): img.set_pixel(x, y, Color(0, 0, 0, 0))
 	for x in range(8, 19): PixelLib.put(img, x, 25, blk[0])
-	for y in range(26, 80): PixelLib.put(img, 4, y, Color("8a5a3a") if y < 60 else Color("5a3a2c"))
-	for y in range(26, 70): PixelLib.put(img, 7, y, Color("30344a"))
 	PixelLib.outline(img)
 	return img
 
