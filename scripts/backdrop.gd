@@ -7,10 +7,16 @@ const TABLE_PROPS = preload("res://assets/art/environment-v2/mesa-proporciones-v
 const CLEAN_TABLE = preload("res://assets/art/environment-v2/mesa-libreta-frontal-v1.png")
 const CUP_TABLE_ART = preload("res://assets/art/environment-v2/vaso-cuero-negro-mesa-v2.png")
 const CUP_SHOP_ART = preload("res://assets/art/environment-v2/vaso-cuero-negro-tienda-v1.png")
+const TABLE_V3 = preload("res://assets/art/pixel-v3/mesa-v3.png")
+const TABLE_PATCH_V3 = preload("res://assets/art/pixel-v3/mesa-parche-v3.png")
+const THERMOS_TABLE_V3 = preload("res://assets/art/pixel-v3/termo-mesa-v3.png")
+const MATE_V3 = preload("res://assets/art/pixel-v3/mate-v3.png")
+const CUP_V3 = preload("res://assets/art/pixel-v3/vaso-v3.png")
 const StickerArt = preload("res://scripts/sticker_art.gd")
 const StickerDefinitions = preload("res://scripts/stickers.gd")
 var stickers: Dictionary = {}
-const THERMOS_RECT = Rect2(1180, 170, 135, 225)
+const THERMOS_ORIGIN = Vector2(1203, 168)
+const THERMOS_RECT = Rect2(1203, 170, 144, 225)
 const SHOP_THERMOS_RECT = Rect2(65, 525, 145, 330)
 const CUP_RECT = Rect2(1260, 400, 145, 180)
 const CUP_MOUTH = Vector2(1330, 425)
@@ -68,6 +74,8 @@ func _draw() -> void:
 	var cup_patch := Rect2(50, 640, 280, 235) if shop_mode else Rect2(1100, 330, 320, 260)
 	var cup_scale := Vector2(cup_art.get_size()) / Vector2(1440, 900)
 	if shop_mode: draw_texture_rect_region(cup_art, cup_patch, Rect2(cup_patch.position * cup_scale, cup_patch.size * cup_scale))
+	# Rebuilds the room behind the old thermos until the salon is redrawn (phase 4).
+	else: draw_texture_rect(TABLE_PATCH_V3, Rect2(1176, 168, 180, 128), false)
 	var panels := {"dia": 0, "tarde": 1, "noche": 2, "espacio": 3, "agujero_negro": 4, "cielo": 5}
 	var cell := Vector2(EXTERIORS.get_size()) / Vector2(2, 3)
 	var index: int = panels.get(environment_id, 0)
@@ -82,12 +90,8 @@ func _draw() -> void:
 		else:
 			var source := Rect2(origin + (window.position - panorama.position) / panorama.size * cell, window.size / panorama.size * cell)
 			draw_texture_rect_region(EXTERIORS, window, source)
-	# Restore the cap in front of the animated window panorama.
-	if not shop_mode:
-		var cap := PackedVector2Array([Vector2(1210, 220), Vector2(1226, 211), Vector2(1226, 185), Vector2(1270, 179), Vector2(1288, 165), Vector2(1296, 170), Vector2(1280, 185), Vector2(1305, 188), Vector2(1312, 240), Vector2(1210, 240)])
-		var cap_uv := PackedVector2Array()
-		for point in cap: cap_uv.append(point / Vector2(1440, 900))
-		draw_polygon(cap, PackedColorArray([Color.WHITE]), cap_uv, CLEAN_TABLE)
+	# Pixel-v3 table (wood, felt, front, floor) over the old plate; the room above it stays.
+	if not shop_mode: draw_texture_rect(TABLE_V3, Rect2(0, 272, 1440, 628), false)
 	# Only replace the prop strip: all dice areas, the hand and the original
 	# room remain sourced from the existing plates. Keep the shop cup below it.
 	var props_points := PackedVector2Array([Vector2(0, 137), Vector2(360, 137), Vector2(360, 520), Vector2(322, 715), Vector2(0, 715)]) if shop_mode else PackedVector2Array([Vector2(0, 137), Vector2(360, 137), Vector2(360, 680), Vector2(0, 680)])
@@ -97,12 +101,16 @@ func _draw() -> void:
 	if shop_mode:
 		# Restore the shop's leather cup without its former oversized notebook.
 		draw_recovered_figure([Vector2(184, 719), Vector2(218, 726), Vector2(254, 734), Vector2(286, 748), Vector2(310, 767), Vector2(331, 792), Vector2(347, 825), Vector2(349, 868), Vector2(337, 903), Vector2(312, 932), Vector2(278, 950), Vector2(240, 950), Vector2(205, 940), Vector2(169, 928), Vector2(130, 915), Vector2(103, 901), Vector2(83, 875), Vector2(79, 844), Vector2(84, 809), Vector2(95, 779), Vector2(112, 754), Vector2(133, 738), Vector2(154, 726)], Vector2.ZERO, CUP_SHOP_ART)
+	# Thermos with its stickers, then the mate and the dice cup in front of it.
+	draw_texture_rect(THERMOS_TABLE_V3, Rect2(THERMOS_ORIGIN, Vector2(144, 350)), false)
 	var occupied := 0
 	for id in StickerDefinitions.NAMES:
 		if not stickers.has(id): continue
-		var target := Rect2(1226 + (occupied % 2) * 42, 252 + int(occupied / 2.0) * 42, 38, 38)
-		StickerArt.draw_sticker(self, target, id, 1266, 46)
+		var target := Rect2(THERMOS_ORIGIN + Vector2(46 + (occupied % 2) * 42, 112 + int(occupied / 2.0) * 42), Vector2(38, 38))
+		StickerArt.draw_sticker(self, target, id, THERMOS_ORIGIN.x + 86.0, 46)
 		occupied += 1
+	draw_texture_rect(MATE_V3, Rect2(1088, 310, 136, 236), false)
+	draw_texture_rect(CUP_V3, Rect2(1280, 426, 144, 188), false)
 	# God remains a provisional silhouette; ordinary hands retain existing art.
 	var center := Vector2(667, 105 + (sin(elapsed * 1.1) * 3 if motion else 0))
 	if actor == "god":

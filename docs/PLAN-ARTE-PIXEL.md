@@ -118,3 +118,11 @@ Ejecutar solo la **Fase 0**: medir, proponer paleta y píxel lógico, y mostrar 
 - Stickers en grilla par (38 px, paso 42) tanto en el termo nuevo como sobre el termo de la mesa.
 - **Cambio de alcance:** el termo de la mesa de juego, el mate y el vaso están integrados en la imagen de la mesa (`mesa-libreta-frontal-v1.png`), por lo que **solo pueden reemplazarse junto con la mesa en la Fase 3**. El vaso pasa a la Fase 3; en la mesa seguirá visible el termo viejo con los stickers nuevos hasta entonces.
 - Suite: 2195 comprobaciones, 0 fallos.
+
+**Fase 3 — hecha, pendiente de aprobación (rama `feature/pixel-mesa`):**
+- Mesa rehecha desde la fila 272 hacia abajo (`pixel-v3/mesa-v3.png`, 720×314 px lógicos, `tools/art/make_mesa.gd`): madera en bloques de veta (sin ruido), paño bordó con pelo corto en tres tonos, tres paneles con filo dorado y ornamentos en las esquinas (mismas posiciones que las zonas de juego), frente con ménsulas y piso de tablas. Ya no se usa la parte baja de `mesa-libreta-frontal-v1.png`; el salón de arriba sigue siendo el original (Fase 4).
+- Termo de la mesa: el termo nuevo alargado (`termo-mesa-v3.png`, 72×175), con los stickers en su grilla. Se eliminó el recorte del termo viejo sobre la ventana.
+- Mate (`mate-v3.png`, con virola de greca y bombilla) y vaso de cuero (`vaso-v3.png`, costuras doradas y fieltro verde), más sombras de contacto sobre el paño.
+- `mesa-parche-v3.png` reconstruye por barrido el fondo que tapaba el termo viejo; desaparece cuando se rehaga el salón.
+- Libreta y lápiz no se tocaron: la libreta es una interfaz plana de Godot (no está en la imagen) y no hay lápiz en la mesa actual.
+- Posición del termo para stickers: `Backdrop.THERMOS_ORIGIN`; zonas de clic y `CUP_MOUTH` sin cambios. Suite: 2195 comprobaciones, 0 fallos.
