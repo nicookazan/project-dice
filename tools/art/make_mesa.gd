@@ -68,14 +68,20 @@ func flip_rows(rows: Array, fx: bool, fy: bool) -> Array:
 	if fy: out.reverse()
 	return out
 
-func shadow(img: Image, cx: float, cy: float, rx: float, ry: float) -> void:
-	for y in range(int(cy - ry) - 1, int(cy + ry) + 2):
-		for x in range(int(cx - rx) - 1, int(cx + rx) + 2):
+## Sombra de contacto de un objeto apoyado en el paño: una sombra proyectada hacia la
+## derecha (luz arriba-izquierda) y un núcleo más oscuro justo bajo la base. Dos tonos planos.
+func shadow(img: Image, cx: float, base_y: float, rx: float) -> void:
+	var cast_c := Vector2(cx + rx * 0.3, base_y + 1.0)
+	var cast_r := Vector2(rx * 1.3, 6.0)
+	var core_c := Vector2(cx, base_y - 1.0)
+	var core_r := Vector2(rx * 0.97, 4.5)
+	for y in range(int(base_y) - 8, int(base_y) + 9):
+		for x in range(int(cx - rx * 1.7), int(cx + rx * 1.7)):
 			if x < 0 or x >= W or y < 0 or y >= H or not in_pano(x, y): continue
-			var d := pow((x - cx) / rx, 2) + pow((y - cy) / ry, 2)
-			if d < 0.5: img.set_pixel(x, y, PANO[0].lerp(PANO[1], 0.35))
-			elif d < 1.0: img.set_pixel(x, y, PANO[1].lerp(PANO[0], 0.65))
-			elif d < 1.25 and (x + y) % 2 == 0: img.set_pixel(x, y, PANO[1].lerp(PANO[2], 0.45))
+			var dc := pow((x - core_c.x) / core_r.x, 2) + pow((y - core_c.y) / core_r.y, 2)
+			var dk := pow((x - cast_c.x) / cast_r.x, 2) + pow((y - cast_c.y) / cast_r.y, 2)
+			if dc <= 1.0: img.set_pixel(x, y, Color("3e0a16"))
+			elif dk <= 1.0: img.set_pixel(x, y, Color("5c1222"))
 
 # ---------- mesa ----------
 func edge_y(x: int) -> int:
@@ -197,9 +203,9 @@ func make_table() -> Image:
 				marks.append(Vector2i(x, y))
 	for m in marks: img.set_pixel(m.x, m.y, PANO[0])
 	# sombras de contacto de los objetos sobre el paño
-	shadow(img, 642, 260, 36, 6)
-	shadow(img, 580, 266, 32, 6)
-	shadow(img, 684, 307, 40, 7)
+	shadow(img, 644, 256, 24)
+	shadow(img, 574, 268, 22)
+	shadow(img, 676, 303, 34)
 	# ménsulas del frente
 	bracket(img, 2, 370, false)
 	bracket(img, W - 17, 370, true)
