@@ -2,8 +2,7 @@ extends SceneTree
 ## Genera el arte pixel-v3 de la mesa de juego (Fase 3):
 ##   mesa-v3.png        madera + paño bordó + frente + piso (720×314 lógicos, desde la fila 136)
 ##   termo-mesa-v3.png  el termo de la tienda alargado para la mesa (72×175)
-##   mate-v3.png, vaso-v3.png  objetos sobre el paño
-##   mesa-parche-v3.png fondo reconstruido detrás del termo viejo (hasta la Fase 4)
+##   (mate-v3.png y vaso-v3.png salen de make_mate_vaso.gd)
 ## Ejecutar: godot --path . --script res://tools/art/make_mesa.gd   (con GPU no hace falta; headless sirve)
 
 const PixelLib = preload("res://tools/art/pixel_lib.gd")
@@ -69,14 +68,20 @@ func flip_rows(rows: Array, fx: bool, fy: bool) -> Array:
 	if fy: out.reverse()
 	return out
 
-func shadow(img: Image, cx: float, cy: float, rx: float, ry: float) -> void:
-	for y in range(int(cy - ry) - 1, int(cy + ry) + 2):
-		for x in range(int(cx - rx) - 1, int(cx + rx) + 2):
+## Sombra de contacto de un objeto apoyado en el paño: una sombra proyectada hacia la
+## derecha (luz arriba-izquierda) y un núcleo más oscuro justo bajo la base. Dos tonos planos.
+func shadow(img: Image, cx: float, base_y: float, rx: float) -> void:
+	var cast_c := Vector2(cx + rx * 0.3, base_y + 1.0)
+	var cast_r := Vector2(rx * 1.3, 6.0)
+	var core_c := Vector2(cx, base_y - 1.0)
+	var core_r := Vector2(rx * 0.97, 4.5)
+	for y in range(int(base_y) - 8, int(base_y) + 9):
+		for x in range(int(cx - rx * 1.7), int(cx + rx * 1.7)):
 			if x < 0 or x >= W or y < 0 or y >= H or not in_pano(x, y): continue
-			var d := pow((x - cx) / rx, 2) + pow((y - cy) / ry, 2)
-			if d < 0.5: img.set_pixel(x, y, PANO[0].lerp(PANO[1], 0.35))
-			elif d < 1.0: img.set_pixel(x, y, PANO[1].lerp(PANO[0], 0.65))
-			elif d < 1.25 and (x + y) % 2 == 0: img.set_pixel(x, y, PANO[1].lerp(PANO[2], 0.45))
+			var dc := pow((x - core_c.x) / core_r.x, 2) + pow((y - core_c.y) / core_r.y, 2)
+			var dk := pow((x - cast_c.x) / cast_r.x, 2) + pow((y - cast_c.y) / cast_r.y, 2)
+			if dc <= 1.0: img.set_pixel(x, y, Color("3e0a16"))
+			elif dk <= 1.0: img.set_pixel(x, y, Color("5c1222"))
 
 # ---------- mesa ----------
 func edge_y(x: int) -> int:
@@ -198,9 +203,9 @@ func make_table() -> Image:
 				marks.append(Vector2i(x, y))
 	for m in marks: img.set_pixel(m.x, m.y, PANO[0])
 	# sombras de contacto de los objetos sobre el paño
-	shadow(img, 642, 260, 36, 6)
-	shadow(img, 580, 266, 32, 6)
-	shadow(img, 684, 307, 40, 7)
+	shadow(img, 644, 256, 24)
+	shadow(img, 574, 268, 22)
+	shadow(img, 676, 303, 34)
 	# ménsulas del frente
 	bracket(img, 2, 370, false)
 	bracket(img, W - 17, 370, true)
@@ -215,159 +220,7 @@ func make_thermos_table() -> Image:
 		for x in range(72): img.set_pixel(x, y, src.get_pixel(x, sy))
 	return img
 
-# ---------- mate ----------
-func make_mate() -> Image:
-	var img := PixelLib.make(68, 118)
-	var cx := 30.0
-	var wood: Array = WOOD
-	# panza
-	for y in range(58, 113):
-		var hw := 0.0
-		var foot := y >= 103
-		if foot:
-			hw = 13.0 + (y - 103) * 0.15
-		else:
-			var t := (y - 58.0) / 44.0
-			hw = lerpf(24.0, 13.0, pow(t, 2.2)) + 6.0 * sin(PI * pow(t, 0.9))
-		for x in range(int(cx - hw) - 1, int(cx + hw) + 2):
-			var u := (x + 0.5 - cx) / hw
-			if absf(u) > 1.0: continue
-			var v := (y - 80.0) / 32.0
-			var lit := -0.75 * u - 0.45 * v
-			var idx := 0
-			if lit > 0.62: idx = 4
-			elif lit > 0.18: idx = 3
-			elif lit > -0.28: idx = 2
-			elif lit > -0.72: idx = 1
-			if foot: idx = maxi(idx - 1, 0)
-			var c: Color = wood[idx]
-			if not foot:
-				var d := pow((x + 0.5 - (cx + 3)) / 11.0, 2) + pow((y - 82.0) / 15.0, 2)
-				var d2 := pow((x + 0.5 - (cx + 3)) / 5.0, 2) + pow((y - 82.0) / 7.0, 2)
-				if absf(d - 1.0) < 0.2 or absf(d2 - 1.0) < 0.3: c = wood[maxi(idx - 1, 0)]
-			img.set_pixel(x, y, c)
-	for x in range(int(cx - 14), int(cx + 15)):
-		img.set_pixel(x, 103, wood[0])
-		img.set_pixel(x, 104, wood[3] if x < cx else wood[2])
-	# virola de plata con greca
-	for y in range(47, 58):
-		for x in range(int(cx - 25), int(cx + 25)):
-			var u := (x + 0.5 - cx) / 25.0
-			var s := PixelLib.SILVER
-			var idx := 2
-			if u < -0.8: idx = 1
-			elif u < -0.3: idx = 3
-			elif u < 0.05: idx = 4
-			elif u < 0.5: idx = 3
-			elif u < 0.85: idx = 2
-			else: idx = 1
-			var c: Color = s[idx]
-			var gy := y - 49
-			if gy >= 0 and gy < 6:
-				var gx := (x - 6) % 8
-				var pat: Array = ["########", "#......#", "#.####.#", "#.#..#..", "#.#.####", "#.#....."]
-				if String(pat[gy])[gx] == "#": c = s[0] if idx >= 3 else s[0].lerp(s[1], 0.3)
-			img.set_pixel(x, y, c)
-	# boca: aro de plata y yerba
-	for y in range(36, 52):
-		for x in range(int(cx - 26), int(cx + 27)):
-			var d := pow((x + 0.5 - cx) / 25.0, 2) + pow((y - 44.0) / 7.0, 2)
-			if d > 1.0: continue
-			var c: Color = PixelLib.SILVER[3]
-			if d < 0.66:
-				var r := hash2(x, y, 31)
-				c = YERBA[1]
-				if r < 0.2: c = YERBA[0]
-				elif r > 0.78: c = YERBA[2]
-				if y < 42: c = c.darkened(0.12)
-			elif x + y < cx + 44: c = PixelLib.SILVER[4]
-			img.set_pixel(x, y, c)
-	# bombilla
-	for i in range(0, 41):
-		var t := i / 40.0
-		var bx := roundi(lerpf(33.0, 59.0, t))
-		var by := roundi(lerpf(44.0, 6.0, t))
-		PixelLib.put(img, bx, by, PixelLib.SILVER[3])
-		PixelLib.put(img, bx + 1, by, PixelLib.SILVER[2])
-		PixelLib.put(img, bx + 2, by, PixelLib.SILVER[1])
-	for i in range(4):
-		PixelLib.put(img, 58 + i, 4 + int(i / 3), PixelLib.SILVER[3 if i < 2 else 2])
-		PixelLib.put(img, 58 + i, 5 + int(i / 3), PixelLib.SILVER[1])
-	for i in range(23, 27):
-		var t2 := i / 40.0
-		var rx := roundi(lerpf(33.0, 59.0, t2))
-		var ry := roundi(lerpf(44.0, 6.0, t2))
-		for k in range(3): PixelLib.put(img, rx + k, ry, PixelLib.COPPER[3 if k == 0 else (2 if k == 1 else 1)])
-	PixelLib.outline(img)
-	return img
-
 # ---------- vaso de cuero ----------
-func arc(x: int, depth: float, x0: int, x1: int) -> int:
-	var t := (x - (x0 + x1) / 2.0) / ((x1 - x0) / 2.0)
-	return roundi(depth * (1.0 - t * t))
-
-func make_cup() -> Image:
-	var img := PixelLib.make(72, 94)
-	var cx := 35.5
-	var blk: Array = PixelLib.BLACK
-	for y in range(8, 92):
-		var hw := lerpf(35.0, 31.0, (y - 8.0) / 83.0)
-		for x in range(int(cx - hw) - 1, int(cx + hw) + 2):
-			var u := (x + 0.5 - cx) / hw
-			if absf(u) > 1.0: continue
-			var bottom := 87 + arc(x, 4.0, int(cx - hw), int(cx + hw))
-			if y > bottom: continue
-			var idx := 0
-			if u < -0.84: idx = 1
-			elif u < -0.6: idx = 2
-			elif u < -0.42: idx = 1
-			elif u > 0.8: idx = 0
-			var c: Color = blk[idx]
-			if y >= bottom - 1: c = blk[0].darkened(0.4)
-			img.set_pixel(x, y, c)
-	# costuras doradas
-	for row in [[15, 3.0, 16], [83, 4.0, 4]]:
-		for x in range(6, 66):
-			if (x / 4) % 3 == 2: continue
-			var hw2 := lerpf(35.0, 31.0, (row[0] - 8.0) / 83.0)
-			if absf(x + 0.5 - cx) > hw2 - 2.0: continue
-			var yy: int = row[0] + arc(x, float(row[1]), 4, 67)
-			var shade := PixelLib.GOLD[3] if x < 30 else (PixelLib.GOLD[2] if x < 50 else PixelLib.GOLD[1])
-			PixelLib.put(img, x, yy, shade)
-	# boca: aro de cuero y fieltro verde
-	for y in range(0, 17):
-		for x in range(0, 72):
-			var d := pow((x + 0.5 - cx) / 35.5, 2) + pow((y - 8.0) / 8.0, 2)
-			if d > 1.0: continue
-			var c: Color = blk[2] if (x + y) < 40 else blk[1]
-			if d < 0.8:
-				var din := pow((x + 0.5 - cx) / 31.5, 2) + pow((y - 8.5) / 6.0, 2)
-				if din < 1.0:
-					c = GREEN[2] if y > 7 else (GREEN[1] if y > 4 else GREEN[0])
-					pass
-				else:
-					c = blk[1]
-			img.set_pixel(x, y, c)
-	PixelLib.outline(img)
-	return img
-
-# ---------- parche del fondo detrás del termo viejo ----------
-func make_patch() -> Image:
-	var src := Image.load_from_file(ProjectSettings.globalize_path(BASE_PLATE))
-	var sx := float(src.get_width()) / 1440.0
-	var sy := float(src.get_height()) / 900.0
-	var img := PixelLib.make(90, 64)
-	for ly in range(64):
-		var py := 168 + ly * 2 + 1
-		var left := src.get_pixel(int(1170 * sx), int(py * sy))
-		var right := src.get_pixel(int(1360 * sx), int(py * sy))
-		for lx in range(90):
-			var t := (lx + 0.5) / 90.0
-			var c := left.lerp(right, t)
-			c = Color(roundf(c.r * 20.0) / 20.0, roundf(c.g * 20.0) / 20.0, roundf(c.b * 20.0) / 20.0, 1.0)
-			img.set_pixel(lx, ly, c)
-	return img
-
 func upscale(img: Image, k: int) -> Image:
 	var big := img.duplicate() as Image
 	big.resize(img.get_width() * k, img.get_height() * k, Image.INTERPOLATE_NEAREST)
@@ -379,19 +232,14 @@ func blit(dst: Image, src: Image, px: int, py: int) -> void:
 func _init() -> void:
 	var table := make_table()
 	var thermos := make_thermos_table()
-	var mate := make_mate()
-	var cup := make_cup()
-	var patch := make_patch()
+	var mate := Image.load_from_file(ProjectSettings.globalize_path(OUT + "mate-v3.png"))
+	var cup := Image.load_from_file(ProjectSettings.globalize_path(OUT + "vaso-v3.png"))
 	table.get_region(Rect2i(0, TOP, W, H - TOP)).save_png(OUT + "mesa-v3.png")
 	thermos.save_png(OUT + "termo-mesa-v3.png")
-	mate.save_png(OUT + "mate-v3.png")
-	cup.save_png(OUT + "vaso-v3.png")
-	patch.save_png(OUT + "mesa-parche-v3.png")
 	# vista previa 1440×900 con las mismas posiciones que usa backdrop.gd
 	var plate := Image.load_from_file(ProjectSettings.globalize_path(BASE_PLATE))
 	plate.resize(1440, 900, Image.INTERPOLATE_NEAREST)
 	plate.convert(Image.FORMAT_RGBA8)
-	blit(plate, patch, 1176, 168)
 	blit(plate, table, 0, 0)
 	blit(plate, thermos, 1203, 168)
 	blit(plate, mate, 1088, 310)

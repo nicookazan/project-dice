@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://c8ukvp4j26mv3"
-path="res://.godot/imported/mesa-parche-v3.png-3544b1d40c58189de7784cc4980f0a68.ctex"
+uid="uid://cgjvipw1q4jvr"
+path="res://.godot/imported/salon-v3.png-043520fc9ae999b7b20007433b13bee3.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/art/pixel-v3/mesa-parche-v3.png"
-dest_files=["res://.godot/imported/mesa-parche-v3.png-3544b1d40c58189de7784cc4980f0a68.ctex"]
+source_file="res://assets/art/pixel-v3/salon-v3.png"
+dest_files=["res://.godot/imported/salon-v3.png-043520fc9ae999b7b20007433b13bee3.ctex"]
 
 [params]
 

@@ -8,7 +8,7 @@ const CLEAN_TABLE = preload("res://assets/art/environment-v2/mesa-libreta-fronta
 const CUP_TABLE_ART = preload("res://assets/art/environment-v2/vaso-cuero-negro-mesa-v2.png")
 const CUP_SHOP_ART = preload("res://assets/art/environment-v2/vaso-cuero-negro-tienda-v1.png")
 const TABLE_V3 = preload("res://assets/art/pixel-v3/mesa-v3.png")
-const TABLE_PATCH_V3 = preload("res://assets/art/pixel-v3/mesa-parche-v3.png")
+const SALON_V3 = preload("res://assets/art/pixel-v3/salon-v3.png")
 const THERMOS_TABLE_V3 = preload("res://assets/art/pixel-v3/termo-mesa-v3.png")
 const MATE_V3 = preload("res://assets/art/pixel-v3/mate-v3.png")
 const CUP_V3 = preload("res://assets/art/pixel-v3/vaso-v3.png")
@@ -74,8 +74,8 @@ func _draw() -> void:
 	var cup_patch := Rect2(50, 640, 280, 235) if shop_mode else Rect2(1100, 330, 320, 260)
 	var cup_scale := Vector2(cup_art.get_size()) / Vector2(1440, 900)
 	if shop_mode: draw_texture_rect_region(cup_art, cup_patch, Rect2(cup_patch.position * cup_scale, cup_patch.size * cup_scale))
-	# Rebuilds the room behind the old thermos until the salon is redrawn (phase 4).
-	else: draw_texture_rect(TABLE_PATCH_V3, Rect2(1176, 168, 180, 128), false)
+	# Pixel-v3 club room (walls, lamps, pictures, chairs); windows are drawn over it.
+	else: draw_texture_rect(SALON_V3, Rect2(0, 0, 1440, 300), false)
 	var panels := {"dia": 0, "tarde": 1, "noche": 2, "espacio": 3, "agujero_negro": 4, "cielo": 5}
 	var cell := Vector2(EXTERIORS.get_size()) / Vector2(2, 3)
 	var index: int = panels.get(environment_id, 0)
