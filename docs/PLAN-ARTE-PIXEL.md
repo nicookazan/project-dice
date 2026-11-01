@@ -99,7 +99,7 @@ Cada fase termina con: assets en `assets/art/pixel-v3/`, capturas antes/después
 
 ## Siguiente paso propuesto
 
-**Fase 8** (interfaz y cierre), cuando el autor lo pida. Antes, revisar los gestos de la mano y definir el jefe final con los tres guardianes (ver Fase 7).
+**Fase 8** (interfaz y cierre), cuando el autor lo pida. Aparte, quedan por iterar los gestos de la mano y por definir el jefe final con los tres guardianes (ver Fase 7).
 
 ## Registro de avance
 
@@ -159,6 +159,6 @@ Cada fase termina con: assets en `assets/art/pixel-v3/`, capturas antes/después
   - **Figura de luz** (`guardian-figura-v3.png`): silueta encapuchada con ojos blancos, túnica estrellada y brazos abiertos.
   - **Dado cósmico** (`guardian-dado-v3.png`): dado dorado con un ojo en un punto, mandorla y dados en órbita.
 - **Pendiente de definir (no está en el PRD):** el jefe final y su relación con los guardianes (cantidad y orden de encuentros, reglas, en qué nivel aparecen, arte del jefe). No se agregó nada al PRD ni a las fichas; el tablero de Notion debe actualizarse a mano cuando el autor lo decida. Mientras tanto, `scripts/backdrop.gd` conserva el triángulo provisional para `actor == "god"`.
-- **Gestos nuevos de la mano (a revisar más adelante):** abrir, cerrar, pulgar arriba y pulgar abajo, para reaccionar a lo que hace el jugador. Se arman con las piezas de la mano aprobada (`tools/art/make_mano_gestos.py`); todavía son bocetos sin integrar y falta decidir cuándo se dispara cada uno.
+- **Gestos de la mano (descartados por ahora):** se probaron abrir, cerrar, pulgar arriba y pulgar abajo y no convencieron al autor; no quedan en el repo. La mano conserva solo la animación inicial. Se iteran más adelante, probablemente con piezas dibujadas de cero (puño con nudillos, pulgar plegado) y disparadas por lo que haga el jugador.
 - **Efectos de puntuación y rotura:** no hay arte existente y no se inventó; quedan fuera hasta que el autor los pida.
 - Suite: 2195 comprobaciones, 0 fallos.
