@@ -45,3 +45,5 @@ El cuerpo del dado ahora usa el sprite transparente `assets/art/ivory-die-v3.png
 `assets/art/pixel-v3/exteriores-v3.png` (01/11/2026): generado con `python tools/art/make_exteriores.py` (sin IA de imagen nueva) a partir de `environment-v2/exteriores-v2.png` (Imagegen; prompts en `environment-v2/PROMPTS.md`): reducción a la grilla lógica, paleta corta por ambiente y limpieza de ruido, sin redibujar.
 
 `assets/art/pixel-v3/mano-v3.png` y `nube-v3.png` (01/11/2026): `tools/art/make_mano_dios.py` y `make_mano_anim.py` (sin IA de imagen nueva), a partir de la mano y la nube recuperadas de `club-table-v2.png`; la animación son cuadros derivados de esa mano. `pixel-v3/guardianes/*.png`: `tools/art/make_dios_opciones.py`, diseño nuevo por código (sin IA de imagen), propuesto por el asistente y aprobado por el autor como guardianes del jefe final.
+
+`assets/art/pixel-v3/ui/*.png` (01/11/2026): `tools/art/make_interfaz.py` (sin IA de imagen). Botones, panel y marco del cartel de la interfaz, con el diseño que ya tenía el juego (fondo azul noche, borde naranja escalonado, ornamento azul) llevado a la grilla de 2×2.

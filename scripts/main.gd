@@ -6,6 +6,7 @@ const Zone = preload("res://scripts/drop_zone.gd")
 const Backdrop = preload("res://scripts/backdrop.gd")
 const CoinArt = preload("res://scripts/coin_art.gd")
 const ShopArt = preload("res://scripts/shop_art.gd")
+const UiSkin = preload("res://scripts/ui_skin.gd")
 const ItemTooltip = preload("res://scripts/item_tooltip.gd")
 const HoverButton = preload("res://scripts/hover_button.gd")
 const HoverPanel = preload("res://scripts/hover_panel.gd")
@@ -84,6 +85,12 @@ func _ready() -> void:
 	theme_value.set_font("font", "TooltipLabel", ItemTooltip.pixel_font())
 	theme_value.set_font_size("font_size", "TooltipLabel", 18)
 	theme_value.set_color("font_color", "TooltipLabel", cream)
+	# Pixel-v3 look for every Godot dialog and its buttons (fichas, confirmaciones, opciones).
+	for state in ["normal", "hover", "pressed", "disabled"]: theme_value.set_stylebox(state, "Button", UiSkin.button(state))
+	theme_value.set_stylebox("focus", "Button", box(Color.TRANSPARENT, Color.WHITE, 3))
+	theme_value.set_color("font_color", "Button", cream)
+	theme_value.set_color("font_hover_color", "Button", Color("fff0c7"))
+	theme_value.set_color("font_disabled_color", "Button", Color("85867b"))
 	theme = theme_value
 	background = Backdrop.new()
 	background.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -93,6 +100,7 @@ func _ready() -> void:
 	detail.title = "Libreta · detalle de cálculo"
 	detail.min_size = Vector2i(520, 260)
 	add_child(detail)
+	skin_dialog(detail)
 	detail_body = RichTextLabel.new()
 	detail_body.name = "DetailText"
 	detail_body.selection_enabled = true
@@ -104,6 +112,7 @@ func _ready() -> void:
 	confirmation.exclusive = true
 	confirmation.ok_button_text = "Abandonar"
 	confirmation.cancel_button_text = "Seguir jugando"
+	skin_dialog(confirmation)
 	confirmation.confirmed.connect(confirm_navigation)
 	confirmation.canceled.connect(cancel_navigation)
 	confirmation.get_cancel_button().pressed.connect(cancel_navigation)
@@ -119,9 +128,22 @@ func _ready() -> void:
 		get_viewport().get_texture().get_image().save_png("res://test-results/mesa.png")
 		get_tree().quit()
 
+func skin_dialog(window: Window) -> void:
+	# Pixel-v3 card for Godot's embedded dialogs. The decoration is left empty and the framed panel carries the look;
+	# the title floats above it in gold with a dark outline so it reads over any background.
+	window.add_theme_stylebox_override("embedded_border", StyleBoxEmpty.new())
+	window.add_theme_stylebox_override("embedded_unfocused_border", StyleBoxEmpty.new())
+	window.add_theme_stylebox_override("panel", UiSkin.panel(Vector4(20, 20, 20, 20)))
+	window.add_theme_color_override("title_color", gold)
+	window.add_theme_color_override("title_outline_modulate", Color("0d1728"))
+	window.add_theme_constant_override("title_height", 40)
+	window.add_theme_constant_override("title_outline_size", 10)
+	window.add_theme_font_size_override("title_font_size", 22)
+	window.add_theme_font_override("title_font", ItemTooltip.pixel_font())
+
 func present_detail(title: String, text: String, compact := false) -> void:
 	if is_instance_valid(thermos_panel): thermos_panel.hide()
-	detail.remove_theme_stylebox_override("panel")
+	detail.add_theme_stylebox_override("panel", UiSkin.panel(Vector4(20, 20, 20, 20)))
 	if is_instance_valid(settings_panel): settings_panel.hide()
 	if is_instance_valid(dice_gallery): dice_gallery.hide()
 	detail_body.show()
@@ -284,6 +306,9 @@ func panel(parent: Node, rect: Rect2, bg: Color, border := Color.TRANSPARENT) ->
 	node.position = rect.position
 	node.size = rect.size
 	node.add_theme_stylebox_override("panel", box(bg, border, 2 if border.a > 0 else 0))
+	if border == gold and bg in [Color("0d1728"), Color("263c3d")] and not preferences.high_contrast:
+		node.add_theme_stylebox_override("panel", UiSkin.panel())
+		node.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	parent.add_child(node)
 	return node
 
@@ -311,10 +336,8 @@ func button(parent: Node, text_value: String, rect: Rect2, action: Callable, dis
 	node.size = rect.size
 	node.disabled = disabled
 	node.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
-	node.add_theme_stylebox_override("normal", box(Color("0b3152") if accent else Color("101e30"), Color("d39a41"), 3))
-	node.add_theme_stylebox_override("hover", box(Color("164e7c") if accent else Color("283d52"), Color("ffcc77"), 3))
-	node.add_theme_stylebox_override("pressed", box(Color("631b2a"), gold, 3))
-	node.add_theme_stylebox_override("disabled", box(Color("222129"), Color("775c39"), 2))
+	node.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	for state in ["normal", "hover", "pressed", "disabled"]: node.add_theme_stylebox_override(state, UiSkin.button(state, accent))
 	node.add_theme_color_override("font_color", cream)
 	node.add_theme_color_override("font_disabled_color", Color("85867b"))
 	if preferences.high_contrast:
@@ -1221,23 +1244,11 @@ func shop_offer_text(offer: Dictionary) -> Array:
 	return ["Oferta", ""]
 
 func shop_skin(ornate := false) -> StyleBoxTexture:
-	var atlas := AtlasTexture.new()
-	atlas.atlas = Backdrop.SHOP_ART
-	var unit := Vector2(atlas.atlas.get_width() / 1440.0, atlas.atlas.get_height() / 900.0)
-	atlas.region = Rect2(Vector2(45, 18) * unit, Vector2(462, 143) * unit) if ornate else Rect2(Vector2(554, 168) * unit, Vector2(198, 83) * unit)
-	var skin := StyleBoxTexture.new()
-	skin.texture = atlas
-	for side in [SIDE_LEFT, SIDE_TOP, SIDE_RIGHT, SIDE_BOTTOM]:
-		skin.set_texture_margin(side, 30 if ornate else 15)
-		skin.set_content_margin(side, 10 if side in [SIDE_LEFT, SIDE_RIGHT] else 3)
-	return skin
+	return UiSkin.title() if ornate else UiSkin.button("normal")
 
 func skin_shop_button(node: Button) -> void:
 	if preferences.high_contrast: return
-	for state in ["normal", "hover", "pressed", "disabled"]:
-		var skin := shop_skin()
-		skin.modulate_color = Color("ffffff") if state == "normal" else Color("ffe1a1") if state == "hover" else Color("d5ac73") if state == "pressed" else Color("655d51")
-		node.add_theme_stylebox_override(state, skin)
+	for state in ["normal", "hover", "pressed", "disabled"]: node.add_theme_stylebox_override(state, UiSkin.button(state))
 	node.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 
 func shop_frame(rect: Rect2, ornate := false) -> Panel:
