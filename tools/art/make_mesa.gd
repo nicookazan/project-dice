@@ -2,7 +2,7 @@ extends SceneTree
 ## Genera el arte pixel-v3 de la mesa de juego (Fase 3):
 ##   mesa-v3.png        madera + paño bordó + frente + piso (720×314 lógicos, desde la fila 136)
 ##   termo-mesa-v3.png  el termo de la tienda alargado para la mesa (72×175)
-##   (mate-v3.png y vaso-v3.png salen de make_mate_vaso.gd)
+##   (mate-v3.png sale de make_mate.gd y vaso-v3.png de make_mate_vaso.gd)
 ## Ejecutar: godot --path . --script res://tools/art/make_mesa.gd   (con GPU no hace falta; headless sirve)
 
 const PixelLib = preload("res://tools/art/pixel_lib.gd")

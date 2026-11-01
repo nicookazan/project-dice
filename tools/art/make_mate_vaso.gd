@@ -1,6 +1,7 @@
 extends SceneTree
-## Mate y vaso de pixel-v3 (aprobada la opción A: píxel de 2×2 px). Salida: assets/art/pixel-v3/mate-v3.png y vaso-v3.png.
-## También deja la variante fina (B) y la comparación en test-results/propuesta/.
+## Vaso de pixel-v3 (aprobada la opción A: píxel de 2×2 px). Salida: assets/art/pixel-v3/vaso-v3.png.
+## El mate de madera de este script quedó reemplazado: mate-v3.png sale de make_mate.gd (calabaza).
+## Acá solo se dibuja para las comparaciones que deja en test-results/propuesta/.
 ## Ejecutar: godot --headless --path . --script res://tools/art/make_mate_vaso.gd
 
 const OUT := "res://test-results/propuesta/"
@@ -162,7 +163,6 @@ func _init() -> void:
 		var mate := render(mate_px, 136, 236, p)
 		var cup := render(cup_px, 144, 188, p)
 		if p == 2:
-			mate.save_png("res://assets/art/pixel-v3/mate-v3.png")
 			cup.save_png("res://assets/art/pixel-v3/vaso-v3.png")
 		up(mate, 6 if p == 2 else 3).save_png(OUT + "mate-" + tag + ".png")
 		up(cup, 6 if p == 2 else 3).save_png(OUT + "vaso-" + tag + ".png")

@@ -133,6 +133,12 @@ Cada fase termina con: assets en `assets/art/pixel-v3/`, capturas antes/después
 - Se eliminó `mesa-parche-v3.png` (ya no hace falta). Suite: 2195 comprobaciones, 0 fallos.
 - **Mate y vaso rehechos (opción A aprobada):** forma original, rampas de 7 tonos (madera, plata, cuero) y 5 (yerba, fieltro), sombreado esférico y bombilla con anillos. Generados con `tools/art/make_mate_vaso.gd` (la variante fina B quedó descartada).
 
+**Mate de calabaza (01/11/2026, rama `feature/mate-calabaza`):**
+- `mate-v3.png` reemplaza al mate de madera con greca. Lo eligió el autor (opción Z2) después de varias rondas de bocetos en `test-results/propuesta/`. Se genera con `tools/art/make_mate.gd`; `make_mate_vaso.gd` ahora solo escribe el vaso.
+- Calabaza redonda con panel de cuero en dos tonos y costura dorada, paleta de 10 marrones con corrimiento de tono (sombras hacia el bordó, luces hacia el ocre), manchas suaves, brillo y luz de rebote. Aro, collar con remaches y tiras de plata que rematan en un remache. Sin patas ni base: el fondo está apenas aplanado.
+- Bombilla de metal en perspectiva, más gruesa hacia la punta, con codo, boquilla achatada con abertura y collarín dorado, virola dorada grabada, destellos y sin contorno negro. Entra por un hueco húmedo de la yerba, con borde irregular, reflejo verdoso y hojitas pegadas.
+- Mismo marco (136×236, píxel de 2×2) y misma posición en `backdrop.gd`. El dibujo se bajó 26 px para que apoye sobre la sombra de contacto que ya hornea `make_mesa.gd` (`mesa-v3.png` no cambia). Suite: 2195 comprobaciones, 0 fallos. Revisado en la captura `test-results/grupos.png`.
+
 **Fase 5 — hecha y aprobada por el autor (01/11/2026, rama `feature/pixel-tienda`):**
 - Fondo de la tienda (`pixel-v3/tienda-v3.png`, 720×450 px lógicos, 119 colores), generado con `python tools/art/make_tienda.py`: salón con los motivos de `salon-v3.png` y bandas de arriba y abajo tranquilas para la interfaz.
 - **Vendedor** (`tools/art/vendedor.py`): conversión fiel del dibujo de `shop-salesman-v1.png` con el método de sprite-forge. Se usa la mediana por celda en la grilla lógica, un suavizado que respeta bordes, una paleta propia por zona (cara 10 tonos, pelo 6, traje 6, manos 8) y limpieza de manchas fuera de los rasgos. A mano solo se repuso el brillo de las pupilas y el blanco del ojo.

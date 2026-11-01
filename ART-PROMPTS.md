@@ -34,7 +34,9 @@ El cuerpo del dado ahora usa el sprite transparente `assets/art/ivory-die-v3.png
 
 `assets/art/pixel-v3/termo-v3.png` y `stickers-v3.png`: generados con `tools/art/make_thermos_stickers.gd` (sin IA de imagen), a partir del termo plateado con asa negra y de los seis stickers (par, trío, escalera, full, póker, generala) existentes.
 
-`assets/art/pixel-v3/mesa-v3.png` y `termo-mesa-v3.png` (`tools/art/make_mesa.gd`), `mate-v3.png` y `vaso-v3.png` (`tools/art/make_mate_vaso.gd`): generados (sin IA de imagen), tomando como referencia la composición de `mesa-libreta-frontal-v1.png` (paño con tres paneles, mate de madera con virola, termo de acero, vaso de cuero negro con costuras doradas).
+`assets/art/pixel-v3/mesa-v3.png` y `termo-mesa-v3.png` (`tools/art/make_mesa.gd`) y `vaso-v3.png` (`tools/art/make_mate_vaso.gd`): generados (sin IA de imagen), tomando como referencia la composición de `mesa-libreta-frontal-v1.png` (paño con tres paneles, termo de acero, vaso de cuero negro con costuras doradas).
+
+`assets/art/pixel-v3/mate-v3.png` (01/11/2026): generado con `tools/art/make_mate.gd` (sin IA de imagen). Reemplaza al mate de madera con virola de greca. Lo eligió el autor (opción Z2) tras varias rondas de bocetos, a partir de dos fotos de referencia que aportó: un mate de cuero negro con bombilla de alpaca y un mate de calabaza pixelado con aro y tiras de plata. Calabaza redonda con panel de cuero en dos tonos de marrón y costura dorada; collar, aro y tiras de plata con remaches; sin patas ni base. Bombilla de metal en perspectiva (se ensancha hacia la punta), con codo, boquilla con abertura, virola dorada y sin contorno negro; entra por un hueco húmedo de la yerba.
 
 `assets/art/pixel-v3/salon-v3.png`: generado con `tools/art/make_salon.gd` (sin IA de imagen), con la distribución del salón de `mesa-libreta-frontal-v1.png` (ventanas, lámparas, cuadros, sillas, banderín argentino, planta).
 
