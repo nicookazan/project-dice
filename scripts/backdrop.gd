@@ -12,6 +12,10 @@ const SALON_V3 = preload("res://assets/art/pixel-v3/salon-v3.png")
 const THERMOS_TABLE_V3 = preload("res://assets/art/pixel-v3/termo-mesa-v3.png")
 const MATE_V3 = preload("res://assets/art/pixel-v3/mate-v3.png")
 const CUP_V3 = preload("res://assets/art/pixel-v3/vaso-v3.png")
+const CLOUD_V3 = preload("res://assets/art/pixel-v3/nube-v3.png")
+const HAND_V3 = preload("res://assets/art/pixel-v3/mano-v3.png")
+const HAND_FRAMES := 8
+const HAND_FRAME_SECONDS := 0.11
 const StickerArt = preload("res://scripts/sticker_art.gd")
 const StickerDefinitions = preload("res://scripts/stickers.gd")
 var stickers: Dictionary = {}
@@ -21,10 +25,6 @@ const SHOP_THERMOS_RECT = Rect2(65, 525, 145, 330)
 const CUP_RECT = Rect2(1260, 400, 145, 180)
 const CUP_MOUTH = Vector2(1330, 425)
 var shop_mode := false
-# Texture polygons reuse the recovered plate's actual pixels, without repainting
-# the approved hand/cloud or carrying a rectangular piece of its old sky.
-const CLOUD_OUTLINE = [Vector2(658, 0), Vector2(946, 0), Vector2(942, 13), Vector2(929, 24), Vector2(908, 29), Vector2(895, 27), Vector2(882, 36), Vector2(860, 38), Vector2(844, 30), Vector2(826, 34), Vector2(815, 25), Vector2(801, 29), Vector2(788, 35), Vector2(773, 37), Vector2(754, 44), Vector2(733, 43), Vector2(714, 34), Vector2(697, 30), Vector2(679, 28), Vector2(665, 20)]
-const HAND_OUTLINE = [Vector2(788, 25), Vector2(810, 24), Vector2(828, 38), Vector2(834, 53), Vector2(849, 65), Vector2(860, 79), Vector2(870, 94), Vector2(871, 101), Vector2(863, 104), Vector2(853, 102), Vector2(842, 90), Vector2(841, 82), Vector2(832, 78), Vector2(817, 83), Vector2(815, 92), Vector2(810, 98), Vector2(800, 98), Vector2(794, 92), Vector2(793, 107), Vector2(796, 124), Vector2(792, 131), Vector2(779, 132), Vector2(776, 125), Vector2(774, 116), Vector2(773, 121), Vector2(764, 122), Vector2(759, 116), Vector2(756, 107), Vector2(753, 112), Vector2(746, 112), Vector2(741, 106), Vector2(737, 98), Vector2(736, 85), Vector2(740, 78), Vector2(745, 70), Vector2(755, 59), Vector2(763, 53), Vector2(770, 46), Vector2(782, 40)]
 const WINDOWS = [Rect2(470, 0, 47, 217), Rect2(534, 0, 378, 219), Rect2(952, 0, 92, 215), Rect2(1198, 43, 73, 177)]
 var environment_id := "dia"
 var actor := "common"
@@ -119,7 +119,10 @@ func _draw() -> void:
 		draw_circle(center + Vector2(0, 7), 18, Color("f6eed4"))
 		draw_circle(center + Vector2(0, 7), 9, Color("302532"))
 		return
-	var offset := Vector2(-45, 12 + (sin(elapsed * 1.1) * 3 if motion else 0))
-	draw_recovered_figure(CLOUD_OUTLINE, Vector2(-45, 0))
-	draw_recovered_figure(HAND_OUTLINE, offset)
+	# Pixel-v3 cloud and hand: logical pixels land on 2x2 blocks, so the bob moves in 2 px steps and the
+	# fingers drum through an 8-frame cycle (frame 0 when motion is reduced or off).
+	var bob := 2.0 * roundf(sin(elapsed * 1.1) * 1.5) if motion else 0.0
+	var frame := int(elapsed / HAND_FRAME_SECONDS) % HAND_FRAMES if motion else 0
+	draw_texture_rect(CLOUD_V3, Rect2(552, 0, 262, 40), false)
+	draw_texture_rect_region(HAND_V3, Rect2(624, 34 + bob, 122, 106), Rect2(frame * 61, 0, 61, 53))
 

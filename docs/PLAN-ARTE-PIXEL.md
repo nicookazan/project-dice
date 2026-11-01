@@ -1,6 +1,6 @@
 # Plan de arte — menos "IA", más pixel art real
 
-Fecha: 31 de octubre de 2026. Estado (01/11/2026): **fases 0–6 hechas; 7–8 pendientes** (ver el registro de avance al final). Se avanza una fase por vez, con aprobación del autor antes de pasar a la siguiente.
+Fecha: 31 de octubre de 2026. Estado (01/11/2026): **fases 0–7 hechas (Dios queda para cuando exista el jefe final); 8 pendiente** (ver el registro de avance al final). Se avanza una fase por vez, con aprobación del autor antes de pasar a la siguiente.
 
 ## Decisiones de partida (del autor)
 
@@ -99,7 +99,7 @@ Cada fase termina con: assets en `assets/art/pixel-v3/`, capturas antes/después
 
 ## Siguiente paso propuesto
 
-**Fase 7** (mano, nube, Dios y efectos), cuando el autor lo pida. Como en las fases 5 y 6, se parte de los dibujos existentes y se muestran bocetos para aprobar antes de integrar.
+**Fase 8** (interfaz y cierre), cuando el autor lo pida. Aparte, quedan por iterar los gestos de la mano y por definir el jefe final con los tres guardianes (ver Fase 7).
 
 ## Registro de avance
 
@@ -151,3 +151,14 @@ Cada fase termina con: assets en `assets/art/pixel-v3/`, capturas antes/después
 - Cada celda del atlas mide 402×111 (panel más una columna y una fila repetidas) para que el medio píxel de las ventanas de ancho impar no tome el borde del vecino. `scripts/backdrop.gd` mapea un píxel lógico a 2×2 de pantalla. El ambiente «cierre» (ventanas tapadas) no cambia.
 - Para revertir: la constante `EXTERIORS` y el cálculo de `source` en `scripts/backdrop.gd`. El original se conserva.
 - Suite: 2195 comprobaciones, 0 fallos. Revisión de presentación de los siete ambientes sin errores.
+
+**Fase 7 — hecha y aprobada por el autor (01/11/2026, rama `feature/pixel-mano-dios`):**
+- **Mano y nube integradas:** conversión fiel del original (`pixel-v3/mano-v3.png`, 8 cuadros de 61×53; `pixel-v3/nube-v3.png`, 131×20; generadores `make_mano_dios.py` y `make_mano_anim.py`). La mano tamborilea (meñique → índice, pulgar quieto) a 110 ms por cuadro. El vaivén pasó de 3 px sin redondear a pasos de 2 px para respetar la grilla; con movimiento reducido o apagado queda el cuadro 0. Para revertir, ver las constantes `CLOUD_V3` y `HAND_V3` y el dibujo final de `scripts/backdrop.gd`.
+- **Los tres guardianes (decisión del autor):** el triángulo de Dios era un placeholder y se reemplaza por tres figuras épicas de contraste fuerte, que serán los **guardianes** del jefe final: derrotados los tres, se accede al jefe final. Quedan guardadas en `pixel-v3/guardianes/` (124×100 px lógicos), sin integrar al juego, con su generador `tools/art/make_dios_opciones.py`:
+  - **Ojo solar** (`guardian-ojo-v3.png`): ojo de pupila vertical en un vacío oscuro con anillos y 32 rayos.
+  - **Figura de luz** (`guardian-figura-v3.png`): silueta encapuchada con ojos blancos, túnica estrellada y brazos abiertos.
+  - **Dado cósmico** (`guardian-dado-v3.png`): dado dorado con un ojo en un punto, mandorla y dados en órbita.
+- **Pendiente de definir (no está en el PRD):** el jefe final y su relación con los guardianes (cantidad y orden de encuentros, reglas, en qué nivel aparecen, arte del jefe). No se agregó nada al PRD ni a las fichas; el tablero de Notion debe actualizarse a mano cuando el autor lo decida. Mientras tanto, `scripts/backdrop.gd` conserva el triángulo provisional para `actor == "god"`.
+- **Gestos de la mano (descartados por ahora):** se probaron abrir, cerrar, pulgar arriba y pulgar abajo y no convencieron al autor; no quedan en el repo. La mano conserva solo la animación inicial. Se iteran más adelante, probablemente con piezas dibujadas de cero (puño con nudillos, pulgar plegado) y disparadas por lo que haga el jugador.
+- **Efectos de puntuación y rotura:** no hay arte existente y no se inventó; quedan fuera hasta que el autor los pida.
+- Suite: 2195 comprobaciones, 0 fallos.
