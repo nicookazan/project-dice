@@ -2,7 +2,7 @@ extends Control
 const ART = preload("res://assets/art/club-table-v2.png")
 const SHOP_ART = preload("res://assets/art/shop-table-v1.png")
 const SELLER_ART = preload("res://assets/art/pixel-v3/tienda-v3.png")
-const EXTERIORS = preload("res://assets/art/environment-v2/exteriores-v2.png")
+const EXTERIORS = preload("res://assets/art/pixel-v3/exteriores-v3.png")
 const TABLE_PROPS = preload("res://assets/art/environment-v2/mesa-proporciones-v3.png")
 const CLEAN_TABLE = preload("res://assets/art/environment-v2/mesa-libreta-frontal-v1.png")
 const CUP_TABLE_ART = preload("res://assets/art/environment-v2/vaso-cuero-negro-mesa-v2.png")
@@ -88,7 +88,8 @@ func _draw() -> void:
 			for y in range(int(window.position.y), int(window.end.y), 25):
 				draw_rect(Rect2(window.position.x, y, window.size.x, minf(22, window.end.y - y)), Color("654936"))
 		else:
-			var source := Rect2(origin + (window.position - panorama.position) / panorama.size * cell, window.size / panorama.size * cell)
+			# Pixel-v3 panels are 401×110 logical px: every logical pixel lands on a 2×2 block of the window.
+			var source := Rect2(origin + (window.position - panorama.position) / 2.0, window.size / 2.0)
 			draw_texture_rect_region(EXTERIORS, window, source)
 	# Pixel-v3 table (wood, felt, front, floor) over the old plate; the room above it stays.
 	if not shop_mode: draw_texture_rect(TABLE_V3, Rect2(0, 272, 1440, 628), false)
