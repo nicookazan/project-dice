@@ -1,5 +1,15 @@
 # Tienda: integración artística de la referencia
 
+## Pixel art de la tienda (Fase 5 del plan de arte) — 01/11/2026
+
+El fondo de la tienda pasa a pixel art en la grilla del juego: `assets/art/pixel-v3/tienda-v3.png` (720×450 px lógicos, dibujado a 1440×900 con filtro nearest). El vendedor es el mismo de la ilustración anterior, convertido con su dibujo, sus colores por zona y sin el ruido de foto. El maletín conserva la silueta del original (interior en trapecio, base abierta hacia abajo), con cuero, herrajes dorados y el terciopelo de la mesa. Las cuatro zonas de ofertas, la capa de venta por arrastre y los controles no se movieron.
+
+El medallón de mejora numérica y el sobre de stickers (en diagonal, como antes) salen de `pixel-v3/tienda-iconos-v3.png`. `scripts/shop_art.gd` los dibuja a escala entera: ×2 en la tienda y ×4 en la animación del sobre. Las descripciones y los paneles (elegir sticker, confirmar, inspector del termo) usan `pixel-v3/terciopelo-v3.png`, el terciopelo del maletín repetido 1:1, con el mismo marco dorado.
+
+Generadores: `tools/art/make_tienda.py`, `vendedor.py` y `maletin.py` (Python 3.13 con Pillow, numpy y scipy). Procedencia en `ART-PROMPTS.md`; detalle y forma de revertir en `docs/PLAN-ARTE-PIXEL.md` (Fase 5). `shop-salesman-v1.png` y `shop-items-v1.png` quedan como referencia histórica.
+
+Verificación: **2195 comprobaciones, cero fallos**. Revisiones visuales de tienda, descripciones, sobre, venta por arrastre, termo e interfaz sin errores. El autor aprobó los bocetos antes de integrarlos.
+
 ## Venta por arrastre y balanceo más marcado — 30/10/2026
 
 Las monedas propias del inventario inferior se pueden arrastrar. Mientras se sostiene una, aparece una capa bordó transparente sobre los cuatro compartimentos del maletín, con «Vender: $2» para pasivas o «Vender: $1» para consumibles. El objeto que se lleva queda por encima de esa capa. Se retiraron los botones de venta que estaban debajo de cada moneda; pulsar la moneda conserva su inspección.

@@ -1,7 +1,7 @@
 extends Control
 const ART = preload("res://assets/art/club-table-v2.png")
 const SHOP_ART = preload("res://assets/art/shop-table-v1.png")
-const SELLER_ART = preload("res://assets/art/shop-salesman-v1.png")
+const SELLER_ART = preload("res://assets/art/pixel-v3/tienda-v3.png")
 const EXTERIORS = preload("res://assets/art/environment-v2/exteriores-v2.png")
 const TABLE_PROPS = preload("res://assets/art/environment-v2/mesa-proporciones-v3.png")
 const CLEAN_TABLE = preload("res://assets/art/environment-v2/mesa-libreta-frontal-v1.png")

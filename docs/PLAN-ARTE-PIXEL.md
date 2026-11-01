@@ -1,6 +1,6 @@
 # Plan de arte — menos "IA", más pixel art real
 
-Fecha: 31 de octubre de 2026. Estado: **propuesta, nada ejecutado**. Se avanza una fase por vez, con aprobación del autor antes de pasar a la siguiente.
+Fecha: 31 de octubre de 2026. Estado (01/11/2026): **fases 0–5 hechas; 6–8 pendientes** (ver el registro de avance al final). Se avanza una fase por vez, con aprobación del autor antes de pasar a la siguiente.
 
 ## Decisiones de partida (del autor)
 
@@ -99,7 +99,7 @@ Cada fase termina con: assets en `assets/art/pixel-v3/`, capturas antes/después
 
 ## Siguiente paso propuesto
 
-Ejecutar solo la **Fase 0**: medir, proponer paleta y píxel lógico, y mostrar una muestra comparativa. No se modifica ningún asset del juego hasta que la apruebes.
+**Fase 6** (exteriores y ambientes), cuando el autor lo pida. Como en la Fase 5, se parte de los dibujos existentes y se muestran bocetos para aprobar antes de integrar.
 
 ## Registro de avance
 
@@ -132,3 +132,15 @@ Ejecutar solo la **Fase 0**: medir, proponer paleta y píxel lógico, y mostrar 
 - Las ventanas (panorama animado) y su posición no cambian; el salón solo dibuja el marco. La mano y la nube se conservan hasta la Fase 7.
 - Se eliminó `mesa-parche-v3.png` (ya no hace falta). Suite: 2195 comprobaciones, 0 fallos.
 - **Mate y vaso rehechos (opción A aprobada):** forma original, rampas de 7 tonos (madera, plata, cuero) y 5 (yerba, fieltro), sombreado esférico y bombilla con anillos. Generados con `tools/art/make_mate_vaso.gd` (la variante fina B quedó descartada).
+
+**Fase 5 — hecha y aprobada por el autor (01/11/2026, rama `feature/pixel-tienda`):**
+- Fondo de la tienda (`pixel-v3/tienda-v3.png`, 720×450 px lógicos, 119 colores), generado con `python tools/art/make_tienda.py`: salón con los motivos de `salon-v3.png` y bandas de arriba y abajo tranquilas para la interfaz.
+- **Vendedor** (`tools/art/vendedor.py`): conversión fiel del dibujo de `shop-salesman-v1.png` con el método de sprite-forge. Se usa la mediana por celda en la grilla lógica, un suavizado que respeta bordes, una paleta propia por zona (cara 10 tonos, pelo 6, traje 6, manos 8) y limpieza de manchas fuera de los rasgos. A mano solo se repuso el brillo de las pupilas y el blanco del ojo.
+- **Regla del autor:** al pasar arte existente se limpia, no se rediseña. La primera versión, redibujada con formas esquemáticas, se rechazó porque no respetaba la cara ni las manos del original.
+- **Maletín** (`tools/art/maletin.py`): tiene la silueta del original (tapa casi frontal, interior en trapecio, base que se abre hacia abajo), con cuero, costura, herrajes dorados y el terciopelo de la mesa. Una versión rectangular de frente se descartó por "demasiado cuadrada". Las zonas de ofertas de `main.gd` no se movieron.
+- **Íconos** (`pixel-v3/tienda-iconos-v3.png`, celdas de 44×44): medallón de mejora numérica y sobre de stickers en diagonal (~13°, como el original). `scripts/shop_art.gd` los dibuja a escala entera: ×2 en la tienda, ×4 en la animación del sobre. El atlas isométrico `shop-items-v1.png` ya no se usa: las ofertas de dados se dibujan con el dado frontal real y sus marcas de elemento planas.
+- **Terciopelo de descripciones y paneles** (`pixel-v3/terciopelo-v3.png`): baldosa del terciopelo del maletín que `scripts/tooltip_frame.gd` repite 1:1.
+- **Sin cambios:** dados (protegidos), monedas, stickers y termo (fases 1 y 2), marcos de interfaz (Fase 8).
+- **Herramientas:** los generadores de esta fase son de Python 3.13 (Pillow, numpy, scipy), porque convierten una ilustración existente; los demás siguen en GDScript.
+- **Para revertir:** cambiar `SELLER_ART` en `scripts/backdrop.gd`, `SHEET` en `scripts/shop_art.gd` y `VELVET` en `scripts/tooltip_frame.gd`. Los archivos originales se conservan.
+- Suite: 2195 comprobaciones, 0 fallos. Revisiones visuales de tienda, descripciones, sobre, venta por arrastre, termo e interfaz sin errores.

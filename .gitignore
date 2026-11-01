@@ -11,3 +11,6 @@ test-results/
 /text_editor_themes/
 .DS_Store
 *.log
+
+# Python (generadores de arte en tools/art)
+__pycache__/
