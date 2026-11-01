@@ -2,13 +2,13 @@
 
 La tapa queda casi de frente, el interior es un trapecio apenas más angosto arriba (las zonas de compra
 de main.gd se diseñaron sobre esa forma) y la base se abre hacia abajo, como en la ilustración. Cuero
-negro con costura, herrajes dorados y terciopelo bordó con el mismo pelo corto que el paño de la mesa.
+negro cálido (grano fino, ribete bordó entre filetes dorados, doble costura clara), herrajes dorados y terciopelo bordó con el mismo pelo corto que el paño de la mesa.
 """
 from __future__ import annotations
 
 import numpy as np
 
-from pixel_lib import Canvas, OUTLINE, GOLD, LEATHER, PANO, hash2, poly_mask, edge_of
+from pixel_lib import Canvas, OUTLINE, GOLD, WARMBLK as LEATHER, PANO, hash2, poly_mask, edge_of
 
 W, H = 720, 450
 IN_Y0, IN_Y1 = 123, 311          # interior de terciopelo
@@ -168,6 +168,37 @@ def front_handle(cv: Canvas, cx: int, y: int, half: int) -> None:
         cv.put(fx + 5, y + 10, GOLD[5])
 
 
+HILO = (200, 160, 104)
+HILO_SOMBRA = (138, 106, 64)
+
+
+def grano(cv: Canvas, mask: np.ndarray) -> None:
+    """Grano fino del cuero: casi liso, apenas puntos claros 2×2 y arrugas largas y suaves en diagonal."""
+    for y, x in zip(*np.where(mask)):
+        r, g, b = cv.get(int(x), int(y))
+        base = min(range(7), key=lambda i: abs(LEATHER[i][0] - r) + abs(LEATHER[i][1] - g) + abs(LEATHER[i][2] - b))
+        if hash2(int(x) // 2, int(y) // 2, 11) > 0.97:
+            cv.put(int(x), int(y), LEATHER[min(6, base + 1)])
+        elif (x * 2 + y * 7 + int(hash2(int(x) // 50, int(y) // 14, 3) * 30)) % 83 == 0:
+            cv.put(int(x), int(y), LEATHER[max(0, base - 1)])
+
+
+def costura(cv: Canvas, x0: int, x1: int, y: int, c=HILO, paso: int = 4) -> None:
+    for x in range(x0, x1):
+        if x % paso < 2:
+            cv.put(x, y, c)
+
+
+def ribete(cv: Canvas, x0: int, x1: int, y: int) -> None:
+    """Ribete de terciopelo bordó de 4 filas entre dos filetes dorados."""
+    for x in range(x0, x1):
+        cv.put(x, y, GOLD[1])
+        cv.put(x, y + 1, PANO[3] if x % 8 < 4 else PANO[2])
+        cv.put(x, y + 2, PANO[1])
+        cv.put(x, y + 3, GOLD[4])
+        cv.put(x, y + 4, GOLD[2])
+
+
 # ---------- cuerpo
 def velvet_px(x: int, y: int, top: float, left: float) -> tuple:
     """Terciopelo con pelo corto; sombra de los bordes de arriba y de la izquierda (luz arriba-izquierda)."""
@@ -191,6 +222,7 @@ def draw(cv: Canvas) -> None:
     # cuero: tapa en sombra suave, base un tono más clara, bordes con luz a la izquierda y sombra a la derecha
     cv.fill(lid, LEATHER[2])
     cv.fill(base, LEATHER[3])
+    grano(cv, body)
     for y in range(92, 383):
         for side, lit in ((True, True), (False, False)):
             poly = LID_P if y < 312 else BASE_P
@@ -209,6 +241,10 @@ def draw(cv: Canvas) -> None:
     for x in range(266, 660):
         if x % 4 < 2:
             cv.put(x, 99, LEATHER[1])
+    # ribete bordó bajo el canto y doble costura clara
+    ribete(cv, int(side_x(LID_P, 105.5, True)) + 6, int(side_x(LID_P, 105.5, False)) - 6, 103)
+    costura(cv, int(side_x(LID_P, 111.5, True)) + 6, int(side_x(LID_P, 111.5, False)) - 6, 111)
+    costura(cv, int(side_x(LID_P, 113.5, True)) + 6, int(side_x(LID_P, 113.5, False)) - 6, 113, HILO_SOMBRA)
     # costura a lo largo de los costados de la tapa
     for y in range(101, 310):
         if y % 4 < 2:
@@ -288,6 +324,10 @@ def draw(cv: Canvas) -> None:
                 c = LEATHER[1] if y < FRONT_Y[1] else LEATHER[0]
             if c is not None:
                 cv.put(x, y, c)
+    # ribete bordó y doble costura clara en el frente de la base
+    ribete(cv, int(side_x(BASE_P, 336.5, True)) + 8, int(side_x(BASE_P, 336.5, False)) - 8, 333)
+    costura(cv, int(side_x(BASE_P, 339.5, True)) + 8, int(side_x(BASE_P, 339.5, False)) - 8, 339)
+    costura(cv, int(side_x(BASE_P, 341.5, True)) + 8, int(side_x(BASE_P, 341.5, False)) - 8, 341, HILO_SOMBRA)
     # remaches dorados del frente
     for x in range(250, 680, 38):
         for (dx, dy, c) in ((0, 0, GOLD[5]), (1, 0, GOLD[3]), (0, 1, GOLD[3]), (1, 1, GOLD[1])):

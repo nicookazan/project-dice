@@ -101,11 +101,41 @@ func wood_tone(x: int, y: int, edge: int) -> Color:
 	if glow > 0.45: idx += 1
 	return WOOD[clampi(idx, 1, 4)]
 
+## Capitoné de rombos (el mismo de tools/art/texturas.py): cojines con luz arriba-izquierda, costura hundida,
+## trama de tela y botones de latón en los cruces. `y` va de 372 a 415 (ly = fila dentro de la franja).
+const CAPI := [Color("060e24"), Color("0a1636"), Color("0f2048"), Color("163060"), Color("1f4280"), Color("2a58a0")]
+const CAPI_HX := 12.0
+const CAPI_HY := 7.0
+const CAPI_ORO := [Color("3a2408"), Color("6a420e"), Color("a06a18"), Color("d09a28"), Color("f0c850"), Color("ffe488"), Color("fff8c0")]
+
 func navy_tone(x: int, y: int) -> Color:
-	var idx := 1
-	if (y - 371) % 7 == 0 and hash2(int(x / 40), int((y - 371) / 7), 9) > 0.45: idx = 0
-	elif (y - 371) % 7 == 1 and hash2(int(x / 40), int((y - 371) / 7), 9) > 0.45: idx = 2
-	return NAVY[idx]
+	var ly := y - 372
+	var h := 44
+	# botones de latón: esquina de 2×2 con sombra a la derecha y abajo
+	for o in [[0, 0, 5], [1, 0, 3], [0, 1, 3], [1, 1, 1], [2, 1, -1], [1, 2, -1]]:
+		var vx: int = x - o[0]
+		var vy: int = ly - o[1]
+		if vx < 0 or vy < 0 or vx % 12 != 0 or vy % 7 != 0: continue
+		var bi := vx / 12
+		var bj := vy / 7
+		if (bi + bj) % 2 != 0: continue
+		if vx < 2 or vx >= W - 3 or vy < 3 or vy >= h - 3: continue
+		return CAPI[0] if o[2] < 0 else CAPI_ORO[o[2]]
+	var p := (x / CAPI_HX + ly / CAPI_HY) / 2.0
+	var q := (x / CAPI_HX - ly / CAPI_HY) / 2.0
+	var fa := p - floorf(p)
+	var fb := q - floorf(q)
+	var t := minf(minf(fa, 1.0 - fa), minf(fb, 1.0 - fb)) * 2.0
+	var lit := (1.0 - fa) * 0.5 + (1.0 - fb) * 0.5 - 0.5
+	var idx := 2
+	if t > 0.3 and lit > 0.1: idx = 4
+	elif t > 0.18 and lit > -0.05: idx = 3
+	elif lit < -0.2: idx = 1
+	if t < 0.1: idx = 0
+	elif t < 0.2: idx = mini(idx, 1)
+	if idx >= 2 and (x + ly) % 4 == 0 and hash2(x, ly, 6) > 0.5: idx -= 1
+	if ly > h - 10: idx = maxi(0, idx - 1)
+	return CAPI[idx]
 
 func floor_tone(x: int, y: int) -> Color:
 	var run_len := 14 + int(hash2(y, 17) * 40)
