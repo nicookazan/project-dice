@@ -1,6 +1,6 @@
 # Plan de arte — menos "IA", más pixel art real
 
-Fecha: 31 de octubre de 2026. Estado (01/11/2026): **fases 0–5 hechas; 6–8 pendientes** (ver el registro de avance al final). Se avanza una fase por vez, con aprobación del autor antes de pasar a la siguiente.
+Fecha: 31 de octubre de 2026. Estado (01/11/2026): **fases 0–6 hechas; 7–8 pendientes** (ver el registro de avance al final). Se avanza una fase por vez, con aprobación del autor antes de pasar a la siguiente.
 
 ## Decisiones de partida (del autor)
 
@@ -99,7 +99,7 @@ Cada fase termina con: assets en `assets/art/pixel-v3/`, capturas antes/después
 
 ## Siguiente paso propuesto
 
-**Fase 6** (exteriores y ambientes), cuando el autor lo pida. Como en la Fase 5, se parte de los dibujos existentes y se muestran bocetos para aprobar antes de integrar.
+**Fase 7** (mano, nube, Dios y efectos), cuando el autor lo pida. Como en las fases 5 y 6, se parte de los dibujos existentes y se muestran bocetos para aprobar antes de integrar.
 
 ## Registro de avance
 
@@ -144,3 +144,10 @@ Cada fase termina con: assets en `assets/art/pixel-v3/`, capturas antes/después
 - **Herramientas:** los generadores de esta fase son de Python 3.13 (Pillow, numpy, scipy), porque convierten una ilustración existente; los demás siguen en GDScript.
 - **Para revertir:** cambiar `SELLER_ART` en `scripts/backdrop.gd`, `SHEET` en `scripts/shop_art.gd` y `VELVET` en `scripts/tooltip_frame.gd`. Los archivos originales se conservan.
 - Suite: 2195 comprobaciones, 0 fallos. Revisiones visuales de tienda, descripciones, sobre, venta por arrastre, termo e interfaz sin errores.
+
+**Fase 6 — hecha y aprobada por el autor (01/11/2026, rama `feature/pixel-exteriores`):**
+- Los seis exteriores de las ventanas (`pixel-v3/exteriores-v3.png`, `tools/art/make_exteriores.py`) son una conversión fiel de `environment-v2/exteriores-v2.png`, sin rediseño: cada panel se reduce a 401×110 px lógicos (el panorama de 801×220 px), se suaviza respetando bordes y se pinta con una paleta corta propia de 20 a 24 colores. Las estrellas se conservan, ajustadas a la paleta.
+- Los límites de los paneles en la hoja original no son tercios iguales (filas en y=342 y 671, columna en x=768). Con los límites reales desaparece una línea clara que se colaba al pie de las ventanas de noche y espacio, y que ya estaba en el juego anterior.
+- Cada celda del atlas mide 402×111 (panel más una columna y una fila repetidas) para que el medio píxel de las ventanas de ancho impar no tome el borde del vecino. `scripts/backdrop.gd` mapea un píxel lógico a 2×2 de pantalla. El ambiente «cierre» (ventanas tapadas) no cambia.
+- Para revertir: la constante `EXTERIORS` y el cálculo de `source` en `scripts/backdrop.gd`. El original se conserva.
+- Suite: 2195 comprobaciones, 0 fallos. Revisión de presentación de los siete ambientes sin errores.
