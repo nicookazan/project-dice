@@ -16,7 +16,7 @@ func _initialize() -> void:
 	scene.start_new_run(3)
 	Flow.click(scene, "Empezar primer encuentro")
 	Flow.click(scene, "TIRAR (3)")
-	Flow.click(scene, "Menú")
+	Flow.click(scene, "Guardar y volver al menú")
 	await capture("continuar")
 	Flow.click(scene, "Nueva partida")
 	await capture("confirmar-nueva")
@@ -29,13 +29,13 @@ func _initialize() -> void:
 	await capture("error-escritura")
 	scene.save_store.fail_at = ""
 	Flow.click(scene, "Error al guardar · reintentar")
-	Flow.click(scene, "Menú")
+	Flow.click(scene, "Guardar y volver al menú")
 	scene.save_store.write_text(scene.save_store.path, "corrupt original, preserved by explicit recovery")
 	scene.refresh_save_status()
 	scene.render()
 	await capture("respaldo-disponible")
 	Flow.click(scene, "Recuperar respaldo y continuar")
-	Flow.click(scene, "Menú")
+	Flow.click(scene, "Guardar y volver al menú")
 	var envelope: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(scene.save_store.path))
 	envelope.version = 999
 	scene.save_store.write_text(scene.save_store.path, JSON.stringify(envelope))
@@ -57,7 +57,7 @@ func _initialize() -> void:
 	scene.render()
 	var boxes: Array = scene.ui.find_children("*", "CheckBox", true, false)
 	boxes[0].button_pressed = true
-	Flow.click(scene, "Menú")
+	Flow.click(scene, "Guardar y volver al menú")
 	Flow.click(scene, "Continuar")
 	await capture("reparacion-pendiente")
 	print("SAVE REVIEW: 7 captures, isolated save path: ", scene.save_store.path)

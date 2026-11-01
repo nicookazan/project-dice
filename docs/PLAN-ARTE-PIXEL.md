@@ -162,3 +162,7 @@ Cada fase termina con: assets en `assets/art/pixel-v3/`, capturas antes/después
 - **Gestos de la mano (descartados por ahora):** se probaron abrir, cerrar, pulgar arriba y pulgar abajo y no convencieron al autor; no quedan en el repo. La mano conserva solo la animación inicial. Se iteran más adelante, probablemente con piezas dibujadas de cero (puño con nudillos, pulgar plegado) y disparadas por lo que haga el jugador.
 - **Efectos de puntuación y rotura:** no hay arte existente y no se inventó; quedan fuera hasta que el autor los pida.
 - Suite: 2195 comprobaciones, 0 fallos.
+
+**Fase 8 — en curso (rama `feature/pixel-interfaz`):**
+- **Hecho a pedido del autor (01/11/2026):** Abandonar partida, Recorrido y Opciones salen de la mesa, del resultado y de la tienda y pasan a un panel que abre el botón «Menú» dentro de la partida (`show_game_menu` en `scripts/main.gd`), junto con «Seguir jugando» y «Guardar y volver al menú» (el comportamiento anterior de «Menú»). La tecla M sigue abriendo el recorrido. El texto de todos los botones baja 1 px para quedar centrado. Pruebas nuevas en `level_flow_tests.gd` y revisión visual `tests/game_menu_review.gd`.
+- **Pendiente:** kit de interfaz en pixel art (botones, diálogo, cartel, libreta), en boceto para aprobar; decisión sobre la tipografía; revisión a 1280×800 y 1440×900; limpieza de assets viejos.
