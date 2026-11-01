@@ -21,6 +21,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from pixel_lib import (Canvas, OUTLINE, GOLD, WALL, BEAM, CHAIR, SHADE, LEAF, FRAME, FRAME_DK, PAPER, COPPER, NAVY,
                        PANO, hash2, upscale)
 import maletin
+import texturas
 import vendedor
 
 W, H = 720, 450
@@ -46,26 +47,11 @@ def halo(x: int, y: int) -> int:
 
 
 def wall(cv: Canvas) -> None:
-    for y in range(44, 386):
-        for x in range(W):
-            if y < 250:
-                idx = 2
-                if y % 16 == 9 and hash2(x // 34, y, 1) > 0.55:
-                    idx = 1
-                idx = min(4, idx + halo(x, y))
-            elif y < 256:
-                idx = (4, 3, 2, 1, 0, 0)[y - 250]
-            else:
-                idx = 1
-                if (x + 7) % 26 == 0:
-                    idx = 0
-                elif (x + 7) % 26 == 1:
-                    idx = 2
-                elif y in (262, 380):
-                    idx = 0
-                elif y in (263, 381):
-                    idx = 2
-            cv.put(x, y, WALL[idx])
+    # tablones con friso bordó, picture rail dorado y zócalo de boiserie (ver texturas.py)
+    texturas.planks(cv, 44, 238, W, halo)
+    texturas.friso(cv, 238, W)
+    texturas.rail(cv, 250, W)
+    texturas.wainscot(cv, 256, 386, W, halo)
     # banda superior: viga azul oscura con moldura (zona tranquila para la interfaz)
     for y in range(0, 44):
         for x in range(W):
@@ -107,59 +93,11 @@ def lamp(cv: Canvas, cx: int, cy: int, s: int, hanging: bool) -> None:
 
 
 def picture(cv: Canvas, x: int, y: int, w: int, h: int, kind: str) -> None:
-    ink = OUTLINE
-    cv.rect(x, y, w, h, FRAME_DK)
-    cv.rect(x + 1, y + 1, w - 2, h - 2, FRAME)
-    cv.rect(x + 3, y + 3, w - 6, h - 6, FRAME_DK)
-    cv.rect(x + 4, y + 4, w - 8, h - 8, PAPER)
-    cx, by = x + w // 2, y + h - 5
-    if kind == "building":
-        cv.rect(cx - 12, by - 14, 24, 14, ink)
-        for a in range(-8, 9):
-            for b in range(0, 9):
-                if a * a + b * b * 1.4 <= 64:
-                    cv.put(cx + a, by - 14 - b, ink)
-        cv.rect(cx, by - 30, 1, 10, ink)
-        for k in range(-9, 10, 6):
-            cv.rect(cx + k, by - 10, 2, 7, PAPER)
-    elif kind == "dancers":
-        for k in (-1, 1):
-            hx = cx + k * 5
-            cv.rect(hx, by - 20, 2, 20, ink)
-            cv.rect(hx - 1, by - 18, 4, 10, ink)
-            for a in range(-2, 3):
-                for b in range(-2, 3):
-                    if a * a + b * b <= 5:
-                        cv.put(hx + 1 + a, by - 24 + b, ink)
-        cv.hline(cx - 5, cx + 6, by - 13, ink)
-    else:
-        for a in range(-4, 5):
-            for b in range(-4, 5):
-                if a * a + b * b <= 16:
-                    cv.put(cx + a, y + h // 2 - 5 + b, ink)
-        for a in range(-7, 8):
-            for b in range(0, 7):
-                if a * a + b * b * 3 <= 52:
-                    cv.put(cx + a, y + h // 2 + 2 + b, ink)
+    texturas.cuadro(cv, x, y, w, h, kind)
 
 
 def pennant(cv: Canvas, x: int, y: int) -> None:
-    cv.rect(x - 2, y - 3, 38, 2, (216, 160, 48))
-    sky, white, edge = (124, 184, 224), (242, 242, 238), (42, 90, 138)
-    for yy in range(62):
-        for xx in range(34):
-            c = white if 11 <= xx < 23 else sky
-            if xx in (0, 33):
-                c = edge
-            cv.put(x + xx, y + yy, c)
-    for k in range(18):
-        for xx in range(k, 34 - k):
-            cv.put(x + xx, y + 62 + k, white if 11 <= xx < 23 else sky)
-    for a in range(-4, 5):
-        for b in range(-4, 5):
-            if a * a + b * b <= 14:
-                cv.put(x + 17 + a, y + 26 + b, (232, 168, 48))
-    cv.hline(x, x + 33, y, edge)
+    texturas.bandera(cv, x, y)
 
 
 def plant(cv: Canvas, x: int, base: int) -> None:
@@ -202,7 +140,7 @@ def room(cv: Canvas) -> None:
     wall(cv)
     picture(cv, 6, 58, 48, 64, "building")
     picture(cv, 226, 54, 20, 30, "portrait")
-    picture(cv, 682, 186, 30, 40, "dancers")
+    picture(cv, 682, 192, 30, 40, "dancers")
     for lx, ly, s, hanging in LAMPS:
         lamp(cv, lx, ly, s, hanging)
     # mesita de la lámpara chica
@@ -224,16 +162,14 @@ def bottom_band(cv: Canvas) -> None:
             elif y == 386:
                 c = GOLD[1]
             elif y < 442:
-                c = NAVY[1]
-                if (y - 390) % 9 == 0 and hash2(x // 44, (y - 390) // 9, 9) > 0.5:
-                    c = NAVY[0]
-                elif (y - 390) % 9 == 1 and hash2(x // 44, (y - 390) // 9, 9) > 0.5:
-                    c = NAVY[2]
+                continue
             elif y == 442:
                 c = GOLD[2]
             else:
                 c = (BEAM[2], BEAM[1], BEAM[1], BEAM[0], BEAM[0], BEAM[0], BEAM[0], BEAM[0])[y - 443]
             cv.put(x, y, c)
+    # capitoné de rombos entre los dos filetes dorados
+    texturas.capitone(cv, 387, 442, W)
     # ménsulas doradas en los extremos (como la mesa)
     for x0, flip in ((3, False), (W - 13, True)):
         for j, row in enumerate(["##########", "#.........", "#.######..", "#.#.......", "#.#.####..",

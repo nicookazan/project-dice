@@ -27,6 +27,12 @@ COPPER = ramp("3a1808", "6a3012", "9a4a1e", "c4703a", "e89a5c")
 LEATHER = ramp("07070b", "101016", "191921", "24242e", "34343f", "4c4c5a", "7a7a8a")
 BLUE = ramp("14285a", "204a9c", "3070d0", "6a9ae8", "b8d0f8")
 IVORY = ramp("6b4a2a", "c9a36a", "efe0b8", "fff6dc", "ffffff")
+# texturas (nov 2026): cuero cálido del maletín, blanco y celeste de la bandera, pared y zócalo del salón, piel de los retratos
+WARMBLK = ramp("0b0807", "1a1210", "28201c", "3a2e28", "50423a", "6e5c4e", "94806c")
+CELESTE = ramp("2a5a8a", "4f8cc4", "7cb8e0", "a8d4ee", "cde8f6")
+WHITE = ramp("8a98b0", "bcc8d8", "e2e8f0", "f4f7fa", "ffffff")
+PANEL = ramp("1c0d07", "33180c", "4d2812", "6a3a18", "8a5222", "a86a2e")
+SKIN = ramp("5a2e1c", "8a5232", "b87a4e", "d89c6c", "f0c090")
 # salón y mesa
 WALL = ramp("2a160c", "43240f", "5e3414", "7c4a1c", "9a6228")
 BEAM = ramp("1a0c06", "2e1810", "422212", "5c3318")
