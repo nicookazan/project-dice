@@ -1,17 +1,18 @@
-extends TextureRect
-## Fixed atlas regions are illustrations only; game definitions own every effect.
-const SHEET = preload("res://assets/art/shop-items-v1.png")
-const ICONS = {"steel": 0, "copper": 1, "emerald": 2, "sapphire": 3, "ruby": 4, "diamond": 5, "fire": 6, "water": 7, "electricity": 8, "earth": 9, "wind": 10, "pack": 11, "portrait": 12, "sticker": 13, "number": 14, "face": 15}
-var icon_id := "face"
+extends Control
+## Offer icons that are neither dice nor coins (pixel-v3). Illustrations only; game definitions own every effect.
+## Drawn at an integer scale so every logical pixel keeps an even block (2×2 in the shop, 4×4 in the pack reveal).
+const SHEET = preload("res://assets/art/pixel-v3/tienda-iconos-v3.png")
+const CELL := 44
+const ICONS = {"number": 0, "pack": 1}
+var icon_id := "number"
 
 func _ready() -> void:
-	var index: int = ICONS.get(icon_id, 15)
-	var atlas := AtlasTexture.new()
-	atlas.atlas = SHEET
-	var cell := Vector2(SHEET.get_width() / 4.0, SHEET.get_height() / 4.0)
-	atlas.region = Rect2(Vector2(index % 4, int(index / 4.0)) * cell, cell)
-	texture = atlas
-	expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	resized.connect(queue_redraw)
+
+func _draw() -> void:
+	var index: int = ICONS.get(icon_id, 0)
+	var k := maxi(1, floori(minf(size.x, size.y) / CELL))
+	var side := Vector2(CELL, CELL) * k
+	draw_texture_rect_region(SHEET, Rect2(((size - side) / 2).floor(), side), Rect2(index * CELL, 0, CELL, CELL))

@@ -29,7 +29,7 @@ static func reload_ui(scene, check: Callable, context: String) -> bool:
 	var valid: bool = scene.save_error == "" and scene.save_store.inspect().get("active", false)
 	check.call(valid, "Integral: checkpoint valid before reload " + context + " / " + scene.save_error)
 	if not valid: return false
-	Flow.click(scene, "Menú")
+	Flow.click(scene, "Guardar y volver al menú")
 	var resumed := Flow.click(scene, "Continuar")
 	check.call(resumed and scene.checkpoint_data() == before, "Integral: UI reload preserves exact game/RNG/choices " + context)
 	return resumed

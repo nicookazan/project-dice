@@ -6,6 +6,7 @@ const Zone = preload("res://scripts/drop_zone.gd")
 const Backdrop = preload("res://scripts/backdrop.gd")
 const CoinArt = preload("res://scripts/coin_art.gd")
 const ShopArt = preload("res://scripts/shop_art.gd")
+const UiSkin = preload("res://scripts/ui_skin.gd")
 const ItemTooltip = preload("res://scripts/item_tooltip.gd")
 const HoverButton = preload("res://scripts/hover_button.gd")
 const HoverPanel = preload("res://scripts/hover_panel.gd")
@@ -84,6 +85,12 @@ func _ready() -> void:
 	theme_value.set_font("font", "TooltipLabel", ItemTooltip.pixel_font())
 	theme_value.set_font_size("font_size", "TooltipLabel", 18)
 	theme_value.set_color("font_color", "TooltipLabel", cream)
+	# Pixel-v3 look for every Godot dialog and its buttons (fichas, confirmaciones, opciones).
+	for state in ["normal", "hover", "pressed", "disabled"]: theme_value.set_stylebox(state, "Button", UiSkin.button(state))
+	theme_value.set_stylebox("focus", "Button", box(Color.TRANSPARENT, Color.WHITE, 3))
+	theme_value.set_color("font_color", "Button", cream)
+	theme_value.set_color("font_hover_color", "Button", Color("fff0c7"))
+	theme_value.set_color("font_disabled_color", "Button", Color("85867b"))
 	theme = theme_value
 	background = Backdrop.new()
 	background.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -93,6 +100,7 @@ func _ready() -> void:
 	detail.title = "Libreta · detalle de cálculo"
 	detail.min_size = Vector2i(520, 260)
 	add_child(detail)
+	skin_dialog(detail)
 	detail_body = RichTextLabel.new()
 	detail_body.name = "DetailText"
 	detail_body.selection_enabled = true
@@ -104,6 +112,7 @@ func _ready() -> void:
 	confirmation.exclusive = true
 	confirmation.ok_button_text = "Abandonar"
 	confirmation.cancel_button_text = "Seguir jugando"
+	skin_dialog(confirmation)
 	confirmation.confirmed.connect(confirm_navigation)
 	confirmation.canceled.connect(cancel_navigation)
 	confirmation.get_cancel_button().pressed.connect(cancel_navigation)
@@ -119,9 +128,22 @@ func _ready() -> void:
 		get_viewport().get_texture().get_image().save_png("res://test-results/mesa.png")
 		get_tree().quit()
 
+func skin_dialog(window: Window) -> void:
+	# Pixel-v3 card for Godot's embedded dialogs. The decoration is left empty and the framed panel carries the look;
+	# the title floats above it in gold with a dark outline so it reads over any background.
+	window.add_theme_stylebox_override("embedded_border", StyleBoxEmpty.new())
+	window.add_theme_stylebox_override("embedded_unfocused_border", StyleBoxEmpty.new())
+	window.add_theme_stylebox_override("panel", UiSkin.panel(Vector4(20, 20, 20, 20)))
+	window.add_theme_color_override("title_color", gold)
+	window.add_theme_color_override("title_outline_modulate", Color("0d1728"))
+	window.add_theme_constant_override("title_height", 40)
+	window.add_theme_constant_override("title_outline_size", 10)
+	window.add_theme_font_size_override("title_font_size", 22)
+	window.add_theme_font_override("title_font", ItemTooltip.pixel_font())
+
 func present_detail(title: String, text: String, compact := false) -> void:
 	if is_instance_valid(thermos_panel): thermos_panel.hide()
-	detail.remove_theme_stylebox_override("panel")
+	detail.add_theme_stylebox_override("panel", UiSkin.panel(Vector4(20, 20, 20, 20)))
 	if is_instance_valid(settings_panel): settings_panel.hide()
 	if is_instance_valid(dice_gallery): dice_gallery.hide()
 	detail_body.show()
@@ -284,6 +306,9 @@ func panel(parent: Node, rect: Rect2, bg: Color, border := Color.TRANSPARENT) ->
 	node.position = rect.position
 	node.size = rect.size
 	node.add_theme_stylebox_override("panel", box(bg, border, 2 if border.a > 0 else 0))
+	if border == gold and bg in [Color("0d1728"), Color("263c3d")] and not preferences.high_contrast:
+		node.add_theme_stylebox_override("panel", UiSkin.panel())
+		node.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	parent.add_child(node)
 	return node
 
@@ -311,10 +336,8 @@ func button(parent: Node, text_value: String, rect: Rect2, action: Callable, dis
 	node.size = rect.size
 	node.disabled = disabled
 	node.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
-	node.add_theme_stylebox_override("normal", box(Color("0b3152") if accent else Color("101e30"), Color("d39a41"), 3))
-	node.add_theme_stylebox_override("hover", box(Color("164e7c") if accent else Color("283d52"), Color("ffcc77"), 3))
-	node.add_theme_stylebox_override("pressed", box(Color("631b2a"), gold, 3))
-	node.add_theme_stylebox_override("disabled", box(Color("222129"), Color("775c39"), 2))
+	node.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	for state in ["normal", "hover", "pressed", "disabled"]: node.add_theme_stylebox_override(state, UiSkin.button(state, accent))
 	node.add_theme_color_override("font_color", cream)
 	node.add_theme_color_override("font_disabled_color", Color("85867b"))
 	if preferences.high_contrast:
@@ -324,6 +347,13 @@ func button(parent: Node, text_value: String, rect: Rect2, action: Callable, dis
 		node.add_theme_color_override("font_disabled_color", Color("bdbdbd"))
 	node.add_theme_stylebox_override("focus", box(Color.TRANSPARENT, Color.WHITE, 3))
 	if is_instance_valid(background) and background.shop_mode: skin_shop_button(node)
+	# The font's ascent leaves the label about 1 px above the optical centre: push it down 1 px.
+	for state in ["normal", "hover", "pressed", "disabled", "focus"]:
+		var skin: StyleBox = node.get_theme_stylebox(state)
+		if skin != null and not (skin is StyleBoxEmpty):
+			skin = skin.duplicate()
+			skin.set_content_margin(SIDE_TOP, skin.get_margin(SIDE_TOP) + 2)
+			node.add_theme_stylebox_override(state, skin)
 	node.pressed.connect(func():
 		if not throwing and not sticker_animation_active() and not detail.visible and not confirmation.visible: action.call())
 	parent.add_child(node)
@@ -461,6 +491,39 @@ func continue_saved() -> void:
 	purchase_error = ""
 	session_started = true
 	render()
+
+var game_menu: Control
+
+func close_game_menu() -> void:
+	if is_instance_valid(game_menu):
+		if game_menu.get_parent() != null: game_menu.get_parent().remove_child(game_menu)
+		game_menu.queue_free()
+	game_menu = null
+
+## In-game menu: every secondary option lives here so the table and the shop stay uncluttered.
+func show_game_menu() -> void:
+	close_game_menu()
+	game_menu = Control.new()
+	game_menu.name = "GameMenu"
+	game_menu.size = Vector2(1440, 900)
+	game_menu.z_index = 120
+	ui.add_child(game_menu)
+	var dim := ColorRect.new()
+	dim.size = game_menu.size
+	dim.color = Color(0.02, 0.03, 0.06, 0.72)
+	game_menu.add_child(dim)
+	var card := panel(game_menu, Rect2(520, 190, 400, 500), Color("0d1728"), gold)
+	var title := label(card, "MENÚ", Vector2(0, 24), 30, gold, 400)
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	var entries := [
+		["Seguir jugando", close_game_menu, true],
+		["Recorrido · M", func(): close_game_menu(); show_route(), false],
+		["Opciones", func(): close_game_menu(); show_options(), false],
+		["Abandonar partida", func(): close_game_menu(); request_navigation("menu"), false],
+		["Guardar y volver al menú", func(): close_game_menu(); request_navigation("pause"), false]]
+	for index in range(entries.size()):
+		var entry: Array = entries[index]
+		button(card, entry[0], Rect2(50, 92 + index * 72, 300, 54), entry[1], false, entry[2])
 
 func request_navigation(destination: String) -> void:
 	if destination not in ["menu", "new", "new_debug", "quit", "pause"]: return
@@ -796,10 +859,7 @@ func render() -> void:
 		render_shop()
 		finish_render()
 		return
-	button(ui, "Menú", Rect2(1220, 23, 185, 38), func(): request_navigation("pause"))
-	button(ui, "Abandonar partida", Rect2(590, 23, 195, 38), func(): request_navigation("menu"))
-	button(ui, "Recorrido · M", Rect2(1000, 23, 200, 38), show_route)
-	button(ui, "Opciones", Rect2(800, 23, 180, 38), show_options)
+	button(ui, "Menú", Rect2(1220, 23, 185, 38), show_game_menu)
 	if game.phase not in ["shop", "purchase_target", "sticker_choice"]: shop_section = "coins"
 	if game.phase != "sticker_choice": pack_panel_open = true
 	render_notebook()
@@ -1184,23 +1244,11 @@ func shop_offer_text(offer: Dictionary) -> Array:
 	return ["Oferta", ""]
 
 func shop_skin(ornate := false) -> StyleBoxTexture:
-	var atlas := AtlasTexture.new()
-	atlas.atlas = Backdrop.SHOP_ART
-	var unit := Vector2(atlas.atlas.get_width() / 1440.0, atlas.atlas.get_height() / 900.0)
-	atlas.region = Rect2(Vector2(45, 18) * unit, Vector2(462, 143) * unit) if ornate else Rect2(Vector2(554, 168) * unit, Vector2(198, 83) * unit)
-	var skin := StyleBoxTexture.new()
-	skin.texture = atlas
-	for side in [SIDE_LEFT, SIDE_TOP, SIDE_RIGHT, SIDE_BOTTOM]:
-		skin.set_texture_margin(side, 30 if ornate else 15)
-		skin.set_content_margin(side, 10 if side in [SIDE_LEFT, SIDE_RIGHT] else 3)
-	return skin
+	return UiSkin.title() if ornate else UiSkin.button("normal")
 
 func skin_shop_button(node: Button) -> void:
 	if preferences.high_contrast: return
-	for state in ["normal", "hover", "pressed", "disabled"]:
-		var skin := shop_skin()
-		skin.modulate_color = Color("ffffff") if state == "normal" else Color("ffe1a1") if state == "hover" else Color("d5ac73") if state == "pressed" else Color("655d51")
-		node.add_theme_stylebox_override(state, skin)
+	for state in ["normal", "hover", "pressed", "disabled"]: node.add_theme_stylebox_override(state, UiSkin.button(state))
 	node.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 
 func shop_frame(rect: Rect2, ornate := false) -> Panel:
@@ -1322,9 +1370,6 @@ func render_shop() -> void:
 	shop_frame(Rect2(730, 30, 200, 80))
 	shop_caption(ui, "CAPACIDAD", Rect2(742, 38, 176, 22), 18)
 	shop_caption(ui, str(game.coin_inventory.shared_capacity), Rect2(742, 60, 176, 42), 34, gold)
-	for entry in [["Menú", 1027, func(): request_navigation("pause")], ["Opciones", 1137, show_options], ["Recorrido · M", 1247, show_route]]:
-		var nav := button(ui, entry[0], Rect2(entry[1], 166, 106 if entry[0] != "Recorrido · M" else 158, 31), entry[2])
-		nav.add_theme_font_size_override("font_size", 13)
 	shop_caption(ui, "TUS DADOS", Rect2(350, 777, 370, 22), 15)
 	for id in range(5):
 		var die := Die.new()
@@ -1378,8 +1423,8 @@ func render_shop() -> void:
 	var next_button := button(ui, next_label, Rect2(1025, 25, 380, 93), func(): act(game.leave_shop), game.phase != "shop", true)
 	next_button.name = "ShopAdvance"
 	next_button.add_theme_font_size_override("font_size", 18)
-	var leave := button(ui, "Abandonar partida", Rect2(1025, 126, 380, 28), func(): request_navigation("menu"))
-	leave.add_theme_font_size_override("font_size", 14)
+	var game_menu_button := button(ui, "Menú", Rect2(1025, 126, 380, 36), show_game_menu)
+	game_menu_button.add_theme_font_size_override("font_size", 16)
 	shop_caption(ui, "EL MALETÍN · TODAS LAS OFERTAS A LA VISTA", Rect2(410, 750, 980, 31), 15)
 	shop_caption(ui, "NIVEL %d · %s · DATOS PROVISIONALES" % [game.level_index + 1, game.environment_id().replace("_", " ").to_upper()], Rect2(30, 94, 400, 22), 11)
 	coin_sale_overlay = preload("res://scripts/coin_sale_zone.gd").new()
@@ -1561,9 +1606,7 @@ func show_sticker_reveal(items: Array, previous: Dictionary) -> void:
 
 func render_result() -> void:
 	panel(ui, Rect2(0, 0, 1440, 900), Color(0.04, 0.06, 0.07, 0.84))
-	button(ui, "Recorrido · M", Rect2(1000, 23, 200, 38), show_route)
-	button(ui, "Menú", Rect2(1220, 23, 185, 38), func(): request_navigation("pause"))
-	button(ui, "Abandonar partida", Rect2(590, 23, 195, 38), func(): request_navigation("menu"))
+	button(ui, "Menú", Rect2(1220, 23, 185, 38), show_game_menu)
 	if game.phase == "repair":
 		render_repairs()
 		return

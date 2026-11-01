@@ -1,11 +1,18 @@
 extends StyleBox
-## Tile-free velvet fill and native rectangular trim; no case-edge pixels.
-const CLOTH = preload("res://assets/art/shop-salesman-v1.png")
+## Velvet fill from the case (pixel-v3, repeated 1:1 so each logical pixel stays 2×2) and native rectangular trim.
+const VELVET = preload("res://assets/art/pixel-v3/terciopelo-v3.png")
 
 func _draw(canvas_item: RID, rect: Rect2) -> void:
-	var unit := Vector2(CLOTH.get_size()) / Vector2(1440, 900)
-	# Sample only the unobstructed interior, away from all perspective edges.
-	CLOTH.draw_rect_region(canvas_item, rect, Rect2(Vector2(620, 295) * unit, Vector2(240, 100) * unit))
+	var tile := Vector2(VELVET.get_size())
+	var y := 0.0
+	while y < rect.size.y:
+		var h := minf(tile.y, rect.size.y - y)
+		var x := 0.0
+		while x < rect.size.x:
+			var w := minf(tile.x, rect.size.x - x)
+			VELVET.draw_rect_region(canvas_item, Rect2(rect.position + Vector2(x, y), Vector2(w, h)), Rect2(0, 0, w, h))
+			x += tile.x
+		y += tile.y
 	var frame := StyleBoxFlat.new()
 	frame.bg_color = Color.TRANSPARENT
 	frame.border_color = Color("a86826")

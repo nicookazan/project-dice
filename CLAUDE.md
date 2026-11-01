@@ -30,7 +30,7 @@ Pasos 00–18 completos en alcance técnico; 19 (presentación/arte) reabierto p
 
 - `scripts/rules.gd` reglas puras (categorías, puntuación, economía); `game.gd` estado y transiciones; `main.gd` UI/mesa/tienda (~1600 líneas); `campaign.gd`, `boss_rules.gd`, `shop.gd`, `purchases.gd`, `stickers.gd`, `coins.gd`, `gems.gd`, `materials.gd`, `elements.gd`, `number_upgrades.gd`, `dice_state.gd`, `save_*.gd`, `presentation_*.gd`.
 - `tests/run_tests.gd` agrega las suites `*_tests.gd`; `tests/*_review.gd` generan capturas (requieren GPU, **sin** `--headless`) en `test-results/` (ignorado por Git).
-- `assets/art/` arte y prompts de procedencia; `ART-PROMPTS.md` índice. Plan de renovación del pixel art: `docs/PLAN-ARTE-PIXEL.md`; el arte nuevo (`assets/art/pixel-v3/`) se genera por código en `tools/art/` y los dados (`PROTEGIDOS.sha256`) no se tocan.
+- `assets/art/` arte y prompts de procedencia; `ART-PROMPTS.md` índice. Plan de renovación del pixel art: `docs/PLAN-ARTE-PIXEL.md`; el arte nuevo (`assets/art/pixel-v3/`) se genera por código en `tools/art/` (scripts de Godot; los de la tienda son Python 3.13 con Pillow, numpy y scipy) y los dados (`PROTEGIDOS.sha256`) no se tocan. Al pasar arte existente se respeta su dibujo (se limpia, no se rediseña) y el autor aprueba bocetos antes de integrar.
 
 ## Comandos
 
@@ -47,7 +47,7 @@ Pasos 00–18 completos en alcance técnico; 19 (presentación/arte) reabierto p
 - Redondeo: decimales se conservan y se redondea una sola vez al total de mano (0,5 hacia arriba).
 - Arte: respetar el pixel art existente y el diseño maestro de dados (`docs/DISENO-MAESTRO-DADOS.md`, imagen marfil frontal). No sustituir por geometría provisional. Registrar prompts/procedencia.
 - Guardado versionado (hoy v6) con migraciones; nunca sobrescribir archivos inválidos. Guardados y preferencias van en `%APPDATA%/DiosNoJuegaALosDados/`, fuera de Git.
-- No publicar ni distribuir externamente sin instrucción explícita. Rama de trabajo actual: `codex/mac-test-ready`.
+- No publicar ni distribuir externamente sin instrucción explícita. Rama principal: `main` (única de larga vida); cada cambio va en `feature/<nombre>` con PR contra `main`.
 - Fuera de alcance salvo pedido: compra/venta de dados, más de 5 dados, destrucción del dado, usos seguros de cristal, dos tiradas por mano, victoria automática por generala servida, nivel 8/CMD.
 
 ## Agentes disponibles (en `~/.claude/agents`)

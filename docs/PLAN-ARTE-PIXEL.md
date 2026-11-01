@@ -1,6 +1,6 @@
 # Plan de arte — menos "IA", más pixel art real
 
-Fecha: 31 de octubre de 2026. Estado: **propuesta, nada ejecutado**. Se avanza una fase por vez, con aprobación del autor antes de pasar a la siguiente.
+Fecha: 31 de octubre de 2026. Estado (01/11/2026): **fases 0–7 hechas (Dios queda para cuando exista el jefe final); 8 pendiente** (ver el registro de avance al final). Se avanza una fase por vez, con aprobación del autor antes de pasar a la siguiente.
 
 ## Decisiones de partida (del autor)
 
@@ -99,7 +99,7 @@ Cada fase termina con: assets en `assets/art/pixel-v3/`, capturas antes/después
 
 ## Siguiente paso propuesto
 
-Ejecutar solo la **Fase 0**: medir, proponer paleta y píxel lógico, y mostrar una muestra comparativa. No se modifica ningún asset del juego hasta que la apruebes.
+**Fase 8** (interfaz y cierre), cuando el autor lo pida. Aparte, quedan por iterar los gestos de la mano y por definir el jefe final con los tres guardianes (ver Fase 7).
 
 ## Registro de avance
 
@@ -138,3 +138,38 @@ Ejecutar solo la **Fase 0**: medir, proponer paleta y píxel lógico, y mostrar 
 - Calabaza redonda con panel de cuero en dos tonos y costura dorada, paleta de 10 marrones con corrimiento de tono (sombras hacia el bordó, luces hacia el ocre), manchas suaves, brillo y luz de rebote. Aro, collar con remaches y tiras de plata que rematan en un remache. Sin patas ni base: el fondo está apenas aplanado.
 - Bombilla de metal en perspectiva, más gruesa hacia la punta, con codo, boquilla achatada con abertura y collarín dorado, virola dorada grabada, destellos y sin contorno negro. Entra por un hueco húmedo de la yerba, con borde irregular, reflejo verdoso y hojitas pegadas.
 - Mismo marco (136×236, píxel de 2×2) y misma posición en `backdrop.gd`. El dibujo se bajó 26 px para que apoye sobre la sombra de contacto que ya hornea `make_mesa.gd` (`mesa-v3.png` no cambia). Suite: 2195 comprobaciones, 0 fallos. Revisado en la captura `test-results/grupos.png`.
+
+**Fase 5 — hecha y aprobada por el autor (01/11/2026, rama `feature/pixel-tienda`):**
+- Fondo de la tienda (`pixel-v3/tienda-v3.png`, 720×450 px lógicos, 119 colores), generado con `python tools/art/make_tienda.py`: salón con los motivos de `salon-v3.png` y bandas de arriba y abajo tranquilas para la interfaz.
+- **Vendedor** (`tools/art/vendedor.py`): conversión fiel del dibujo de `shop-salesman-v1.png` con el método de sprite-forge. Se usa la mediana por celda en la grilla lógica, un suavizado que respeta bordes, una paleta propia por zona (cara 10 tonos, pelo 6, traje 6, manos 8) y limpieza de manchas fuera de los rasgos. A mano solo se repuso el brillo de las pupilas y el blanco del ojo.
+- **Regla del autor:** al pasar arte existente se limpia, no se rediseña. La primera versión, redibujada con formas esquemáticas, se rechazó porque no respetaba la cara ni las manos del original.
+- **Maletín** (`tools/art/maletin.py`): tiene la silueta del original (tapa casi frontal, interior en trapecio, base que se abre hacia abajo), con cuero, costura, herrajes dorados y el terciopelo de la mesa. Una versión rectangular de frente se descartó por "demasiado cuadrada". Las zonas de ofertas de `main.gd` no se movieron.
+- **Íconos** (`pixel-v3/tienda-iconos-v3.png`, celdas de 44×44): medallón de mejora numérica y sobre de stickers en diagonal (~13°, como el original). `scripts/shop_art.gd` los dibuja a escala entera: ×2 en la tienda, ×4 en la animación del sobre. El atlas isométrico `shop-items-v1.png` ya no se usa: las ofertas de dados se dibujan con el dado frontal real y sus marcas de elemento planas.
+- **Terciopelo de descripciones y paneles** (`pixel-v3/terciopelo-v3.png`): baldosa del terciopelo del maletín que `scripts/tooltip_frame.gd` repite 1:1.
+- **Sin cambios:** dados (protegidos), monedas, stickers y termo (fases 1 y 2), marcos de interfaz (Fase 8).
+- **Herramientas:** los generadores de esta fase son de Python 3.13 (Pillow, numpy, scipy), porque convierten una ilustración existente; los demás siguen en GDScript.
+- **Para revertir:** cambiar `SELLER_ART` en `scripts/backdrop.gd`, `SHEET` en `scripts/shop_art.gd` y `VELVET` en `scripts/tooltip_frame.gd`. Los archivos originales se conservan.
+- Suite: 2195 comprobaciones, 0 fallos. Revisiones visuales de tienda, descripciones, sobre, venta por arrastre, termo e interfaz sin errores.
+
+**Fase 6 — hecha y aprobada por el autor (01/11/2026, rama `feature/pixel-exteriores`):**
+- Los seis exteriores de las ventanas (`pixel-v3/exteriores-v3.png`, `tools/art/make_exteriores.py`) son una conversión fiel de `environment-v2/exteriores-v2.png`, sin rediseño: cada panel se reduce a 401×110 px lógicos (el panorama de 801×220 px), se suaviza respetando bordes y se pinta con una paleta corta propia de 20 a 24 colores. Las estrellas se conservan, ajustadas a la paleta.
+- Los límites de los paneles en la hoja original no son tercios iguales (filas en y=342 y 671, columna en x=768). Con los límites reales desaparece una línea clara que se colaba al pie de las ventanas de noche y espacio, y que ya estaba en el juego anterior.
+- Cada celda del atlas mide 402×111 (panel más una columna y una fila repetidas) para que el medio píxel de las ventanas de ancho impar no tome el borde del vecino. `scripts/backdrop.gd` mapea un píxel lógico a 2×2 de pantalla. El ambiente «cierre» (ventanas tapadas) no cambia.
+- Para revertir: la constante `EXTERIORS` y el cálculo de `source` en `scripts/backdrop.gd`. El original se conserva.
+- Suite: 2195 comprobaciones, 0 fallos. Revisión de presentación de los siete ambientes sin errores.
+
+**Fase 7 — hecha y aprobada por el autor (01/11/2026, rama `feature/pixel-mano-dios`):**
+- **Mano y nube integradas:** conversión fiel del original (`pixel-v3/mano-v3.png`, 8 cuadros de 61×53; `pixel-v3/nube-v3.png`, 131×20; generadores `make_mano_dios.py` y `make_mano_anim.py`). La mano tamborilea (meñique → índice, pulgar quieto) a 110 ms por cuadro. El vaivén pasó de 3 px sin redondear a pasos de 2 px para respetar la grilla; con movimiento reducido o apagado queda el cuadro 0. Para revertir, ver las constantes `CLOUD_V3` y `HAND_V3` y el dibujo final de `scripts/backdrop.gd`.
+- **Los tres guardianes (decisión del autor):** el triángulo de Dios era un placeholder y se reemplaza por tres figuras épicas de contraste fuerte, que serán los **guardianes** del jefe final: derrotados los tres, se accede al jefe final. Quedan guardadas en `pixel-v3/guardianes/` (124×100 px lógicos), sin integrar al juego, con su generador `tools/art/make_dios_opciones.py`:
+  - **Ojo solar** (`guardian-ojo-v3.png`): ojo de pupila vertical en un vacío oscuro con anillos y 32 rayos.
+  - **Figura de luz** (`guardian-figura-v3.png`): silueta encapuchada con ojos blancos, túnica estrellada y brazos abiertos.
+  - **Dado cósmico** (`guardian-dado-v3.png`): dado dorado con un ojo en un punto, mandorla y dados en órbita.
+- **Pendiente de definir (no está en el PRD):** el jefe final y su relación con los guardianes (cantidad y orden de encuentros, reglas, en qué nivel aparecen, arte del jefe). No se agregó nada al PRD ni a las fichas; el tablero de Notion debe actualizarse a mano cuando el autor lo decida. Mientras tanto, `scripts/backdrop.gd` conserva el triángulo provisional para `actor == "god"`.
+- **Gestos de la mano (descartados por ahora):** se probaron abrir, cerrar, pulgar arriba y pulgar abajo y no convencieron al autor; no quedan en el repo. La mano conserva solo la animación inicial. Se iteran más adelante, probablemente con piezas dibujadas de cero (puño con nudillos, pulgar plegado) y disparadas por lo que haga el jugador.
+- **Efectos de puntuación y rotura:** no hay arte existente y no se inventó; quedan fuera hasta que el autor los pida.
+- Suite: 2195 comprobaciones, 0 fallos.
+
+**Fase 8 — en curso (rama `feature/pixel-interfaz`):**
+- **Hecho a pedido del autor (01/11/2026):** Abandonar partida, Recorrido y Opciones salen de la mesa, del resultado y de la tienda y pasan a un panel que abre el botón «Menú» dentro de la partida (`show_game_menu` en `scripts/main.gd`), junto con «Seguir jugando» y «Guardar y volver al menú» (el comportamiento anterior de «Menú»). La tecla M sigue abriendo el recorrido. El texto de todos los botones baja 1 px para quedar centrado. Pruebas nuevas en `level_flow_tests.gd` y revisión visual `tests/game_menu_review.gd`.
+- **Kit de interfaz integrado (aprobado por el autor, 01/11/2026):** texturas de 9 cortes en `pixel-v3/ui/` (6 estados de botón, panel con esquineros y marco del cartel TIENDA), generadas con `tools/art/make_interfaz.py` y cargadas desde `scripts/ui_skin.gd`. Se usan en los botones (`button()`), los marcos de la tienda, las tarjetas con borde dorado (menú, pantalla inicial, modales) y las ventanas de diálogo de Godot (fichas, confirmaciones), cuyo marco es el panel del kit con el título dorado encima. El modo de alto contraste conserva los planos. Tipografía: se mantiene Consolas sin suavizado (no se suma ninguna fuente de terceros).
+- **Pendiente:** la libreta sigue siendo un panel plano de Godot (el papel con renglones está en el kit pero no integrado: toca la distribución del texto); revisión a 1280×800 y 1440×900; limpieza de assets viejos sin uso (`shop-salesman-v1.png`, `shop-items-v1.png`, partes de `environment-v2/` y `club-table-v2.png`). Para revertir el kit, volver a los `box()` planos en `button()`, `shop_skin()`, `panel()` y quitar `skin_dialog()`.
