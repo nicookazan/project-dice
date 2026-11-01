@@ -37,3 +37,7 @@ El cuerpo del dado ahora usa el sprite transparente `assets/art/ivory-die-v3.png
 `assets/art/pixel-v3/mesa-v3.png` y `termo-mesa-v3.png` (`tools/art/make_mesa.gd`), `mate-v3.png` y `vaso-v3.png` (`tools/art/make_mate_vaso.gd`): generados (sin IA de imagen), tomando como referencia la composición de `mesa-libreta-frontal-v1.png` (paño con tres paneles, mate de madera con virola, termo de acero, vaso de cuero negro con costuras doradas).
 
 `assets/art/pixel-v3/salon-v3.png`: generado con `tools/art/make_salon.gd` (sin IA de imagen), con la distribución del salón de `mesa-libreta-frontal-v1.png` (ventanas, lámparas, cuadros, sillas, banderín argentino, planta).
+
+`assets/art/pixel-v3/tienda-v3.png` (01/11/2026): generado con `python tools/art/make_tienda.py` (sin IA de imagen nueva). El vendedor (`tools/art/vendedor.py`) es una conversión del dibujo de `shop-salesman-v1.png` (Imagegen, inspirado en las fotos del usuario; ver `assets/art/shop-salesman-prompts-v1.md`): reducción a la grilla lógica, paleta propia por zona y limpieza de ruido con el método de sprite-forge, sin redibujar rasgos. El maletín (`tools/art/maletin.py`) se dibuja por código con la silueta del original. El salón y las bandas siguen los motivos de `salon-v3.png`.
+
+`assets/art/pixel-v3/tienda-iconos-v3.png` (medallón de mejora numérica y sobre de stickers en diagonal, según el diseño de `shop-items-v1.png`) y `terciopelo-v3.png` (baldosa del terciopelo del maletín para descripciones y paneles): generados con `tools/art/make_tienda.py`, sin IA de imagen.
