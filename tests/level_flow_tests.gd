@@ -6,6 +6,12 @@ const UI = preload("res://tests/interface_tests.gd")
 
 static func click(scene, caption: String) -> bool:
 	var control = UI.find_button(scene.ui, caption)
+	# Secondary options live inside the in-game menu panel: open it first when the button is not on screen.
+	if control == null and caption in ["Recorrido · M", "Opciones", "Abandonar partida", "Guardar y volver al menú", "Seguir jugando"]:
+		var menu = UI.find_button(scene.ui, "Menú")
+		if menu != null and not menu.disabled:
+			menu.pressed.emit()
+			control = UI.find_button(scene.ui, caption)
 	if control == null or control.disabled: return false
 	control.pressed.emit()
 	# Advance presentation time before issuing the next synchronous UI action.
@@ -109,6 +115,11 @@ static func run(scene, check: Callable) -> Dictionary:
 	click(scene, "Empezar primer encuentro")
 	check.call(scene.game.phase == "play" and scene.game.rival == 0 and not scene.game.begin_level(), "Flow: only first encounter starts, intro continuation is idempotent")
 	before = scene.game.snapshot()
+	check.call(UI.find_button(scene.ui, "Recorrido · M") == null and UI.find_button(scene.ui, "Abandonar partida") == null and UI.find_button(scene.ui, "Opciones") == null and UI.find_button(scene.ui, "Menú") != null, "Flow: table keeps only the Menú button; secondary options are not loose on screen")
+	UI.find_button(scene.ui, "Menú").pressed.emit()
+	check.call(scene.ui.has_node("GameMenu") and UI.find_button(scene.ui, "Seguir jugando") != null and UI.find_button(scene.ui, "Recorrido · M") != null and UI.find_button(scene.ui, "Opciones") != null and UI.find_button(scene.ui, "Abandonar partida") != null and UI.find_button(scene.ui, "Guardar y volver al menú") != null and scene.game.snapshot() == before, "Flow: Menú opens a panel with route, options, abandon and save-and-exit without changing state")
+	UI.find_button(scene.ui, "Seguir jugando").pressed.emit()
+	check.call(not scene.ui.has_node("GameMenu") and scene.game.snapshot() == before, "Flow: closing the menu panel keeps the game untouched")
 	click(scene, "Recorrido · M")
 	check.call("40 → 70 → 110" in scene.detail_text and "trío + par" in scene.detail_text and scene.game.snapshot() == before, "Flow: route consultable during play without changing RNG or state")
 	scene.detail.hide()

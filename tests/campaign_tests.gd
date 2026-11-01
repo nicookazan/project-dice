@@ -15,7 +15,7 @@ static func reload_ui(scene, check: Callable, label: String) -> void:
 	var before: Dictionary = scene.checkpoint_data()
 	check.call(scene.save_error == "" and scene.save_store.inspect().get("active", false), "Campaign: valid durable checkpoint " + label + " / " + scene.save_error)
 	if scene.save_error != "": return
-	Flow.click(scene, "Volver al menú" if scene.game.phase == "level_intro" else "Menú")
+	Flow.click(scene, "Volver al menú" if scene.game.phase == "level_intro" else "Guardar y volver al menú")
 	check.call(Flow.click(scene, "Continuar") and scene.checkpoint_data() == before, "Campaign: exact UI resume " + label)
 
 static func persistent_parts(game) -> Dictionary:

@@ -324,6 +324,13 @@ func button(parent: Node, text_value: String, rect: Rect2, action: Callable, dis
 		node.add_theme_color_override("font_disabled_color", Color("bdbdbd"))
 	node.add_theme_stylebox_override("focus", box(Color.TRANSPARENT, Color.WHITE, 3))
 	if is_instance_valid(background) and background.shop_mode: skin_shop_button(node)
+	# The font's ascent leaves the label about 1 px above the optical centre: push it down 1 px.
+	for state in ["normal", "hover", "pressed", "disabled", "focus"]:
+		var skin: StyleBox = node.get_theme_stylebox(state)
+		if skin != null and not (skin is StyleBoxEmpty):
+			skin = skin.duplicate()
+			skin.set_content_margin(SIDE_TOP, skin.get_margin(SIDE_TOP) + 2)
+			node.add_theme_stylebox_override(state, skin)
 	node.pressed.connect(func():
 		if not throwing and not sticker_animation_active() and not detail.visible and not confirmation.visible: action.call())
 	parent.add_child(node)
@@ -461,6 +468,39 @@ func continue_saved() -> void:
 	purchase_error = ""
 	session_started = true
 	render()
+
+var game_menu: Control
+
+func close_game_menu() -> void:
+	if is_instance_valid(game_menu):
+		if game_menu.get_parent() != null: game_menu.get_parent().remove_child(game_menu)
+		game_menu.queue_free()
+	game_menu = null
+
+## In-game menu: every secondary option lives here so the table and the shop stay uncluttered.
+func show_game_menu() -> void:
+	close_game_menu()
+	game_menu = Control.new()
+	game_menu.name = "GameMenu"
+	game_menu.size = Vector2(1440, 900)
+	game_menu.z_index = 120
+	ui.add_child(game_menu)
+	var dim := ColorRect.new()
+	dim.size = game_menu.size
+	dim.color = Color(0.02, 0.03, 0.06, 0.72)
+	game_menu.add_child(dim)
+	var card := panel(game_menu, Rect2(520, 190, 400, 500), Color("0d1728"), gold)
+	var title := label(card, "MENÚ", Vector2(0, 24), 30, gold, 400)
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	var entries := [
+		["Seguir jugando", close_game_menu, true],
+		["Recorrido · M", func(): close_game_menu(); show_route(), false],
+		["Opciones", func(): close_game_menu(); show_options(), false],
+		["Abandonar partida", func(): close_game_menu(); request_navigation("menu"), false],
+		["Guardar y volver al menú", func(): close_game_menu(); request_navigation("pause"), false]]
+	for index in range(entries.size()):
+		var entry: Array = entries[index]
+		button(card, entry[0], Rect2(50, 92 + index * 72, 300, 54), entry[1], false, entry[2])
 
 func request_navigation(destination: String) -> void:
 	if destination not in ["menu", "new", "new_debug", "quit", "pause"]: return
@@ -796,10 +836,7 @@ func render() -> void:
 		render_shop()
 		finish_render()
 		return
-	button(ui, "Menú", Rect2(1220, 23, 185, 38), func(): request_navigation("pause"))
-	button(ui, "Abandonar partida", Rect2(590, 23, 195, 38), func(): request_navigation("menu"))
-	button(ui, "Recorrido · M", Rect2(1000, 23, 200, 38), show_route)
-	button(ui, "Opciones", Rect2(800, 23, 180, 38), show_options)
+	button(ui, "Menú", Rect2(1220, 23, 185, 38), show_game_menu)
 	if game.phase not in ["shop", "purchase_target", "sticker_choice"]: shop_section = "coins"
 	if game.phase != "sticker_choice": pack_panel_open = true
 	render_notebook()
@@ -1322,9 +1359,6 @@ func render_shop() -> void:
 	shop_frame(Rect2(730, 30, 200, 80))
 	shop_caption(ui, "CAPACIDAD", Rect2(742, 38, 176, 22), 18)
 	shop_caption(ui, str(game.coin_inventory.shared_capacity), Rect2(742, 60, 176, 42), 34, gold)
-	for entry in [["Menú", 1027, func(): request_navigation("pause")], ["Opciones", 1137, show_options], ["Recorrido · M", 1247, show_route]]:
-		var nav := button(ui, entry[0], Rect2(entry[1], 166, 106 if entry[0] != "Recorrido · M" else 158, 31), entry[2])
-		nav.add_theme_font_size_override("font_size", 13)
 	shop_caption(ui, "TUS DADOS", Rect2(350, 777, 370, 22), 15)
 	for id in range(5):
 		var die := Die.new()
@@ -1378,8 +1412,8 @@ func render_shop() -> void:
 	var next_button := button(ui, next_label, Rect2(1025, 25, 380, 93), func(): act(game.leave_shop), game.phase != "shop", true)
 	next_button.name = "ShopAdvance"
 	next_button.add_theme_font_size_override("font_size", 18)
-	var leave := button(ui, "Abandonar partida", Rect2(1025, 126, 380, 28), func(): request_navigation("menu"))
-	leave.add_theme_font_size_override("font_size", 14)
+	var game_menu_button := button(ui, "Menú", Rect2(1025, 126, 380, 36), show_game_menu)
+	game_menu_button.add_theme_font_size_override("font_size", 16)
 	shop_caption(ui, "EL MALETÍN · TODAS LAS OFERTAS A LA VISTA", Rect2(410, 750, 980, 31), 15)
 	shop_caption(ui, "NIVEL %d · %s · DATOS PROVISIONALES" % [game.level_index + 1, game.environment_id().replace("_", " ").to_upper()], Rect2(30, 94, 400, 22), 11)
 	coin_sale_overlay = preload("res://scripts/coin_sale_zone.gd").new()
@@ -1561,9 +1595,7 @@ func show_sticker_reveal(items: Array, previous: Dictionary) -> void:
 
 func render_result() -> void:
 	panel(ui, Rect2(0, 0, 1440, 900), Color(0.04, 0.06, 0.07, 0.84))
-	button(ui, "Recorrido · M", Rect2(1000, 23, 200, 38), show_route)
-	button(ui, "Menú", Rect2(1220, 23, 185, 38), func(): request_navigation("pause"))
-	button(ui, "Abandonar partida", Rect2(590, 23, 195, 38), func(): request_navigation("menu"))
+	button(ui, "Menú", Rect2(1220, 23, 185, 38), show_game_menu)
 	if game.phase == "repair":
 		render_repairs()
 		return
