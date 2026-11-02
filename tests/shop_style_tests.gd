@@ -54,4 +54,12 @@ static func run(scene, check: Callable) -> Dictionary:
 	scene.render()
 	UI.find_button(scene.ui.get_node("Shop_stickers"), "$4").pressed.emit()
 	check.call(scene.ui.get_node("Shop_cup/ThermosArtwork").stickers == {"trio": 2}, "Shop footer: buying same sticker upgrades its badge instead of duplicating it")
+	var Thermos = preload("res://scripts/shop_thermos.gd")
+	var alone: Rect2 = Thermos.badge_rect("full", {"full": 1})
+	var crowded: Rect2 = Thermos.badge_rect("full", {"pair_loose": 1, "trio": 2, "straight": 1, "full": 1, "poker": 1, "generala": 1})
+	var spots := {}
+	for id in ["pair_loose", "trio", "straight", "full", "poker", "generala"]: spots[Thermos.badge_rect(id, {}).position] = id
+	check.call(alone == crowded and spots.size() == 6, "Thermos stickers: each sticker keeps its own fixed spot whatever else is owned")
+	var Icons = preload("res://scripts/shop_art.gd")
+	check.call(Icons.ICONS.has("number_1") and Icons.ICONS.has("number_6") and Icons.ICONS.number_6 * Icons.CELL + Icons.CELL <= Icons.SHEET.get_width(), "Shop numbers: every number 1-6 has its pixel-art medallion in the icon sheet")
 	return {"reference_layout": "merchandise in case; dice and thermos in blue footer", "detail_pure": true, "sale_exact": true, "face_illustration_exact": true}

@@ -14,13 +14,9 @@ static func badge_hit_rect(id: String, levels: Dictionary) -> Rect2:
 	var end := StickerArt.surface_point(rect.end, AXIS, RADIUS)
 	return Rect2(start, end - start).grow(2)
 
-static func badge_rect(id: String, levels: Dictionary) -> Rect2:
-	var index := 0
-	for key in Stickers.NAMES:
-		if not levels.has(key): continue
-		if key == id: break
-		index += 1
-	return Rect2(46 + (index % 2) * 42, 112 + int(index / 2.0) * 42, 38, 38)
+## Each sticker keeps its own fixed spot whatever else is owned (levels kept for callers).
+static func badge_rect(id: String, _levels: Dictionary) -> Rect2:
+	return StickerArt.thermos_rect(id)
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -30,4 +26,4 @@ func _draw() -> void:
 	draw_texture_rect(ART, Rect2(0, 0, 144, 330), false)
 	for id in Stickers.NAMES:
 		if not stickers.has(id): continue
-		StickerArt.draw_sticker(self, badge_rect(id, stickers), id, AXIS, RADIUS)
+		StickerArt.draw_on_thermos(self, Vector2.ZERO, id, AXIS, RADIUS)
