@@ -9,6 +9,7 @@ const CUP_TABLE_ART = preload("res://assets/art/environment-v2/vaso-cuero-negro-
 const CUP_SHOP_ART = preload("res://assets/art/environment-v2/vaso-cuero-negro-tienda-v1.png")
 const TABLE_V3 = preload("res://assets/art/pixel-v3/mesa-v3.png")
 const SALON_V3 = preload("res://assets/art/pixel-v3/salon-v3.png")
+const MULLIONS_V3 = preload("res://assets/art/pixel-v3/parteluces-v3.png")
 const THERMOS_TABLE_V3 = preload("res://assets/art/pixel-v3/termo-mesa-v3.png")
 const MATE_V3 = preload("res://assets/art/pixel-v3/mate-v3.png")
 const CUP_V3 = preload("res://assets/art/pixel-v3/vaso-v3.png")
@@ -91,6 +92,8 @@ func _draw() -> void:
 			# Pixel-v3 panels are 401×110 logical px: every logical pixel lands on a 2×2 block of the window.
 			var source := Rect2(origin + (window.position - panorama.position) / 2.0, window.size / 2.0)
 			draw_texture_rect_region(EXTERIORS, window, source)
+	# Wooden mullions over the glass (not over the boarded-up "cierre" windows); hand and cloud stay in front.
+	if not shop_mode and environment_id != "cierre": draw_texture_rect(MULLIONS_V3, Rect2(0, 0, 1440, 300), false)
 	# Pixel-v3 table (wood, felt, front, floor) over the old plate; the room above it stays.
 	if not shop_mode: draw_texture_rect(TABLE_V3, Rect2(0, 272, 1440, 628), false)
 	# Only replace the prop strip: all dice areas, the hand and the original

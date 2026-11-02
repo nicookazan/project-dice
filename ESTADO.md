@@ -1,3 +1,5 @@
+> Actualización del 02/11/2026: vaso, mate, paño y salón de la mesa con más textura; parteluces sobre las ventanas. Opciones elegidas por el autor entre bocetos. Ver el registro de avance de [PLAN-ARTE-PIXEL](docs/PLAN-ARTE-PIXEL.md). Suite: 2198 comprobaciones, cero fallos.
+
 > Actualización del 28/10/2026: materiales y elementos ya integrados en dados frontales, combinables con gemas brillantes y sin emblemas inferiores. Ver [Dados compuestos](docs/DADOS-COMPUESTOS.md). Suite: 2133 comprobaciones, cero fallos.
 
 > Actualización del 28/10/2026: siempre mate con termo; stickers sobre el termo; exteriores ilustrados según el PRD; gemas brillantes. Sustituye las referencias históricas a cerveza, stickers en vaso y puntos opacos. Ver docs/CAMBIOS-VISUALES-2026-10-28.md.
