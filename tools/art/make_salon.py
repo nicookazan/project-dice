@@ -2,7 +2,7 @@
 
   assets/art/pixel-v3/salon-v3.png       720×150 px lógicos (se dibuja a 1440×300): pared de tablones como la tienda,
                                          jambas de ventana con filete dorado, dintel y alféizar, boiserie en penumbra,
-                                         cuadros, lámparas, aplique, banderín, planta, sillas de café y mesitas de mármol
+                                         cuadros (uno con la copa del mundo y tres estrellas), lámparas, aplique, banderín, planta, sillas de café y mesitas de mármol
   assets/art/pixel-v3/parteluces-v3.png  720×150, transparente: parteluces y travesaños de madera sobre el vidrio
                                          (backdrop.gd los dibuja encima del exterior y debajo de la mano y la nube)
 
@@ -17,7 +17,12 @@ import os
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from pixel_lib import Canvas, GOLD, SILVER, COPPER, WALL, BEAM, SHADE, LEAF, IVORY, PANEL, ramp, hash2, upscale
+import numpy as np
+from PIL import Image, ImageDraw
+from scipy import ndimage
+
+from pixel_lib import (Canvas, GOLD, SILVER, COPPER, WALL, BEAM, SHADE, LEAF, IVORY, PANEL, CELESTE, WHITE, ramp,
+                       hash2, upscale)
 import texturas
 
 W, H = 720, 150
@@ -31,6 +36,9 @@ BENT = ramp("2a1208", "6a3414", "9a5422", "c47a34")
 MARBLE = ramp("6a6458", "9a9284", "c4bcac", "e2dccc", "f6f2e6")
 GLASS = ramp("0e2a2a", "1a4a46", "2c6e66", "5aa094", "a8e0d0")
 WINE = (150, 30, 50)
+CUP_GREEN = ramp("0c321a", "1a5a2e", "2e8a44", "4aa860")
+# cuadro de la copa del mundo (marco dorado; interior 34×42)
+COPA_FRAME = (538, 56, 44, 52)
 
 
 def halo(x: int, y: int) -> int:
@@ -184,6 +192,112 @@ def cafe_table(cv: Canvas, cx: int, top: int, items: str) -> None:
             cv.put(gx, top - 10, IVORY[4])
 
 
+def _pick(r, t):
+    return r[max(0, min(len(r) - 1, int(t * len(r))))]
+
+
+def _star(cv: Canvas, cx: float, cy: float, R: float) -> None:
+    """Estrella de cinco puntas dorada: mitad izquierda clara, derecha en sombra, borde oscuro abajo-derecha."""
+    pts = []
+    for k in range(10):
+        a = -math.pi / 2 + k * math.pi / 5
+        r = R if k % 2 == 0 else R * 0.45
+        pts.append((cx + math.cos(a) * r, cy + math.sin(a) * r))
+    m = Image.new("L", (cv.w, cv.h), 0)
+    ImageDraw.Draw(m).polygon(pts, fill=255)
+    mask = np.array(m) > 0
+    for y, x in zip(*np.nonzero(mask)):
+        c = GOLD[5] if x + 0.5 < cx else GOLD[3]
+        if y + 0.5 > cy + R * 0.25 and x + 0.5 >= cx:
+            c = GOLD[2]
+        cv.put(x, y, c)
+    edge = mask & ~ndimage.binary_erosion(mask, border_value=0)
+    for y, x in zip(*np.nonzero(edge)):
+        if x + 0.5 >= cx or y + 0.5 > cy:
+            cv.put(x, y, GOLD[1])
+    cv.put(int(cx), int(cy - R * 0.3), GOLD[6])
+
+
+def _trophy(cv: Canvas, cx: float, top: int) -> np.ndarray:
+    """Copa del mundo derecha: globo con continentes, dos figuras en espiral, cintura fina, bandas verdes y pie."""
+    gr = 6.6
+    gy = top + gr
+    body_top = gy + gr * 0.55
+    base_y = top + 31
+    solid = np.zeros((cv.h, cv.w), bool)
+    for y in range(cv.h):
+        for x in range(cv.w):
+            yy = y + 0.5
+            if not body_top <= yy <= base_y:
+                continue
+            k = (yy - body_top) / (base_y - body_top)
+            if k < 0.62:
+                half = 5.6 - 3.2 * math.sin(min(1.0, k / 0.62) * math.pi / 2)
+            elif k < 0.8:
+                half = 2.4 + 2.2 * (k - 0.62) / 0.18
+            else:
+                half = 5.2 + (0.6 if k > 0.93 else 0.0)
+            d = x + 0.5 - cx
+            if abs(d) > half:
+                continue
+            solid[y, x] = True
+            s = d / half
+            if 0.8 <= k < 0.86 or 0.9 <= k < 0.95:
+                G = CUP_GREEN
+                c = G[3] if s < -0.45 else (G[2] if s < 0.1 else (G[1] if s < 0.6 else G[0]))
+            else:
+                t = 0.8 - (s + 1) * 0.34
+                if -0.7 < s < -0.4:
+                    t += 0.12  # brillo vertical
+                if k < 0.66 and ((yy * 0.9 + d * 1.3) % 4.6) < 1.1:
+                    t -= 0.2  # figuras en espiral
+                c = _pick(GOLD, t)
+            cv.put(x, y, c)
+    for y in range(cv.h):
+        for x in range(cv.w):
+            nx, ny = (x + 0.5 - cx) / gr, (y + 0.5 - gy) / gr
+            e = nx * nx + ny * ny
+            if e > 1.0:
+                continue
+            solid[y, x] = True
+            lit = -0.6 * nx - 0.6 * ny + 0.55 * math.sqrt(1 - e)
+            t = 0.42 + lit * 0.45
+            if math.sin(nx * 5.0 + ny * 1.8 + 0.6) * math.cos(ny * 4.4 - nx * 0.9) > 0.42:
+                t -= 0.17  # continentes en relieve
+            cv.put(x, y, _pick(GOLD, t))
+    hx, hy = int(cx - gr * 0.45), int(gy - gr * 0.5)
+    for dx, dy in ((0, 0), (1, 0), (0, 1)):
+        cv.put(hx + dx, hy + dy, GOLD[6])
+    # borde un tono más oscuro del oro en el lado de la sombra
+    edge = solid & ~ndimage.binary_erosion(solid, border_value=0)
+    for y, x in zip(*np.nonzero(edge)):
+        if x + 0.5 >= cx - 2:
+            c = cv.get(x, y)
+            i = min(range(len(GOLD)), key=lambda j: sum((a - b) ** 2 for a, b in zip(GOLD[j], c)))
+            cv.put(x, y, GOLD[max(0, i - 1)])
+    return solid
+
+
+def copa_cuadro(iw: int, ih: int) -> Canvas:
+    """La copa del mundo con tres estrellas en arco, sobre la bandera (celeste, blanca y celeste con pliegues).
+    Elegido por el autor (opción A, nov 2026); reemplaza al retrato que estaba bajo la lámpara."""
+    cv = Canvas(iw, ih)
+    cx = iw / 2
+    for y in range(ih):
+        for x in range(iw):
+            f = math.sin(x * 0.32 + y * 0.04) * 0.5 + 0.5
+            band = WHITE if ih / 3 <= y < ih * 2 / 3 else CELESTE
+            cv.put(x, y, band[3] if f > 0.66 else (band[2] if f > 0.2 else band[1]))
+    for sx, sy in ((cx - 9.5, 6.0), (cx, 4.5), (cx + 9.5, 6.0)):
+        _star(cv, sx, sy, 3.8)
+    solid = _trophy(cv, cx, 10)
+    # sombra de la copa sobre la bandera, abajo a la derecha
+    sh = np.roll(np.roll(solid, 1, 0), 1, 1) & ~solid
+    for y, x in zip(*np.nonzero(sh)):
+        cv.put(x, y, tuple(int(v * 0.7) for v in cv.get(x, y)))
+    return cv
+
+
 def plant(cv: Canvas, x: int, base: int) -> None:
     cv.rect(x - 12, base - 14, 26, 14, COPPER[2])
     cv.rect(x - 12, base - 14, 26, 2, COPPER[3])
@@ -208,7 +322,8 @@ def salon() -> Canvas:
     for w in WIN:
         casing(cv, *w)
     texturas.cuadro(cv, 180, 18, 28, 36, "building")
-    texturas.cuadro(cv, 547, 60, 26, 32, "portrait")
+    ix, iy, iw, ih = texturas.marco(cv, *COPA_FRAME)
+    cv.blit(copa_cuadro(iw, ih), ix, iy)
     texturas.cuadro(cv, 698, 16, 28, 40, "dancers")
     for lx, ly, s in LAMPS:
         lamp(cv, lx, ly, s)
