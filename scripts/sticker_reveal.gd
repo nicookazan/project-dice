@@ -99,7 +99,8 @@ func step(delta: float) -> void:
 			destination = thermos.position + thermos.get_parent().position + Thermos.badge_hit_rect(items[i], after).position + Vector2(2, 2)
 		badge.position = origins[i].lerp(destination, ease) + Vector2(0, -90 * sin(PI * flight))
 		badge.scale = Vector2.ONE * lerpf(1, 28.0 / 144.0, ease)
-		badge.rotation = sin(PI * flight) * (0.2 if i % 2 == 0 else -0.2)
+		# lands with the tilt of its fixed spot, so the paste matches the sticker drawn on the thermos
+		badge.rotation = sin(PI * flight) * (0.2 if i % 2 == 0 else -0.2) + ease * Art.thermos_tilt(items[i])
 		if flight >= 1 and is_instance_valid(thermos):
 			thermos.stickers[items[i]] = after[items[i]]
 			thermos.queue_redraw()

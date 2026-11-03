@@ -107,12 +107,9 @@ func _draw() -> void:
 		draw_recovered_figure([Vector2(184, 719), Vector2(218, 726), Vector2(254, 734), Vector2(286, 748), Vector2(310, 767), Vector2(331, 792), Vector2(347, 825), Vector2(349, 868), Vector2(337, 903), Vector2(312, 932), Vector2(278, 950), Vector2(240, 950), Vector2(205, 940), Vector2(169, 928), Vector2(130, 915), Vector2(103, 901), Vector2(83, 875), Vector2(79, 844), Vector2(84, 809), Vector2(95, 779), Vector2(112, 754), Vector2(133, 738), Vector2(154, 726)], Vector2.ZERO, CUP_SHOP_ART)
 	# Thermos with its stickers, then the mate and the dice cup in front of it.
 	draw_texture_rect(THERMOS_TABLE_V3, Rect2(THERMOS_ORIGIN, Vector2(144, 350)), false)
-	var occupied := 0
+	# Every sticker sits on its own fixed spot of the thermos (same layout as the shop).
 	for id in StickerDefinitions.NAMES:
-		if not stickers.has(id): continue
-		var target := Rect2(THERMOS_ORIGIN + Vector2(46 + (occupied % 2) * 42, 112 + int(occupied / 2.0) * 42), Vector2(38, 38))
-		StickerArt.draw_sticker(self, target, id, THERMOS_ORIGIN.x + 86.0, 46)
-		occupied += 1
+		if stickers.has(id): StickerArt.draw_on_thermos(self, THERMOS_ORIGIN, id)
 	draw_texture_rect(MATE_V3, Rect2(1088, 310, 136, 236), false)
 	draw_texture_rect(CUP_V3, Rect2(1280, 426, 144, 188), false)
 	# God remains a provisional silhouette; ordinary hands retain existing art.

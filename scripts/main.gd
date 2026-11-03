@@ -1295,14 +1295,12 @@ func shop_icon(parent: Node, offer: Dictionary, rect: Rect2) -> void:
 	icon.size = rect.size
 	match offer.kind:
 		"material", "shell", "element": icon.icon_id = offer.effect.id
-		"global": icon.icon_id = "number"
+		"global": icon.icon_id = "number_" + str(offer.effect.number)
 		"face": icon.icon_id = "face"
 		"pack": icon.icon_id = "pack"
 		"sticker": icon.icon_id = "portrait" if offer.effect.id == "trio" else "sticker"
 	parent.add_child(icon)
-	if offer.kind in ["global"]:
-		shop_caption(parent, str(offer.effect.number), Rect2(rect.position + Vector2(0, 2), rect.size - Vector2(0, 6)), 37)
-	elif offer.kind == "pack":
+	if offer.kind == "pack":
 		shop_caption(parent, "?" if offer.effect.pack_kind == "choose_one" else "2", Rect2(rect.position + Vector2(0, 5), rect.size - Vector2(0, 5)), 29)
 
 func shop_card(parent: Node, section: String, index: int, rect: Rect2) -> void:

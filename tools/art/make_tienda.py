@@ -2,7 +2,7 @@
 
   assets/art/pixel-v3/tienda-v3.png         escena completa 720×450 px lógicos (se dibuja a 1440×900):
                                             salón del club, vendedor (vendedor.py) y maletín (maletin.py)
-  assets/art/pixel-v3/tienda-iconos-v3.png  íconos de ofertas que no son dados ni monedas (medallón, sobre)
+  assets/art/pixel-v3/tienda-iconos-v3.png  íconos de ofertas que no son dados ni monedas (medallón, sobre, medallón 1–6)
   assets/art/pixel-v3/terciopelo-v3.png     baldosa del terciopelo del maletín para descripciones y paneles
 
 Ejecutar:  python tools/art/make_tienda.py   (desde cualquier carpeta; trabaja en la raíz del proyecto)
@@ -275,10 +275,57 @@ def velvet_tile() -> Canvas:
     return cv
 
 
+# números de las mejoras numéricas (opción C, nov 2026): dígitos de 8×12 px lógicos en oro en relieve con contorno,
+# centrados en el medallón (ancho par: el centro del medallón cae entre dos píxeles)
+DIGITS = {
+    "1": ["...###..", "..####..", ".#####..", "...###..", "...###..", "...###..", "...###..", "...###..", "...###..",
+          "...###..", ".#######", ".#######"],
+    "2": [".######.", "###..###", "###..###", ".....###", "....###.", "...###..", "..###...", ".###....", "###.....",
+          "###.....", "########", "########"],
+    "3": [".######.", "###..###", ".....###", ".....###", "..#####.", "..#####.", ".....###", ".....###", ".....###",
+          "###..###", "###..###", ".######."],
+    "4": ["###..###", "###..###", "###..###", "###..###", "###..###", "########", "########", ".....###", ".....###",
+          ".....###", ".....###", ".....###"],
+    "5": ["########", "###.....", "###.....", "###.....", "#######.", "########", ".....###", ".....###", ".....###",
+          "###..###", "###..###", ".######."],
+    "6": [".######.", "###..###", "###.....", "###.....", "#######.", "########", "###..###", "###..###", "###..###",
+          "###..###", "###..###", ".######."],
+}
+
+
+def digit(cv: Canvas, ox: int, oy: int, d: str) -> None:
+    """Dígito dorado en relieve (luz arriba-izquierda, sombra abajo-derecha) con contorno, centrado en la celda."""
+    rows = DIGITS[d]
+    gw, gh = len(rows[0]), len(rows)
+    x0, y0 = ox + ICON // 2 - gw // 2, oy + ICON // 2 - gh // 2
+
+    def solid(x: int, y: int) -> bool:
+        return 0 <= y < gh and 0 <= x < gw and rows[y][x] == "#"
+
+    for y in range(-1, gh + 1):
+        for x in range(-1, gw + 1):
+            if not solid(x, y) and any(solid(x + dx, y + dy) for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1))):
+                cv.put(x0 + x, y0 + y, OUTLINE)
+    for y in range(gh):
+        for x in range(gw):
+            if not solid(x, y):
+                continue
+            c = GOLD[4]
+            if not solid(x, y - 1) or not solid(x - 1, y):
+                c = GOLD[5]
+            elif not solid(x, y + 1) or not solid(x + 1, y):
+                c = GOLD[2]
+            cv.put(x0 + x, y0 + y, c)
+
+
 def icons() -> Canvas:
-    cv = Canvas(ICON * 2, ICON)
+    """Celdas: medallón liso, sobre de stickers y el medallón con cada número del 1 al 6."""
+    cv = Canvas(ICON * 8, ICON)
     medallion(cv, 0, 0)
     sticker_pack(cv, ICON, 0)
+    for i, d in enumerate("123456"):
+        medallion(cv, ICON * (2 + i), 0)
+        digit(cv, ICON * (2 + i), 0, d)
     return cv
 
 

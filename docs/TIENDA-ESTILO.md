@@ -4,7 +4,7 @@
 
 El fondo de la tienda pasa a pixel art en la grilla del juego: `assets/art/pixel-v3/tienda-v3.png` (720×450 px lógicos, dibujado a 1440×900 con filtro nearest). El vendedor es el mismo de la ilustración anterior, convertido con su dibujo, sus colores por zona y sin el ruido de foto. El maletín conserva la silueta del original (interior en trapecio, base abierta hacia abajo), con cuero, herrajes dorados y el terciopelo de la mesa. Las cuatro zonas de ofertas, la capa de venta por arrastre y los controles no se movieron.
 
-El medallón de mejora numérica y el sobre de stickers (en diagonal, como antes) salen de `pixel-v3/tienda-iconos-v3.png`. `scripts/shop_art.gd` los dibuja a escala entera: ×2 en la tienda y ×4 en la animación del sobre. Las descripciones y los paneles (elegir sticker, confirmar, inspector del termo) usan `pixel-v3/terciopelo-v3.png`, el terciopelo del maletín repetido 1:1, con el mismo marco dorado.
+El medallón de mejora numérica y el sobre de stickers (en diagonal, como antes) salen de `pixel-v3/tienda-iconos-v3.png`. El número de la mejora es un dígito dorado en pixel art horneado y centrado en el medallón (celdas `number_1` a `number_6`); ya no se escribe con texto encima. `scripts/shop_art.gd` los dibuja a escala entera: ×2 en la tienda y ×4 en la animación del sobre. Las descripciones y los paneles (elegir sticker, confirmar, inspector del termo) usan `pixel-v3/terciopelo-v3.png`, el terciopelo del maletín repetido 1:1, con el mismo marco dorado.
 
 Generadores: `tools/art/make_tienda.py`, `vendedor.py` y `maletin.py` (Python 3.13 con Pillow, numpy y scipy). Procedencia en `ART-PROMPTS.md`; detalle y forma de revertir en `docs/PLAN-ARTE-PIXEL.md` (Fase 5). `shop-salesman-v1.png` y `shop-items-v1.png` quedan como referencia histórica.
 
@@ -32,7 +32,7 @@ Pruebas: inventarios únicos en 64 semillas, tabla de una sola pasiva, exclusió
 
 ## Termo plateado de pie a la izquierda — 30/10/2026
 
-El termo deja la franja azul y se coloca de pie abajo a la izquierda, según el montaje del usuario. Reutiliza la tapa negra, pico rojo y cuerpo plateado del arte de la partida (`mesa-libreta-frontal-v1.png`), con siluetas que excluyen el fondo. El metal limpio se prolonga en la parte que el vaso tapa en la imagen original; el asa se completa sin arrastrar píxeles del mate. Los stickers conservan sus marcas provisionales y sus niveles, ahora en dos columnas sobre el cuerpo del termo.
+El termo deja la franja azul y se coloca de pie abajo a la izquierda, según el montaje del usuario. Reutiliza la tapa negra, pico rojo y cuerpo plateado del arte de la partida (`mesa-libreta-frontal-v1.png`), con siluetas que excluyen el fondo. El metal limpio se prolonga en la parte que el vaso tapa en la imagen original; el asa se completa sin arrastrar píxeles del mate. Los stickers conservan sus marcas provisionales y sus niveles. Desde el 02/11/2026 cada uno tiene un lugar fijo y un giro propio sobre el termo (`THERMOS_SPOTS` en `scripts/sticker_art.gd`), como pegado a mano: se pega ahí al conseguirlo y no se mueve cuando llegan otros.
 
 Los dados siguen en la franja azul. «Abandonar partida» ocupa el espacio liberado a su derecha, antes del botón de continuar. El área de inspección acompaña al termo a su nueva ubicación. Compras, aumentos de nivel y guardado se conservan. Verificación: **2167 comprobaciones, cero fallos**, revisión visual a 1440×900 y 1280×800.
 
