@@ -1,5 +1,5 @@
 extends SceneTree
-## Vaso de pixel-v3 (aprobada la opción A: píxel de 2×2 px). Salida: assets/art/pixel-v3/vaso-v3.png.
+## Vaso de pixel-v3 (píxel de 2×2 px; colores con matiz, opción B de nov 2026). Salida: assets/art/pixel-v3/vaso-v3.png.
 ## El mate de madera de este script quedó reemplazado: mate-v3.png sale de make_mate.gd (calabaza).
 ## Acá solo se dibuja para las comparaciones que deja en test-results/propuesta/.
 ## Ejecutar: godot --headless --path . --script res://tools/art/make_mate_vaso.gd
@@ -10,7 +10,9 @@ const WOOD := [Color("2a1008"), Color("4a2010"), Color("6e341a"), Color("944a22"
 const SILVER := [Color("262c3c"), Color("444c60"), Color("667088"), Color("8c96ac"), Color("b4bece"), Color("dce2ec"), Color("ffffff")]
 const COPPER := [Color("3a1808"), Color("6a3012"), Color("9a4a1e"), Color("c4703a"), Color("e89a5c")]
 const YERBA := [Color("1c3010"), Color("2e4a16"), Color("48681e"), Color("688a2c"), Color("8cac48")]
-const LEATHER := [Color("07070b"), Color("101016"), Color("191921"), Color("24242e"), Color("34343f"), Color("4c4c5a"), Color("7a7a8a")]
+# negro de cuero con corrimiento de tono y el reflejo bordó del paño
+const HUE := [Color("05060c"), Color("0b0d16"), Color("131521"), Color("1d1e2b"), Color("2a2834"), Color("3b343c"), Color("54474a"), Color("76605a")]
+const BORDO := [Color("1a080e"), Color("2a0c14"), Color("3e121e")]
 const FELT := [Color("051c16"), Color("0a3426"), Color("124c36"), Color("1a6446"), Color("26805a")]
 const GOLD := [Color("3a2408"), Color("6a420e"), Color("a06a18"), Color("d09a28"), Color("f0c850"), Color("ffe488"), Color("fff8c0")]
 const KEY := ["########", "#......#", "#.####.#", "#.#..#..", "#.#.####", "#.#....."]
@@ -94,8 +96,33 @@ func mate_px(x: float, y: float) -> Variant:
 	return null
 
 # ---------------- vaso (marco 144×188 px) ----------------
+# Opción B (nov 2026): negro con corrimiento de tono (sombras al azul noche, luces al marrón cálido), manchas
+# suaves de cuero aceitado, brillo en tramos, pelo del fieltro y un reflejo bordó del paño en el borde derecho.
+func hash2(x: int, y: int, s: int = 0) -> float:
+	var n: int = (x * 374761393 + y * 668265263 + s * 1442695041) & 0x7fffffff
+	n = ((n ^ (n >> 13)) * 1274126177) & 0x7fffffff
+	n = n ^ (n >> 16)
+	return float(n & 0xffff) / 65535.0
+
+func vnoise(x: float, y: float, cell: float, seed: int) -> float:
+	var xf := x / cell
+	var yf := y / cell
+	var xi := floorf(xf)
+	var yi := floorf(yf)
+	var fx := xf - xi
+	var fy := yf - yi
+	var sx := fx * fx * (3.0 - 2.0 * fx)
+	var sy := fy * fy * (3.0 - 2.0 * fy)
+	var a := hash2(int(xi), int(yi), seed)
+	var b := hash2(int(xi) + 1, int(yi), seed)
+	var c := hash2(int(xi), int(yi) + 1, seed)
+	var d := hash2(int(xi) + 1, int(yi) + 1, seed)
+	return (a + (b - a) * sx) * (1.0 - sy) + (c + (d - c) * sx) * sy
+
 func cup_px(x: float, y: float) -> Variant:
 	var cx := 72.0
+	var i := int(x / 2.0)
+	var j := int(y / 2.0)
 	var hw := 70.0 - 10.0 * clampf((y - 16.0) / 160.0, 0.0, 1.0)
 	var u := (x - cx) / hw
 	# boca
@@ -104,20 +131,28 @@ func cup_px(x: float, y: float) -> Variant:
 		var din := pow((x - cx) / 61.0, 2) + pow((y - 18.0) / 10.5, 2)
 		if din <= 1.0:
 			var tf := 0.1 + clampf((y - 8.0) / 22.0, 0.0, 1.0) * 0.8
+			# pelo del fieltro: hebras de 2×1 un tono más claras, y la sombra del aro arriba
+			if hash2(i / 2 + j % 2, j, 41) > 0.84: tf += 0.2
+			if y < 14.0 and absf(x - cx) < 50.0: tf -= 0.12
 			return pick(FELT, tf)
 		var lit := -0.5 * (x - cx) / 70.0 - 0.75 * (y - 16.0) / 15.0
-		return pick(LEATHER, 0.62 + lit * 0.3)
+		var tr := 0.62 + lit * 0.3
+		if x - cx > 30.0 and y > 16.0: tr -= 0.08
+		return pick(HUE, tr)
 	if absf(u) <= 1.0 and y >= 16.0 and y <= 172.0 + 10.0 * (1.0 - u * u):
 		var z := sqrt(maxf(0.0, 1.0 - u * u))
 		var lit2 := -0.5 * u + 0.78 * z
 		var t := (lit2 + 0.2) / 1.5 * 0.7
-		if absf(u + 0.56) < 0.045: t += 0.16
-		if y < 32.0: t -= 0.12 * (1.0 - (y - 16.0) / 16.0)
 		var yb := 172.0 + 10.0 * (1.0 - u * u)
+		# brillo vertical partido en tramos
+		if absf(u + 0.56) < 0.045 and hash2(0, int(floorf(y / 14.0)), 5) >= 0.3: t += 0.16
+		# manchas suaves de cuero aceitado
+		t += (vnoise(x, y, 16.0, 3) - 0.5) * 0.09
+		if y < 32.0: t -= 0.12 * (1.0 - (y - 16.0) / 16.0)
 		if y > yb - 3.0: t += 0.1
 		if y > yb - 0.8: t -= 0.3
 		# arrugas del cuero
-		for w in [[30.0, 76.0, 22.0], [86.0, 112.0, 18.0], [52.0, 128.0, 26.0], [104.0, 88.0, 14.0]]:
+		for w in [[30.0, 76.0, 22.0], [86.0, 112.0, 18.0], [52.0, 128.0, 26.0], [104.0, 88.0, 14.0], [40.0, 104.0, 12.0]]:
 			if absf(y - (w[1] + 3.0 * (1.0 - u * u))) < 1.2 and x > w[0] and x < w[0] + w[2]: t -= 0.1
 		# costuras doradas
 		for sy in [40.0, 150.0]:
@@ -125,7 +160,11 @@ func cup_px(x: float, y: float) -> Variant:
 			if absf(u) < 0.93 and fmod(x + 500.0, 20.0) < 14.0:
 				if absf(y - yy) <= 2.3: return pick(GOLD, 0.62 - u * 0.3)
 				if y > yy + 2.3 and y < yy + 4.6: t -= 0.14
-		return pick(LEATHER, t)
+		# rebote del paño bordó: franja fina en el borde derecho, más ancha y fuerte hacia abajo
+		var edge := (1.0 - u) * hw
+		if y > 60.0 and edge > 1.0 and edge < 4.5 + (y - 60.0) / 30.0:
+			return BORDO[mini(2, int((y - 60.0) / 45.0))]
+		return pick(HUE, t)
 	return null
 
 func render(f: Callable, w: int, h: int, p: int) -> Image:
