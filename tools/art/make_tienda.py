@@ -266,12 +266,14 @@ def sticker_pack(cv: Canvas, ox: int, oy: int, angle: float = 13.0) -> None:
 
 
 def velvet_tile() -> Canvas:
-    """Baldosa de 64×64 del terciopelo del maletín para los recuadros de descripción (se repite sin costuras)."""
+    """Baldosa de 64×64 para los recuadros de descripción y los paneles (se repite sin costuras): el bordó oscuro
+    del interior del maletín, liso con pelo corto (sin el capitoné, para que el texto se lea bien)."""
+    dk = maletin.DK
     cv = Canvas(64, 64)
     for y in range(64):
         for x in range(64):
             r = hash2(x // 2, y, 21)
-            cv.put(x, y, PANO[1] if r < 0.045 else PANO[3] if r > 0.97 else PANO[2])
+            cv.put(x, y, dk[2] if r < 0.045 else dk[4] if r > 0.97 else dk[3])
     return cv
 
 

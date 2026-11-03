@@ -1,24 +1,33 @@
 """El maletín de la tienda con la forma del original (shop-salesman-v1.png) y materiales pixel-v3.
 
-La tapa queda casi de frente, el interior es un trapecio apenas más angosto arriba (las zonas de compra
-de main.gd se diseñaron sobre esa forma) y la base se abre hacia abajo, como en la ilustración. Cuero
-negro cálido (grano fino, ribete bordó entre filetes dorados, doble costura clara), herrajes dorados y terciopelo bordó con el mismo pelo corto que el paño de la mesa.
+La tapa queda casi de frente, con el marco de cuero parejo: sus costados siguen la misma inclinación que el
+interior, un trapecio apenas más angosto arriba (las zonas de compra de main.gd se diseñaron sobre esa forma).
+La base es una bandeja honda vista desde arriba que se abre hacia quien mira, y su frente tiene costados
+verticales (antes se abría en embudo hasta abajo y la perspectiva parecía rota). Opción B1 elegida por el autor
+(nov 2026). Cuero negro cálido (grano fino, ribete bordó entre filetes dorados, doble costura clara), herrajes
+dorados e interior de capitoné bordó oscuro con botones dorados.
 """
 from __future__ import annotations
 
 import numpy as np
 
-from pixel_lib import Canvas, OUTLINE, GOLD, WARMBLK as LEATHER, PANO, hash2, poly_mask, edge_of
+import math
+
+from pixel_lib import Canvas, OUTLINE, GOLD, WARMBLK as LEATHER, PANO, hash2, poly_mask, edge_of, ramp
+
+# bordó oscuro del interior (antes el del paño, base 8c1c2e): las ofertas y los divisores dorados resaltan más
+DK = ramp("16040a", "26070e", "380b15", "4a0f1c", "5e1424", "741c2e", "8c2638")
 
 W, H = 720, 450
 IN_Y0, IN_Y1 = 123, 311          # interior de terciopelo
 DIV_X = (456, 460)               # divisor vertical
 DIV_Y = (216, 220)               # divisor horizontal
-LID_P = [(262, 92), (663, 92), (668, 95), (670, 100), (684, 312), (241, 312), (255, 100), (257, 95)]
-BASE_P = [(241, 311), (684, 311), (699, 330), (712, 352), (717, 374), (715, 382), (210, 382), (208, 374),
-          (213, 352), (226, 330)]
-LIP_Y = (312, 329)               # borde superior de la base (visto desde arriba), con tira de terciopelo
-FRONT_Y = (330, 381)             # frente de la base
+# tapa con el marco de cuero parejo: los costados siguen la misma inclinación que el interior
+LID_P = [(264, 92), (661, 92), (666, 95), (668, 100), (689, 312), (237, 312), (257, 100), (259, 95)]
+# bandeja honda: se ve el terciopelo de la base desde arriba, después el frente con costados verticales
+LIP_Y = (312, 341)
+BASE_P = [(237, 311), (689, 311), (708, 341), (708, 379), (705, 383), (221, 383), (218, 379), (218, 341)]
+FRONT_Y = (LIP_Y[1] + 1, BASE_P[3][1] + 3)
 
 
 def in_left(y: float) -> float:
@@ -200,17 +209,38 @@ def ribete(cv: Canvas, x0: int, x1: int, y: int) -> None:
 
 
 # ---------- cuerpo
+def tex_px(x: int, y: int) -> tuple:
+    """Capitoné bordó oscuro: rombos acolchados de 24×16 con luz arriba-izquierda y costura hundida
+    (los botones dorados se ponen aparte, en los cruces)."""
+    p = (x / 12.0 + y / 8.0) / 2.0
+    q = (x / 12.0 - y / 8.0) / 2.0
+    fa, fb = p - math.floor(p), q - math.floor(q)
+    t = min(fa, 1 - fa, fb, 1 - fb) * 2.0
+    lit = (1 - fa) * 0.5 + (1 - fb) * 0.5 - 0.5
+    idx = 3
+    if t > 0.3 and lit > 0.1:
+        idx = 5
+    elif t > 0.18 and lit > -0.05:
+        idx = 4
+    elif lit < -0.2:
+        idx = 2
+    if t < 0.1:
+        idx = 1
+    elif t < 0.2:
+        idx = min(idx, 2)
+    return DK[idx]
+
+
 def velvet_px(x: int, y: int, top: float, left: float) -> tuple:
-    """Terciopelo con pelo corto; sombra de los bordes de arriba y de la izquierda (luz arriba-izquierda)."""
-    r = hash2(x // 2, y, 21)
-    c = PANO[1] if r < 0.045 else PANO[3] if r > 0.97 else PANO[2]
+    """Terciopelo con sombra de los bordes de arriba y de la izquierda (luz arriba-izquierda)."""
+    c = tex_px(x, y)
     dt, dl = y - top, x - left
     if dt < 0.5 or dl < 0.5:
-        return PANO[0]
+        return DK[0]
     if dt < 2.5 or dl < 1.5:
-        return PANO[1]
+        return DK[1]
     if dt < 3.5 or dl < 2.5:
-        return PANO[1] if (x + y) % 2 == 0 else PANO[2]
+        return DK[1] if (x + y) % 2 == 0 else c
     return c
 
 
@@ -235,7 +265,7 @@ def draw(cv: Canvas) -> None:
                     cv.put(px, y, c)
     # canto superior de la tapa
     for y, c in ((92, LEATHER[6]), (93, LEATHER[5]), (94, LEATHER[4]), (95, LEATHER[3]), (96, LEATHER[3])):
-        for x in range(262, 664):
+        for x in range(258, 668):
             if lid[y, x]:
                 cv.put(x, y, c)
     for x in range(266, 660):
@@ -269,6 +299,18 @@ def draw(cv: Canvas) -> None:
                 top = IN_Y0 if y < DIV_Y[0] else DIV_Y[1] + 1
                 left = l if x < DIV_X[0] else DIV_X[1] + 1
                 cv.put(x, y, velvet_px(x, y, top, left))
+    # botones dorados del capitoné en los cruces
+    for i in range(10, 60):
+        for j in range(10, 45):
+            if (i + j) % 2:
+                continue
+            bx, by = i * 12, j * 8
+            if (inner[by, bx] and inner[by + 2, bx + 2] and not (DIV_X[0] - 3 <= bx <= DIV_X[1] + 2)
+                    and not (DIV_Y[0] - 3 <= by <= DIV_Y[1] + 2) and IN_Y0 + 3 < by < IN_Y1 - 2):
+                cv.put(bx, by, GOLD[5])
+                cv.put(bx + 1, by, GOLD[3])
+                cv.put(bx, by + 1, GOLD[3])
+                cv.put(bx + 1, by + 1, GOLD[1])
     # divisores dorados
     for y in range(IN_Y0, IN_Y1 + 1):
         for x, c in zip(range(DIV_X[0], DIV_X[1] + 1), (GOLD[5], GOLD[4], GOLD[3], GOLD[2], GOLD[1])):
@@ -291,18 +333,19 @@ def draw(cv: Canvas) -> None:
         corner_bracket(cv, DIV_X[1] + 4, y1 - 8, False, True)
         corner_bracket(cv, int(in_right(y1)) - 8, y1 - 8, True, True)
     # base: borde superior visto desde arriba, con tira de terciopelo entre dos filetes dorados
-    for y in range(LIP_Y[0], LIP_Y[1] + 1):
+    y0, y1 = LIP_Y
+    for y in range(y0, y1 + 1):
         l, r = side_x(BASE_P, y + 0.5, True), side_x(BASE_P, y + 0.5, False)
         for x in range(int(l) + 4, int(np.ceil(r)) - 4):
-            if y < 315:
-                c = LEATHER[1] if y == LIP_Y[0] else LEATHER[2]
-            elif y == 315:
+            if y < y0 + 3:
+                c = LEATHER[1] if y == y0 else LEATHER[2]
+            elif y == y0 + 3:
                 c = GOLD[1]
-            elif y < 326:
-                c = velvet_px(x, y, 316, -99) if y > 316 else PANO[0]
-            elif y == 326:
+            elif y < y1 - 3:
+                c = velvet_px(x, y, y0 + 4, -99) if y > y0 + 4 else DK[0]
+            elif y == y1 - 3:
                 c = GOLD[4]
-            elif y == 327:
+            elif y == y1 - 2:
                 c = GOLD[2]
             else:
                 c = LEATHER[2]
@@ -325,9 +368,11 @@ def draw(cv: Canvas) -> None:
             if c is not None:
                 cv.put(x, y, c)
     # ribete bordó y doble costura clara en el frente de la base
-    ribete(cv, int(side_x(BASE_P, 336.5, True)) + 8, int(side_x(BASE_P, 336.5, False)) - 8, 333)
-    costura(cv, int(side_x(BASE_P, 339.5, True)) + 8, int(side_x(BASE_P, 339.5, False)) - 8, 339)
-    costura(cv, int(side_x(BASE_P, 341.5, True)) + 8, int(side_x(BASE_P, 341.5, False)) - 8, 341, HILO_SOMBRA)
+    fy0 = FRONT_Y[0]
+    ribete(cv, int(side_x(BASE_P, fy0 + 6.5, True)) + 8, int(side_x(BASE_P, fy0 + 6.5, False)) - 8, fy0 + 3)
+    costura(cv, int(side_x(BASE_P, fy0 + 9.5, True)) + 8, int(side_x(BASE_P, fy0 + 9.5, False)) - 8, fy0 + 9)
+    costura(cv, int(side_x(BASE_P, fy0 + 11.5, True)) + 8, int(side_x(BASE_P, fy0 + 11.5, False)) - 8, fy0 + 11,
+            HILO_SOMBRA)
     # remaches dorados del frente
     for x in range(250, 680, 38):
         for (dx, dy, c) in ((0, 0, GOLD[5]), (1, 0, GOLD[3]), (0, 1, GOLD[3]), (1, 1, GOLD[1])):
@@ -336,13 +381,14 @@ def draw(cv: Canvas) -> None:
     handle(cv, 450, 54, 57, 92)
     latch(cv, 303, 87)
     latch(cv, 596, 87)
-    latch(cv, 295, 340)
-    latch(cv, 601, 340)
-    front_handle(cv, 449, 343, 58)
-    corner_cap(cv, 255, 91, False, False)
-    corner_cap(cv, 657, 91, True, False)
-    corner_cap(cv, 208, 369, False, True)
-    corner_cap(cv, 704, 369, True, True)
+    fy0 = FRONT_Y[0]
+    latch(cv, 295, fy0 + 12)
+    latch(cv, 601, fy0 + 12)
+    front_handle(cv, 449, fy0 + 14, 58)
+    corner_cap(cv, 257, 91, False, False)
+    corner_cap(cv, 655, 91, True, False)
+    corner_cap(cv, BASE_P[-1][0], BASE_P[3][1] - 9, False, True)
+    corner_cap(cv, BASE_P[2][0] - 13, BASE_P[3][1] - 9, True, True)
     # contorno de todo el maletín
     ring = np.zeros((H, W), bool)
     ring[1:-1, 1:-1] = ~body[1:-1, 1:-1] & (body[:-2, 1:-1] | body[2:, 1:-1] | body[1:-1, :-2] | body[1:-1, 2:])
