@@ -1,7 +1,7 @@
 extends SceneTree
-## Mate de pixel-v3: calabaza redonda con aro, collar y tiras de plata, panel de cuero en dos tonos de marrón
+## Mate de pixel-v3: calabaza redonda de un solo tono oscuro con aro, collar y tiras de plata
 ## y bombilla de metal en perspectiva (codo, boquilla con abertura y virola dorada) hundida en la yerba.
-## Aprobado como opción Z2 (píxel de 2×2 px, marco 136×236). Salida: assets/art/pixel-v3/mate-v3.png
+## Aprobado como opción Z2 (píxel de 2×2 px, marco 136×236); en nov 2026 pasó al tono oscuro parejo (opción C). Salida: assets/art/pixel-v3/mate-v3.png
 ## y una ampliación ×6 en test-results/propuesta/mate-v3-x6.png.
 ## Ejecutar: godot --headless --path . --script res://tools/art/make_mate.gd
 
@@ -20,8 +20,8 @@ const PX := 2
 # el dibujo se modela con el fondo en y = 200; se baja para que apoye sobre la sombra de contacto
 # que make_mesa.gd hornea en el paño (y ≈ 226 dentro del marco)
 const DROP := 26.0
-# contraste entre la mitad clara y la oscura del panel de cuero
-const PANEL := 0.24
+# cuánto se oscurece toda la calabaza (antes había un panel de dos tonos; el autor eligió el oscuro parejo)
+const DARK := 0.204
 # punto donde la bombilla entra en la yerba (en el hueco húmedo)
 const ENTRY := Vector2(72, 104)
 # grosor de la bombilla en la yerba y cuánto se ensancha hacia la punta (perspectiva)
@@ -189,11 +189,8 @@ func mate_px(x: float, y: float) -> Variant:
 	# luz difusa desde arriba a la izquierda, con rango completo de la paleta
 	var lit3 := -0.55 * nx - 0.6 * ny + 0.75 * z
 	var t3 := (lit3 + 0.45) / 1.55
-	# panel de cuero: mitad superior más clara, inferior más oscura, con costura dorada en la diagonal
-	var dg := y - (130.0 + 0.78 * (x - 26.0))
-	t3 += PANEL * 0.5 if dg < 0.0 else -PANEL
-	if absf(dg) < 1.1 and fmod(x + 400.0, 6.0) < 3.4 and x > 30.0 and x < 94.0:
-		return pick(GOLD, 0.45 + (-0.3 * nx) * 0.3)
+	# toda la calabaza en el tono oscuro, pareja y sin costura (opción C, nov 2026)
+	t3 -= DARK
 	# manchas suaves de la calabaza
 	t3 += 0.07 * sin(x * 0.13 + y * 0.07) * sin(y * 0.11 - x * 0.05 + 1.3)
 	# brillo puntual arriba a la izquierda y luz de rebote cálida en el borde derecho

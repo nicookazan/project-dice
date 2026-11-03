@@ -54,6 +54,44 @@ func gold_at(x: int, y: int) -> Variant:
 				if absf(py - 653.0) < 1.0: return BRASS
 	return null
 
+## Paño (opción C, nov 2026): brocado de rombos tono sobre tono con un punto al centro, en la perspectiva
+## de la mesa, sobre manchas suaves y el charco de luz de las lámparas; motas de pelo como antes.
+const PANO_R := [Color("3e0a14"), Color("56101e"), Color("6e1424"), Color("7e1828"), Color("8c1c2e"), Color("9c2234"), Color("ae2c3e")]
+
+func vnoise(x: float, y: float, cell: float, seed: int) -> float:
+	var xf := x / cell
+	var yf := y / cell
+	var xi := floorf(xf)
+	var yi := floorf(yf)
+	var fx := xf - xi
+	var fy := yf - yi
+	var sx := fx * fx * (3.0 - 2.0 * fx)
+	var sy := fy * fy * (3.0 - 2.0 * fy)
+	var a := hash2(int(xi), int(yi), seed)
+	var b := hash2(int(xi) + 1, int(yi), seed)
+	var c := hash2(int(xi), int(yi) + 1, seed)
+	var d := hash2(int(xi) + 1, int(yi) + 1, seed)
+	return (a + (b - a) * sx) * (1.0 - sy) + (c + (d - c) * sx) * sy
+
+func pano_tone(x: int, y: int) -> Color:
+	# coordenada horizontal "plana" del paño (deshace la perspectiva de xl) para que el dibujo converja
+	var px := x * 2 + 1.0
+	var py := y * 2 + 1.0
+	var ub := (700.0 + (px - 700.0) / (0.845 + 0.155 * (py - 315.0) / 339.0)) / 2.0
+	var n := (vnoise(ub, y, 34.0, 4) - 0.5) + (hash2(int(x / 2), y, 7) - 0.5) * 0.6
+	n += 0.6 * exp(-pow((ub - 420.0) / 230.0, 2) - pow((y - 215.0) / 100.0, 2)) - 0.3
+	var idx := 4 + int(floorf(n + 0.5))
+	var p := (ub / 15.0 + (y - 153) / 10.0) / 2.0
+	var q := (ub / 15.0 - (y - 153) / 10.0) / 2.0
+	var fa := p - floorf(p)
+	var fb := q - floorf(q)
+	var t := minf(minf(fa, 1.0 - fa), minf(fb, 1.0 - fb)) * 2.0
+	if t < 0.07 or (absf(fa - 0.5) < 0.05 and absf(fb - 0.5) < 0.05): idx -= 1
+	var r := hash2(int(x / 2), y, 21)
+	if r < 0.03: idx -= 1
+	elif r > 0.98: idx += 1
+	return PANO_R[clampi(idx, 0, 6)]
+
 const ORNAMENT := ["..##.##.....", ".####.###...", "######.####.", ".###..#####.", "..#.#..###..", ".#...#..#...", "#...........", "............"]
 
 func flip_rows(rows: Array, fx: bool, fy: bool) -> Array:
@@ -191,15 +229,11 @@ func make_table() -> Image:
 	for x in range(W):
 		var e := edge_y(x)
 		img.set_pixel(x, e, WOOD[0])
-	# paño: relleno con pelo corto, sombra proyectada y contorno
+	# paño: brocado de rombos tono sobre tono, sombra proyectada y contorno
 	for y in range(TOP, 345):
 		for x in range(W):
 			if not in_pano(x, y): continue
-			var r := hash2(int(x / 2), y, 21)
-			var c: Color = PANO[2]
-			if r < 0.045: c = PANO[1]
-			elif r > 0.97: c = PANO[3]
-			img.set_pixel(x, y, c)
+			img.set_pixel(x, y, pano_tone(x, y))
 	for x in range(W):
 		for k in range(3):
 			var y := 336 + k
