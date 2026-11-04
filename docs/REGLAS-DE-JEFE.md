@@ -56,3 +56,13 @@ Se admite una migración conocida desde v1: se añaden en memoria el recorrido h
 ## Límites y siguiente paso
 
 No se cambia el balance provisional D01/D02/D04 ni se declara sesión humana realizada. D09 queda resuelta para materiales y carcasas actuales; rescates/activas concretas permanecen en F01. D07 conserva el catálogo de jefes, objetivos y recompensas definitivos. El paso 18 puede preparar la campaña técnica con datos provisionales etiquetados, pero su aceptación de contenido requiere ese catálogo.
+
+## Catálogo y estado del jefe (plan de jefes, fase A — 04/11/2026)
+
+- **Catálogo:** `scripts/boss_catalog.gd` es la fuente de los 21 jefes (18 de los niveles 1 a 6 y las 3 reglas de Dios). Una fila tiene id estable (`l1_kioskero`, ..., `l7_dios_dados`), nivel, posición, nombre, mano, poder, texto, severidad, k, regla (`kind`/`target`) y `implemented`. Objetivo = P del nivel × k redondeado a 5 (P = 110, 160, 230, 320, 440, 600, 800); recompensa = 8 + round((k − 1) × 20), piso 6. Dios usa los objetivos fijos 800/850/900 y recompensa base 8. Todo provisional.
+- **Regla:** sigue siendo `{id, name, kind, target}` (4 campos). Se agrega el tipo `boss_power`, cuyo `target` es un poder propio listado en `BossCatalog.POWERS`; el id de la regla es el id del jefe y el nombre es el del poder.
+- **Contexto:** `BossRules.context(rule, active, state)` es la única entrada de los poderes. La tarjeta roja del Referí se traduce a una suspensión de la moneda expulsada, de modo que previsión, anotación y botones leen lo mismo.
+- **`boss_state`:** sorteos propios del jefe (hoy `{"coin": id}` para el Referí; `""` si no hay monedas equipadas). Se calcula al empezar el encuentro con un generador aparte derivado de semilla + nivel + encuentro + poder, nunca toca el azar principal, se guarda tal cual y no se vuelve a sortear al cargar. Fuera de un jefe con sorteo propio debe ser `{}`.
+- **Sorteo del jefe del nivel:** entre los candidatos con poder implementado; en builds de desarrollo (`Game.development_bosses`) entran todos. Si un nivel no tiene ninguno listo se usa el pool completo.
+- **Guardado v8:** migra los ids `prueba_l{n}_{k}` por nivel y posición, reconstruye campaña, encuentros y regla desde el catálogo y no toca semilla ni estado del azar. v7 se respalda al primer checkpoint nuevo; ids desconocidos se rechazan sin tocar el archivo.
+- **Pruebas:** `tests/boss_catalog_tests.gd` (catálogo contra la tabla del PRD, campaña, filtro de lanzamiento, tarjeta roja, migración v7 a v8).

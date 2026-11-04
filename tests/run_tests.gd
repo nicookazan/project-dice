@@ -30,6 +30,7 @@ const ShopTests = preload("res://tests/shop_tests.gd")
 const CoinTests = preload("res://tests/coin_tests.gd")
 const RepairTests = preload("res://tests/repair_tests.gd")
 const CoinBatchTests = preload("res://tests/coin_batch_tests.gd")
+const BossCatalogTests = preload("res://tests/boss_catalog_tests.gd")
 var checks := 0
 var failures: Array = []
 
@@ -482,6 +483,7 @@ func _initialize() -> void:
 	var save_demo: Dictionary = SaveTests.run(scene, check)
 	var level_validation_demo: Dictionary = LevelValidationTests.run(scene, check)
 	var boss_demo: Dictionary = BossTests.run(scene, check)
+	var boss_catalog_demo: Dictionary = BossCatalogTests.run(check)
 	var campaign_demo: Dictionary = await CampaignTests.run(scene, check)
 	var presentation_demo: Dictionary = PresentationTests.run(scene, check)
 	var shop_style_demo: Dictionary = ShopStyleTests.run(scene, check)
@@ -506,6 +508,7 @@ func _initialize() -> void:
 	report["save_demo"] = save_demo
 	report["level_validation_demo"] = level_validation_demo
 	report["boss_demo"] = boss_demo
+	report["boss_catalog_demo"] = boss_catalog_demo
 	report["campaign_demo"] = campaign_demo
 	report["presentation_demo"] = presentation_demo
 	report["shop_style_demo"] = shop_style_demo

@@ -74,6 +74,7 @@ static func validate(data: Variant) -> String:
 	if not BossRules.valid_encounters(g.level_encounters) or not BossRules.valid_rule(g.boss_rule): return "definición de jefe o recorrido inválida"
 	if g.phase not in PHASES or g.rival < 0 or g.rival >= g.level_encounters.size() or g.hand not in [1, 2] or g.points < 0 or g.rolls_left < 0 or g.rolls_left > 100 or g.rolls_made < 0 or g.rolls_made > 100: return "fase o contadores fuera de rango"
 	if not Campaign.valid_progress(g): return "progreso de campaña inconsistente"
+	if not BossRules.valid_state(g.boss_rule, g.boss_state, g.level_encounters[g.rival].kind == "boss"): return "estado del jefe inválido"
 	for key in ["event_sequence", "coin_instance_sequence", "shop_offer_sequence", "sticker_offer_sequence"]:
 		if g[key] < 0: return "secuencia negativa"
 	if g.reroll_prices.size() != 4: return "contadores de renovación incompletos"
