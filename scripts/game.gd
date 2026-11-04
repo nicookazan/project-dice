@@ -173,6 +173,7 @@ func start_hand() -> void:
 	groups = []
 	for die in dice:
 		DiceState.reset_hand(die)
+	if is_boss() and boss_state.has("die"): boss_state.die = BossRules.draw_hand_die(boss_rule, run_seed, level_index, rival, hand)
 	message = "Primera tirada: los cinco dados están en el vaso."
 
 func snapshot() -> Dictionary:
@@ -391,6 +392,7 @@ func move_die(index: int, zone: String) -> bool:
 	if index < 0 or index >= dice.size(): return false
 	if phase != "play" or rolls_made == 0 or is_grouped(index): return false
 	if zone not in ["cup", "reserve"]: return false
+	if _boss_blocks_move(index, zone): return false
 	if zone == "cup":
 		if rolls_left <= 0 and not free_reroll_ready():
 			message = "No quedan tiradas; anotá la mano o usá una moneda de tirada extra."
@@ -398,6 +400,62 @@ func move_die(index: int, zone: String) -> bool:
 		lock_groups()
 	dice[index].zone = zone
 	return true
+
+## Poderes de dados que impiden mover un dado marcado.
+func _boss_blocks_move(index: int, zone: String) -> bool:
+	if not is_boss() or int(boss_state.get("die", -1)) != index: return false
+	if BossRules.is_power(boss_rule, "abduction"):
+		message = "Ese dado fue abducido y no se puede mover."
+		return true
+	if BossRules.is_power(boss_rule, "loaded_die") and zone == "cup":
+		message = "El dado cargado queda fijo en 1: no se relanza."
+		return true
+	if BossRules.is_power(boss_rule, "scared_die") and zone == "reserve" and rolls_made in [1, 2]:
+		message = "El dado asustado no se puede conservar en las dos primeras tiradas."
+		return true
+	return false
+
+func _set_face(id: int, number: int, results: Array) -> bool:
+	var die: Dictionary = dice[id]
+	var index: int = die.faces.find(number)
+	if index < 0: return false
+	die.face_index = index
+	die.value = number
+	for entry in results:
+		if entry.id == id:
+			entry.face_index = index
+			entry.number = number
+	return true
+
+## Efectos de dados de los jefes tras tirar. Los sorteos propios usan un generador aparte: el azar principal no cambia.
+func _apply_boss_roll(rolled_ids: Array, results: Array) -> void:
+	if not is_boss() or boss_rule.get("kind") != "boss_power": return
+	var marked := int(boss_state.get("die", -1))
+	match boss_rule.target:
+		"loaded_die":
+			if marked in rolled_ids: _set_face(marked, 1, results)
+		"scared_die":
+			if marked >= 0 and rolls_made in [1, 2]: dice[marked].zone = "cup"
+		"shadow":
+			if rolls_made == 1:
+				var top := 0
+				for die in dice:
+					if die.value > dice[top].value: top = die.id
+				_set_face(top, 1, results)
+		"mirror_face":
+			var candidates := rolled_ids.duplicate()
+			candidates.sort()
+			var generator := RandomNumberGenerator.new()
+			generator.seed = ("%d:%d:%d:%d:%d:mirror" % [run_seed, level_index, rival, hand, rolls_made]).hash()
+			var chosen: int = candidates[generator.randi_range(0, candidates.size() - 1)]
+			_set_face(chosen, 7 - int(dice[chosen].value), results)
+
+## Marcas visibles para la interfaz: dado -> clase de poder.
+func boss_marks() -> Dictionary:
+	var marked := int(boss_state.get("die", -1))
+	if not is_boss() or marked < 0: return {}
+	var kinds := {"scared_die": "scared", "loaded_die": "loaded", "abduction": "abducted"}
+	return {marked: kinds.get(boss_rule.get("target", ""), "")} if kinds.has(boss_rule.get("target", "")) else {}
 
 func roll() -> bool:
 	if phase != "play": return false
@@ -412,6 +470,9 @@ func roll() -> bool:
 	if rolled_ids.is_empty():
 		message = "Elegí al menos un dado para el vaso. No se gastó ninguna tirada."
 		return false
+	if rolls_made > 0 and is_boss() and BossRules.is_power(boss_rule, "ring_charge") and rolled_ids.size() < 2:
+		message = "La carga del anillo solo deja conservar tres dados: mandá al menos dos al vaso."
+		return false
 	lock_groups()
 	var initial := rolls_made == 0
 	var results: Array = []
@@ -422,6 +483,7 @@ func roll() -> bool:
 			die.zone = "reserve"
 			results.append({"id": die.id, "face_index": die.face_index, "number": die.value})
 	rolls_made += 1
+	_apply_boss_roll(rolled_ids, results)
 	if free:
 		# The roll still counts as made (the hand stops being served) but costs no budget.
 		if active_rules().get("free_reroll", false) and not free_reroll_used: free_reroll_used = true
@@ -442,6 +504,9 @@ func form_group(ids: Array) -> bool:
 	for index in ids:
 		if not index is int or index < 0 or index >= dice.size() or unique.has(index) or is_grouped(index) or dice[index].zone != "reserve": return false
 		unique[index] = true
+	if BossRules.abducted(boss_context()) in ids:
+		message = "Ese dado fue abducido y no cuenta esta mano."
+		return false
 	var rules := active_rules()
 	var resolved := Rules.resolve_wildcards(dice, ids, rules)
 	var cat: String = resolved.category

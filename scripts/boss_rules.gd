@@ -3,6 +3,8 @@ extends RefCounted
 const Coins = preload("res://scripts/coins.gd")
 const Catalog = preload("res://scripts/boss_catalog.gd")
 const CATEGORIES := ["Par", "Doble par", "Trío", "Escalera", "Full", "Póker", "Generala"]
+## Poderes que marcan un dado por mano (sorteo propio en cada mano).
+const DIE_POWERS := ["scared_die", "loaded_die", "abduction"]
 const NONE = {"id": "sin_generala", "name": "Generala prohibida", "kind": "forbid_category", "target": "Generala"}
 
 static func default_encounters() -> Array:
@@ -20,6 +22,7 @@ static func valid_rule(rule: Variant) -> bool:
 		"suspend_element": return rule.get("target") in ["fire", "water", "electricity", "earth", "wind", "all"]
 		"suspend_stickers": return rule.get("target") == "all"
 		"hand_factor": return rule.get("target") in ["0.5", "1.5"]
+		"abduct": return rule.get("target") in ["0", "1", "2", "3", "4"]
 		"face_scale": return rule.get("target") in ["6=0", "5,6=0.5"]
 		"repeat_half": return rule.get("target") is String and not rule.target.is_empty() and Array(rule.target.split(",")).all(func(name): return name in CATEGORIES)
 	return false
@@ -58,6 +61,9 @@ static func context(rule: Dictionary, active: bool, state: Dictionary = {}, hand
 				translated.merge({"kind": "suspend_coin", "target": coin})
 			"thermos_theft": translated.merge({"kind": "suspend_stickers", "target": "all"})
 			"fire_out": translated.merge({"kind": "suspend_element", "target": "fire"})
+			"abduction":
+				if int(state.get("die", -1)) < 0: return {}
+				translated.merge({"kind": "abduct", "target": str(int(state.die))})
 			"closed_list": translated.merge({"kind": "forbid_category", "target": "Par,Doble par"})
 			"seventh_son": translated.merge({"kind": "face_scale", "target": "6=0"})
 			"gravity": translated.merge({"kind": "face_scale", "target": "5,6=0.5"})
@@ -92,6 +98,17 @@ static func after_hand(rule: Dictionary, state: Dictionary, score: Dictionary, h
 		return {"scored": scored}
 	return state
 
+## Dado abducido (Visitante): no cuenta ni forma grupos. -1 si no hay.
+static func abducted(context_value: Dictionary) -> int:
+	return int(context_value.get("target", "-1")) if context_value.get("kind") == "abduct" else -1
+
+## Dado marcado de la mano para los poderes que lo sortean; el generador sale de semilla + nivel + encuentro + mano.
+static func draw_hand_die(rule: Dictionary, run_seed: int, level: int, encounter: int, hand: int) -> int:
+	if rule.get("kind") != "boss_power" or rule.get("target") not in DIE_POWERS: return -1
+	var generator := RandomNumberGenerator.new()
+	generator.seed = ("%d:%d:%d:%d:%s" % [run_seed, level, encounter, hand, rule.target]).hash()
+	return generator.randi_range(0, 4)
+
 static func stickers_suspended(context_value: Dictionary) -> bool:
 	return context_value.get("kind") == "suspend_stickers"
 
@@ -112,6 +129,7 @@ static func draw_state(rule: Dictionary, run_seed: int, level: int, encounter: i
 		generator.seed = ("%d:%d:%d:%s" % [run_seed, level, encounter, rule.target]).hash()
 		return {"coin": ids[generator.randi_range(0, ids.size() - 1)]}
 	if is_power(rule, "no_repeat"): return {"scored": []}
+	if rule.get("kind") == "boss_power" and rule.get("target") in DIE_POWERS: return {"die": -1}
 	if is_power(rule, "time_stop"):
 		var roulette: Array = []
 		for hand in [1, 2]:
@@ -126,6 +144,8 @@ static func valid_state(rule: Dictionary, state: Variant, boss_active: bool) -> 
 	if boss_active and is_power(rule, "time_stop"):
 		if state.size() != 1 or not state.get("roulette") is Array or state.roulette.size() != 2: return false
 		return state.roulette.all(func(value): return (value is float or value is int) and float(value) in [0.5, 1.5])
+	if boss_active and rule.get("kind") == "boss_power" and rule.get("target") in DIE_POWERS:
+		return state.size() == 1 and state.get("die") is int and state.die >= -1 and state.die <= 4
 	if boss_active and is_power(rule, "no_repeat"):
 		if state.size() != 1 or not state.get("scored") is Array: return false
 		return state.scored.all(func(name): return name is String and name in CATEGORIES) and state.scored.size() == Array(state.scored).reduce(func(seen, name): return seen if name in seen else seen + [name], []).size()
@@ -147,6 +167,7 @@ static func description(rule: Dictionary, state: Dictionary = {}, hand: int = 1)
 	match rule.get("kind"):
 		"boss_power":
 			var text: String = rule.name + ": " + Catalog.power_text(rule.get("id", ""))
+			if rule.target in DIE_POWERS and int(state.get("die", -1)) >= 0: text += " Dado marcado: %d." % (int(state.die) + 1)
 			if is_power(rule, "time_stop") and state.get("roulette") is Array and state.roulette.size() == 2:
 				text += " Mano %d: ×%s." % [clampi(hand, 1, 2), str(state.roulette[clampi(hand, 1, 2) - 1]).replace(".", ",")]
 			return text

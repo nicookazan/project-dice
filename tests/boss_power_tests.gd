@@ -7,6 +7,7 @@ const Fixture = preload("res://tests/support/game_fixture.gd")
 const SaveTests = preload("res://tests/save_tests.gd")
 const Validator = preload("res://scripts/save_validator.gd")
 const BossPanel = preload("res://tests/boss_panel_tests.gd")
+const CatalogTests = preload("res://tests/boss_catalog_tests.gd")
 
 static func prepared(id: String, at_boss: bool, values: Array, groups: Array):
 	var game = BossPanel.forced_boss(id, at_boss)
@@ -19,6 +20,7 @@ static func prepared(id: String, at_boss: bool, values: Array, groups: Array):
 static func run(check: Callable) -> void:
 	_suspensions(check)
 	_forbidden_and_value(check)
+	_dice(check)
 
 static func _suspensions(check: Callable) -> void:
 	# 2A Don Cebador: sin termo los stickers no aportan.
@@ -140,3 +142,91 @@ static func bare(id: String, at_boss: bool, values: Array, groups: Array):
 	var game = prepared(id, at_boss, values, groups)
 	game.cup.stickers = {}
 	return game
+
+static func _dice(check: Callable) -> void:
+	# 1C Rey de las Palomas: el dado asustado no se puede conservar en las dos primeras tiradas.
+	var scared = BossPanel.forced_boss("l1_palomas", true)
+	var marked: int = scared.boss_state.die
+	check.call(marked >= 0 and marked <= 4 and scared.boss_marks() == {marked: "scared"}, "Boss power Palomas: one die is marked each hand and shown")
+	var rng_before: int = scared.rng.state
+	scared.start_hand()
+	check.call(scared.boss_state.die == marked and scared.rng.state == rng_before, "Boss power Palomas: the draw is reproducible and never touches the main RNG")
+	scared.roll()
+	check.call(scared.dice[marked].zone == "cup" and not scared.move_die(marked, "reserve"), "Boss power Palomas: after roll 1 the marked die cannot be kept")
+	check.call(SaveTests.roundtrip(scared, check).boss_state == scared.boss_state, "Boss power Palomas: saved mid-hand without redrawing")
+	scared.roll()
+	check.call(scared.rolls_made == 2 and scared.dice[marked].zone == "cup", "Boss power Palomas: also after roll 2")
+	scared.roll()
+	check.call(scared.rolls_made == 3 and scared.dice[marked].zone == "reserve" and scared.move_die(marked, "reserve"), "Boss power Palomas: free to keep after the second roll")
+	var other = BossPanel.forced_boss("l1_palomas", false)
+	other.roll()
+	check.call(other.dice.all(func(die): return die.zone == "reserve"), "Boss power Palomas: a common rival has no restriction")
+	scared.score_hand()
+	scared.next_hand()
+	check.call(scared.boss_state.die == Boss.draw_hand_die(scared.boss_rule, scared.run_seed, scared.level_index, scared.rival, 2), "Boss power Palomas: hand 2 draws its own marked die from the seed")
+	# 4A Tahúr: un dado queda fijo en 1.
+	var gambler = BossPanel.forced_boss("l4_tahur", true)
+	var loaded: int = gambler.boss_state.die
+	gambler.roll()
+	check.call(gambler.dice[loaded].value == 1 and gambler.dice[loaded].faces[gambler.dice[loaded].face_index] == 1, "Boss power Tahur: the marked die shows 1")
+	check.call(not gambler.move_die(loaded, "cup"), "Boss power Tahur: the loaded die cannot be rerolled")
+	for die in gambler.dice:
+		if die.id != loaded: gambler.move_die(die.id, "cup")
+	gambler.roll()
+	check.call(gambler.dice[loaded].value == 1 and SaveTests.roundtrip(gambler, check).dice == gambler.dice, "Boss power Tahur: stays at 1 and survives saving")
+	# 4C Payaso: tras cada tirada, un dado tirado pasa a su cara opuesta.
+	var base = CatalogTests.forced_boss("l4_payaso", false, 950)
+	var clown = CatalogTests.forced_boss("l4_payaso", true, 950)
+	base.roll()
+	clown.roll()
+	var changed: Array = []
+	for index in range(5):
+		if base.dice[index].value != clown.dice[index].value: changed.append(index)
+	check.call(changed.size() == 1 and clown.dice[changed[0]].value == 7 - base.dice[changed[0]].value, "Boss power Payaso: exactly one die flips to 7 - x after the roll")
+	check.call(base.rng.state == clown.rng.state, "Boss power Payaso: the flip never touches the main RNG")
+	check.call(SaveTests.roundtrip(clown, check).dice == clown.dice, "Boss power Payaso: flipped dice save and load exactly")
+	# 3A Gótico: el dado más alto de la 1.ª tirada queda en 1.
+	var plain = CatalogTests.forced_boss("l3_gotico", false, 951)
+	var gothic = CatalogTests.forced_boss("l3_gotico", true, 951)
+	plain.roll()
+	gothic.roll()
+	var top := 0
+	for die in plain.dice:
+		if die.value > plain.dice[top].value: top = die.id
+	var same := true
+	for index in range(5):
+		if index != top and plain.dice[index].value != gothic.dice[index].value: same = false
+	check.call(gothic.dice[top].value == 1 and same, "Boss power Gotico: only the highest die of roll 1 drops to 1")
+	gothic.move_die(top, "cup")
+	gothic.roll()
+	check.call(gothic.dice[top].faces[gothic.dice[top].face_index] == gothic.dice[top].value, "Boss power Gotico: it is rolled normally again afterwards")
+	# 5B Farolero: solo se pueden conservar hasta 3 dados.
+	var lamp = BossPanel.forced_boss("l5_farolero", true)
+	lamp.roll()
+	lamp.move_die(0, "cup")
+	var rolls_before: int = lamp.rolls_left
+	check.call(not lamp.roll() and lamp.rolls_left == rolls_before, "Boss power Farolero: keeping four dice is refused without spending a roll")
+	lamp.move_die(1, "cup")
+	check.call(lamp.roll() and lamp.rolls_left == rolls_before - 1, "Boss power Farolero: keeping three dice is allowed")
+	var lamp_rival = BossPanel.forced_boss("l5_farolero", false)
+	lamp_rival.roll()
+	lamp_rival.move_die(0, "cup")
+	check.call(lamp_rival.roll(), "Boss power Farolero: a common rival allows rerolling a single die")
+	# 5A Visitante: un dado abducido no cuenta.
+	var alien = BossPanel.bare_boss("l5_visitante", [3, 3, 3, 5, 2])
+	var taken: int = alien.boss_state.die
+	check.call(alien.boss_marks() == {taken: "abducted"} and not alien.move_die(taken, "cup"), "Boss power Visitante: the abducted die is marked and cannot be moved")
+	var visible_total := 0
+	for die in alien.dice:
+		if die.id != taken: visible_total += die.value
+	check.call(alien.preview().total == visible_total, "Boss power Visitante: four dice count, the abducted one adds nothing")
+	var grouped: Array = []
+	for index in range(5):
+		if index != taken: grouped.append(index)
+	check.call(not alien.form_group([taken, (taken + 1) % 5]), "Boss power Visitante: the abducted die cannot join a group")
+	var tampered := SaveTests.payload(alien)
+	tampered.game.groups = [{"ids": [taken, (taken + 1) % 5], "category": "Par", "locked": false}]
+	check.call(Validator.validate(tampered) != "", "Boss power Visitante: a saved group with the abducted die is rejected")
+	var forecast: int = alien.preview().total
+	alien.score_hand()
+	check.call(alien.last_score.total == forecast and SaveTests.roundtrip(BossPanel.bare_boss("l5_visitante", [3, 3, 3, 5, 2]), check) != null, "Boss power Visitante: forecast equals the final score")
