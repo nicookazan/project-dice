@@ -21,6 +21,7 @@ static func run(check: Callable) -> void:
 	_suspensions(check)
 	_forbidden_and_value(check)
 	_dice(check)
+	_memory_economy_info(check)
 
 static func _suspensions(check: Callable) -> void:
 	# 2A Don Cebador: sin termo los stickers no aportan.
@@ -230,3 +231,52 @@ static func _dice(check: Callable) -> void:
 	var forecast: int = alien.preview().total
 	alien.score_hand()
 	check.call(alien.last_score.total == forecast and SaveTests.roundtrip(BossPanel.bare_boss("l5_visitante", [3, 3, 3, 5, 2]), check) != null, "Boss power Visitante: forecast equals the final score")
+
+static func _memory_economy_info(check: Callable) -> void:
+	# 5C Computadora de Bordo: la categoría anotada en la mano 1 queda bloqueada en la mano 2.
+	var computer = prepared("l5_computadora", true, [3, 3, 3, 5, 2], [[0, 1, 2]])
+	check.call(computer.boss_state == {"locked": ""} and computer.boss_context().is_empty(), "Boss power Computadora: nothing locked during hand 1")
+	computer.score_hand()
+	check.call(computer.boss_state == {"locked": "Trío"}, "Boss power Computadora: the category scored in hand 1 is remembered")
+	computer.next_hand()
+	Fixture.set_values(computer, [4, 4, 4, 1, 1])
+	check.call(not computer.form_group([0, 1, 2]) and computer.form_group([3, 4]), "Boss power Computadora: the trio is blocked in hand 2, other categories are not")
+	check.call("trío" in computer.message or computer.message != "", "Boss power Computadora: the player is told why")
+	var reloaded = SaveTests.roundtrip(computer, check)
+	check.call(reloaded.boss_state == {"locked": "Trío"} and not reloaded.form_group([0, 1, 2]), "Boss power Computadora: the block survives saving and loading")
+	var tampered := SaveTests.payload(computer)
+	tampered.game.groups = [{"ids": [0, 1, 2], "category": "Trío", "locked": false}]
+	check.call(Validator.validate(tampered) != "", "Boss power Computadora: a saved blocked group is rejected")
+	var best = prepared("l5_computadora", true, [6, 6, 6, 2, 2], [[0, 1, 2], [3, 4]])
+	best.score_hand()
+	check.call(best.boss_state.locked == "Trío", "Boss power Computadora: with several groups the best-scoring one is locked")
+	var fresh = BossPanel.forced_boss("l5_computadora", true)
+	check.call(fresh.boss_state == {"locked": ""}, "Boss power Computadora: a new encounter starts with nothing locked")
+	# 1A Kioskero: cada anotación cuesta $2, sin dejar saldo negativo por el cobro.
+	var kiosk = prepared("l1_kioskero", true, [3, 3, 3, 5, 2], [[0, 1, 2]])
+	kiosk.cash = 10
+	kiosk.score_hand()
+	check.call(kiosk.cash == 8 and kiosk.boss_state == {"tax": 2} and "Impuesto al kiosco" in kiosk.message, "Boss power Kioskero: a scoring charges $2 and warns")
+	kiosk.next_hand()
+	Fixture.set_values(kiosk, [3, 3, 3, 5, 2])
+	kiosk.form_group([0, 1, 2])
+	kiosk.cash = 1
+	kiosk.score_hand()
+	check.call(kiosk.cash == 0 and kiosk.boss_state == {"tax": 3}, "Boss power Kioskero: only what the player has is charged")
+	var broke = prepared("l1_kioskero", true, [3, 3, 3, 5, 2], [[0, 1, 2]])
+	broke.cash = -5
+	broke.score_hand()
+	check.call(broke.cash == -5 and broke.boss_state == {"tax": 0}, "Boss power Kioskero: debt is never deepened by the tax")
+	var rival = prepared("l1_kioskero", false, [3, 3, 3, 5, 2], [[0, 1, 2]])
+	rival.cash = 10
+	rival.score_hand()
+	check.call(rival.cash == 10, "Boss power Kioskero: a common rival charges nothing")
+	check.call(SaveTests.roundtrip(prepared("l1_kioskero", true, [3, 3, 3, 5, 2], [[0, 1, 2]]), check) != null, "Boss power Kioskero: saved mid-hand")
+	# 6C Durmiente: la previsión se oculta; la anotación no cambia.
+	var sleeper = prepared("l6_durmiente", true, [3, 3, 3, 5, 2], [[0, 1, 2]])
+	var visible = prepared("l6_relojero", false, [3, 3, 3, 5, 2], [[0, 1, 2]])
+	check.call(Boss.forecast_hidden(sleeper.boss_context()) and not Boss.forecast_hidden(visible.boss_context()), "Boss power Durmiente: the forecast is hidden only under the boss")
+	check.call(sleeper.preview().total == visible.preview().total, "Boss power Durmiente: the calculation itself does not change")
+	var sleeper_total: int = sleeper.preview().total
+	sleeper.score_hand()
+	check.call(sleeper.last_score.total == sleeper_total, "Boss power Durmiente: scoring reveals the same total the hidden forecast had")

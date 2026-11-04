@@ -64,3 +64,13 @@ static func bare_boss(id: String, values: Array):
 	game.roll()
 	preload("res://tests/support/game_fixture.gd").set_values(game, values)
 	return game
+
+static func run_hidden_forecast(scene, check: Callable) -> void:
+	var sleeper = bare_boss("l6_durmiente", [3, 3, 3, 5, 2])
+	sleeper.form_group([0, 1, 2])
+	show(scene, sleeper)
+	check.call(preload("res://tests/interface_tests.gd").text_in(scene.ui, "Previsión oculta"), "Boss panel: the notebook hides the forecast under the Durmiente")
+	var plain = bare_boss("l6_relojero", [3, 3, 3, 5, 2])
+	plain.form_group([0, 1, 2])
+	show(scene, plain)
+	check.call(not preload("res://tests/interface_tests.gd").text_in(scene.ui, "Previsión oculta"), "Boss panel: other bosses keep the forecast visible")

@@ -6,7 +6,7 @@ Diseño de contenido: [JEFES-TEMATICOS.md](JEFES-TEMATICOS.md) (18 jefes de los 
 2. **Tocar la mano muestra el poder del jefe.**
 3. **Manos con diseño propio** que combinen con el estilo actual del juego, que no destaquen de más y que no queden feas.
 
-Estado: **fases A y B y las familias 1 a 3 de la D (suspensiones, prohibiciones y valor, dados) implementadas (04/11/2026)**; resto de D (memoria, economía, información), C, E y F pendientes. También publicado en la página de Notion «Bosses - project-dice - PRD». Convención del proyecto: una fase por vez, cada una en `feature/<nombre>` con PR contra `main`, suite verde antes de cerrar, resultado y límites en `ESTADO.md` y en el contrato del sistema. Todo número es provisional (D01/D02/D04/D07/D11).
+Estado: **fases A, B y D completas (21 poderes, 04/11/2026)**; C (arte), E (animación del termo) y F (integración y balance) pendientes. También publicado en la página de Notion «Bosses - project-dice - PRD». Convención del proyecto: una fase por vez, cada una en `feature/<nombre>` con PR contra `main`, suite verde antes de cerrar, resultado y límites en `ESTADO.md` y en el contrato del sistema. Todo número es provisional (D01/D02/D04/D07/D11).
 
 > Las monedas nuevas ya están en `main` (PR #14). Las fases de jefes parten de `main` actualizado y tocan `game.gd`, `rules.gd`, `main.gd` y `save_*.gd`.
 

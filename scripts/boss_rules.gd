@@ -13,7 +13,7 @@ static func default_encounters() -> Array:
 static func valid_rule(rule: Variant) -> bool:
 	if not rule is Dictionary or rule.size() != 4 or not rule.get("id") is String or rule.id == "" or not rule.get("name") is String or rule.name == "": return false
 	match rule.get("kind"):
-		"forbid_category": return rule.get("target") in ["Generala", "Par,Doble par"]
+		"forbid_category": return rule.get("target") is String and not rule.target.is_empty() and Array(rule.target.split(",")).all(func(name): return name in CATEGORIES)
 		"suspend_material": return rule.get("target") in ["steel", "copper", "all"]
 		"suspend_shell": return rule.get("target") in ["emerald", "sapphire", "ruby", "diamond", "all"]
 		"suspend_coin": return rule.get("target") == "all" or (rule.get("target") is String and not Coins.definition(rule.target).is_empty())
@@ -22,6 +22,7 @@ static func valid_rule(rule: Variant) -> bool:
 		"suspend_element": return rule.get("target") in ["fire", "water", "electricity", "earth", "wind", "all"]
 		"suspend_stickers": return rule.get("target") == "all"
 		"hand_factor": return rule.get("target") in ["0.5", "1.5"]
+		"hide_forecast": return rule.get("target") == "all"
 		"abduct": return rule.get("target") in ["0", "1", "2", "3", "4"]
 		"face_scale": return rule.get("target") in ["6=0", "5,6=0.5"]
 		"repeat_half": return rule.get("target") is String and not rule.target.is_empty() and Array(rule.target.split(",")).all(func(name): return name in CATEGORIES)
@@ -61,6 +62,11 @@ static func context(rule: Dictionary, active: bool, state: Dictionary = {}, hand
 				translated.merge({"kind": "suspend_coin", "target": coin})
 			"thermos_theft": translated.merge({"kind": "suspend_stickers", "target": "all"})
 			"fire_out": translated.merge({"kind": "suspend_element", "target": "fire"})
+			"madness": translated.merge({"kind": "hide_forecast", "target": "all"})
+			"board_lock":
+				var locked: String = state.get("locked", "")
+				if hand < 2 or locked == "": return {}
+				translated.merge({"kind": "forbid_category", "target": locked})
 			"abduction":
 				if int(state.get("die", -1)) < 0: return {}
 				translated.merge({"kind": "abduct", "target": str(int(state.die))})
@@ -96,6 +102,15 @@ static func after_hand(rule: Dictionary, state: Dictionary, score: Dictionary, h
 		for row in score.get("rows", []):
 			if not row.get("ids", []).is_empty() and row.category in CATEGORIES and row.category not in scored: scored.append(row.category)
 		return {"scored": scored}
+	if is_power(rule, "board_lock") and hand == 1:
+		var best := ""
+		var best_total := -1.0
+		for row in score.get("rows", []):
+			if row.get("ids", []).is_empty() or row.category not in CATEGORIES: continue
+			if float(row.total) > best_total:
+				best_total = float(row.total)
+				best = row.category
+		return {"locked": best}
 	return state
 
 ## Dado abducido (Visitante): no cuenta ni forma grupos. -1 si no hay.
@@ -108,6 +123,10 @@ static func draw_hand_die(rule: Dictionary, run_seed: int, level: int, encounter
 	var generator := RandomNumberGenerator.new()
 	generator.seed = ("%d:%d:%d:%d:%s" % [run_seed, level, encounter, hand, rule.target]).hash()
 	return generator.randi_range(0, 4)
+
+## La previsión de puntos se oculta (Durmiente). La anotación no cambia.
+static func forecast_hidden(context_value: Dictionary) -> bool:
+	return context_value.get("kind") == "hide_forecast"
 
 static func stickers_suspended(context_value: Dictionary) -> bool:
 	return context_value.get("kind") == "suspend_stickers"
@@ -129,6 +148,8 @@ static func draw_state(rule: Dictionary, run_seed: int, level: int, encounter: i
 		generator.seed = ("%d:%d:%d:%s" % [run_seed, level, encounter, rule.target]).hash()
 		return {"coin": ids[generator.randi_range(0, ids.size() - 1)]}
 	if is_power(rule, "no_repeat"): return {"scored": []}
+	if is_power(rule, "board_lock"): return {"locked": ""}
+	if is_power(rule, "kiosk_tax"): return {"tax": 0}
 	if rule.get("kind") == "boss_power" and rule.get("target") in DIE_POWERS: return {"die": -1}
 	if is_power(rule, "time_stop"):
 		var roulette: Array = []
@@ -146,6 +167,10 @@ static func valid_state(rule: Dictionary, state: Variant, boss_active: bool) -> 
 		return state.roulette.all(func(value): return (value is float or value is int) and float(value) in [0.5, 1.5])
 	if boss_active and rule.get("kind") == "boss_power" and rule.get("target") in DIE_POWERS:
 		return state.size() == 1 and state.get("die") is int and state.die >= -1 and state.die <= 4
+	if boss_active and is_power(rule, "board_lock"):
+		return state.size() == 1 and state.get("locked") is String and (state.locked == "" or state.locked in CATEGORIES)
+	if boss_active and is_power(rule, "kiosk_tax"):
+		return state.size() == 1 and state.get("tax") is int and state.tax >= 0 and state.tax <= 4
 	if boss_active and is_power(rule, "no_repeat"):
 		if state.size() != 1 or not state.get("scored") is Array: return false
 		return state.scored.all(func(name): return name is String and name in CATEGORIES) and state.scored.size() == Array(state.scored).reduce(func(seen, name): return seen if name in seen else seen + [name], []).size()

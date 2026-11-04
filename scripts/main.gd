@@ -207,7 +207,7 @@ func selection_preview() -> Dictionary:
 	var score := Rules.score(game.dice, groups, game.passives, game.impulses, game.rolls_made == 1, game.global_points, game.cup.stickers, game.sticker_catalog, game.boss_context(), game.coin_context())
 	if score.valid:
 		var row: Dictionary = score.rows[game.groups.size()]
-		return {"valid": true, "text": "Selección: %s · %s puntos · G para agrupar" % [category, number(row.total)], "row": row}
+		return {"valid": true, "text": "Selección: %s · %s · G para agrupar" % [category, "puntos ocultos" if BossRules.forecast_hidden(game.boss_context()) else number(row.total) + " puntos"], "row": row}
 	return {"valid": false, "text": "Selección: no se puede calcular este grupo."}
 
 func inspect_die(id: int) -> void:
@@ -931,7 +931,9 @@ func render_notebook() -> void:
 	note.add_child(rule_text)
 	label(note, "GRUPOS", Vector2(28, 304), 17, ink)
 	var preview_value: Dictionary = game.preview() if game.phase == "play" else game.last_score
+	var hidden_forecast: bool = game.phase == "play" and BossRules.forecast_hidden(game.boss_context())
 	if preview_value.is_empty(): preview_value = {"total": 0, "rows": [], "served": false}
+	if hidden_forecast: preview_value = {"total": 0, "rows": [], "served": false}
 	var final_ink := Color("244b91") if game.phase != "play" else ink
 	# Calculations stay scrollable without shrinking the text.
 	var scroll := ScrollContainer.new()
@@ -961,10 +963,10 @@ func render_notebook() -> void:
 			formula += " ×%s" % number(1 + r.copy_count)
 		label(entries, formula, Vector2(4, y + 25), 12, final_ink)
 		y += 46
-	if preview_value.rows.is_empty(): label(entries, "Tirá los dados para empezar.", Vector2(4, 15), 14, ink, 240)
+	if preview_value.rows.is_empty(): label(entries, ("Previsión oculta: la ves al anotar." if hidden_forecast else "Tirá los dados para empezar."), Vector2(4, 15), 14, ink, 240)
 	label(note, "TOTAL DE MANO", Vector2(28, 464), 14, ink)
-	label(note, number(preview_value.total), Vector2(215, 457), 28, final_ink)
-	label(note, "Previsión" if game.phase == "play" else "Anotado", Vector2(28, 486), 12, final_ink)
+	label(note, "?" if hidden_forecast else number(preview_value.total), Vector2(215, 457), 28, final_ink)
+	label(note, "Previsión oculta" if hidden_forecast else ("Previsión" if game.phase == "play" else "Anotado"), Vector2(28, 486), 12, final_ink)
 	if preview_value.served: label(note, "SERVIDA", Vector2(130, 486), 12, Color("94663b"))
 	if not selected.is_empty(): label(note, selection_preview().text, Vector2(28, 509), 13, ink, 254)
 	feedback_label = label(note, feedback_text, Vector2(28, 546), 13, Color("244b91"), 254)

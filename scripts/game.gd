@@ -606,11 +606,20 @@ func score_hand() -> bool:
 	Coins.advance(coin_inventory.equipped, "hand_scored")
 	Coins.advance(coin_inventory.equipped, "hand_combo" if combined else "hand_plain")
 	double_mult = false
+	_collect_kiosk_tax()
 	if points < target() and hand >= 2:
 		phase = "lost"
 		impulses = []
 		message = "Se terminaron las manos. El azar se queda con esta."
 	return true
+
+## Impuesto al kiosco: $2 por anotación, sin dejar saldo negativo por el cobro.
+func _collect_kiosk_tax() -> void:
+	if not is_boss() or not BossRules.is_power(boss_rule, "kiosk_tax"): return
+	var charge := mini(2, maxi(cash, 0))
+	cash -= charge
+	boss_state.tax = int(boss_state.get("tax", 0)) + charge
+	message = "Mano anotada en azul. Impuesto al kiosco: −$%d." % charge
 
 func next_hand() -> bool:
 	if phase != "hand_result" or hand >= 2: return false
