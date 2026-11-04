@@ -24,6 +24,9 @@ const THERMOS_ORIGIN = Vector2(1203, 168)
 const THERMOS_RECT = Rect2(1203, 170, 144, 225)
 const SHOP_THERMOS_RECT = Rect2(65, 525, 145, 330)
 const CUP_RECT = Rect2(1260, 400, 145, 180)
+## Zona clickeable de la mano del fondo (con el vaivén) y del triángulo de Dios.
+const HAND_RECT = Rect2(624, 31, 122, 112)
+const GOD_RECT = Rect2(612, 68, 110, 68)
 const CUP_MOUTH = Vector2(1330, 425)
 var shop_mode := false
 const WINDOWS = [Rect2(470, 0, 47, 217), Rect2(534, 0, 378, 219), Rect2(952, 0, 92, 215), Rect2(1198, 43, 73, 177)]

@@ -20,6 +20,7 @@ const Purchases = preload("res://scripts/purchases.gd")
 const SaveStore = preload("res://scripts/save_store.gd")
 const ValidationProfile = preload("res://scripts/validation_profile.gd")
 const BossRules = preload("res://scripts/boss_rules.gd")
+const BossInfo = preload("res://scripts/boss_info.gd")
 const Preferences = preload("res://scripts/presentation_preferences.gd")
 const Presentation = preload("res://scripts/presentation_state.gd")
 const PresentationAudio = preload("res://scripts/presentation_audio.gd")
@@ -876,6 +877,7 @@ func finish_render() -> void:
 	thermos_button.name = "InspectThermos"
 	thermos_button.tooltip_text = "Termo del mate · %d stickers · clic para ver niveles y efectos" % game.cup.stickers.size()
 	for state in ["normal", "hover", "pressed"]: thermos_button.add_theme_stylebox_override(state, StyleBoxEmpty.new())
+	if not background.shop_mode: render_boss_hand()
 	if background.shop_mode: label(ui, purchase_error if not purchase_error.is_empty() else game.message, Vector2(38, 864), 17, cream, 1360)
 	if game.phase != "repair": repair_selection.clear()
 	if game.phase in ["reward", "won", "lost", "repair"]: render_result()
@@ -1720,3 +1722,20 @@ func render_repairs() -> void:
 	button(modal, "Reparar selección · $%d" % quote.cost, Rect2(30, 445, 680, 46), func(): act(func(): game.resolve_repairs(repair_selection)), repair_selection.is_empty(), true)
 	button(modal, "Continuar sin reparar", Rect2(30, 507, 680, 43), func(): act(func(): game.resolve_repairs([])))
 
+
+## La mano (o el triángulo de Dios) del fondo abre el poder del jefe. Mismo patrón que el termo: botón transparente.
+func render_boss_hand() -> void:
+	var info := BossInfo.panel(game)
+	if info.is_empty(): return
+	var hand_button := button(ui, "", Backdrop.GOD_RECT if BossInfo.is_god(game) and game.is_boss() else Backdrop.HAND_RECT, inspect_boss_hand)
+	hand_button.name = "InspectBoss"
+	hand_button.tooltip_text = info.alt
+	hand_button.focus_mode = Control.FOCUS_ALL
+	for state in ["normal", "pressed"]: hand_button.add_theme_stylebox_override(state, StyleBoxEmpty.new())
+	# Resalte mínimo al pasar el mouse; el foco de teclado conserva el contorno del tema.
+	hand_button.add_theme_stylebox_override("hover", box(Color(1, 1, 1, 0.07)))
+
+func inspect_boss_hand() -> void:
+	var info := BossInfo.panel(game)
+	if info.is_empty(): return
+	present_detail(info.title, info.text, true)
