@@ -3,6 +3,9 @@ const Game = preload("res://scripts/game.gd")
 const Rules = preload("res://scripts/rules.gd")
 const Die = preload("res://scripts/die.gd")
 const Zone = preload("res://scripts/drop_zone.gd")
+const FeltLayout = preload("res://scripts/felt_layout.gd")
+const TableDragOverlay = preload("res://scripts/table_drag_overlay.gd")
+const CupEntry = preload("res://scripts/cup_entry.gd")
 const Backdrop = preload("res://scripts/backdrop.gd")
 const CoinArt = preload("res://scripts/coin_art.gd")
 const ShopArt = preload("res://scripts/shop_art.gd")
@@ -51,6 +54,7 @@ var purchase_error := ""
 var pack_panel_open := true
 var sticker_animation: Control
 var ui: Control
+var cup_zone: Zone
 var coin_sale_overlay
 var coin_sale_caption: Label
 var hover_description: PanelContainer
@@ -617,7 +621,7 @@ func show_options() -> void:
 		detail.remove_child(settings_panel)
 		settings_panel.queue_free()
 	settings_panel = Control.new()
-	settings_panel.custom_minimum_size = Vector2(760, 555)
+	settings_panel.custom_minimum_size = Vector2(760, 575)
 	detail.add_child(settings_panel)
 	var mute := CheckButton.new()
 	mute.name = "Mute"
@@ -660,7 +664,7 @@ func show_options() -> void:
 		var toggle := CheckButton.new()
 		toggle.name = keys[i]
 		toggle.text = captions[i]
-		toggle.position = Vector2(12, 295 + i * 42)
+		toggle.position = Vector2(12, 287 + i * 40)
 		toggle.button_pressed = preferences[keys[i]]
 		var key: String = keys[i]
 		toggle.toggled.connect(func(value): set_preference(key, value))
@@ -677,10 +681,10 @@ func show_options() -> void:
 	faces_button.size = Vector2(230, 40)
 	faces_button.pressed.connect(show_dice_gallery)
 	settings_panel.add_child(faces_button)
-	label(settings_panel, "Las señales siempre incluyen texto. Ninguna opción cambia la partida.\n" + detail_text, Vector2(12, 435), 17, cream, 725)
-	var status := label(settings_panel, preference_store.last_error if preference_store.last_error != "" else "Opciones guardadas aparte de la partida.", Vector2(12, 522), 16, gold, 725)
+	label(settings_panel, "Las señales siempre incluyen texto. Ninguna opción cambia la partida.\n" + detail_text, Vector2(12, 458), 17, cream, 725)
+	var status := label(settings_panel, preference_store.last_error if preference_store.last_error != "" else "Opciones guardadas aparte de la partida.", Vector2(12, 545), 16, gold, 725)
 	status.name = "PreferenceStatus"
-	detail.popup_centered(Vector2i(820, 650))
+	detail.popup_centered(Vector2i(820, 670))
 
 func show_dice_gallery() -> void:
 	present_detail("Dados · seis caras y gemas brillantes", "Cuerpo marfil, puntos negros o gemas de colores intensos con facetas y reflejos. Esta galería no equipa piezas ni modifica la partida.")
@@ -891,6 +895,7 @@ func finish_render() -> void:
 	thermos_button.name = "InspectThermos"
 	thermos_button.tooltip_text = ("Termo robado por Don Cebador · clic para ver qué pasa" if game.thermos_stolen() else "Termo del mate · %d stickers · clic para ver niveles y efectos" % game.cup.stickers.size())
 	for state in ["normal", "hover", "pressed"]: thermos_button.add_theme_stylebox_override(state, StyleBoxEmpty.new())
+	if not background.shop_mode and is_instance_valid(cup_zone) and cup_zone.is_inside_tree(): cup_zone.accept_through(thermos_button)
 	if not background.shop_mode: render_boss_hand()
 	if background.shop_mode: label(ui, purchase_error if not purchase_error.is_empty() else game.message, Vector2(38, 864), 17, cream, 1360)
 	if game.phase != "repair": repair_selection.clear()
@@ -1080,8 +1085,13 @@ func handle_die_drop(index: int, destination: String) -> void:
 		render()
 		return
 	if destination not in ["reserve", "cup"]: return
+	var from := ui.get_local_mouse_position()
 	if game.move_die(index, destination):
 		selected.erase(index)
+		if destination == "cup" and preferences.speed != 0 and not preferences.reduced_motion:
+			var entry := CupEntry.new()
+			add_child(entry)
+			entry.play(game.dice[index], game.boss_context(), from, 0.3 if preferences.speed == 2 else 0.5)
 		render()
 
 func possible_combinations(index: int) -> Array:
@@ -1127,8 +1137,19 @@ func loose_die_pose(index: int) -> Dictionary:
 	return {"position": LANDINGS[index] + offset, "angle": angle}
 
 func render_table() -> void:
-	var group_area := make_zone(Rect2(366, 324, 325, 330), "draft") if preferences.drag_groups else panel(ui, Rect2(366, 324, 325, 330), Color(0.12, 0.01, 0.035, 0.08))
+	var felt := FeltLayout.bounds()
+	var group_area := make_zone(felt, "draft") if preferences.drag_groups else panel(ui, felt, Color(0.12, 0.01, 0.035, 0.08))
 	group_area.name = "GroupArea"
+	if preferences.drag_groups:
+		var local_shape := PackedVector2Array()
+		for point in FeltLayout.polygon(): local_shape.append(point - felt.position)
+		group_area.shape = local_shape
+	# Los grupos conservan su lugar de siempre (366, 324); la zona de soltado ahora llega hasta el borde dorado.
+	var content := Control.new()
+	content.name = "GroupContent"
+	content.position = Vector2(366, 324) - felt.position
+	content.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	group_area.add_child(content)
 	var drag_toggle := CheckButton.new()
 	drag_toggle.text = "Armar grupos arrastrando"
 	drag_toggle.position = Vector2(370, 270)
@@ -1138,31 +1159,38 @@ func render_table() -> void:
 	drag_toggle.toggled.connect(func(value): set_preference("drag_groups", value))
 	ui.add_child(drag_toggle)
 	if preferences.drag_groups:
-		label(group_area, "Arrastrá los dados acá", Vector2(16, 12), 16, cream, 290)
+		label(content, "Arrastrá los dados acá", Vector2(16, 12), 16, cream, 290)
 		for slot in range(selected.size()):
-			add_die(group_area, selected[slot], Vector2(8 + slot * 61, 255))
+			add_die(content, selected[slot], Vector2(8 + slot * 61, 255))
 	var y := 58.0
 	for group_index in range(game.groups.size()):
 		var group: Dictionary = game.groups[group_index]
 		var current_index := group_index
-		label(group_area, group.category + (" · FIJO" if group.locked else " · EDITABLE"), Vector2(14, y), 15, cream)
+		label(content, group.category + (" · FIJO" if group.locked else " · EDITABLE"), Vector2(14, y), 15, cream)
 		var x := 8.0
 		for index in group.ids:
-			add_die(group_area, index, Vector2(x, y + 27), true)
+			add_die(content, index, Vector2(x, y + 27), true)
 			x += 60
 		if not group.locked and game.phase == "play":
-			button(group_area, "Desarmar", Rect2(199, y - 4, 112, 29), func(): act(func(): game.ungroup(current_index)))
+			button(content, "Desarmar", Rect2(199, y - 4, 112, 29), func(): act(func(): game.ungroup(current_index)))
 		y += 103
 	var reserve := make_zone(Rect2(712, 324, 350, 330), "reserve")
 	for index in range(game.dice.size()):
 		if game.dice[index].zone == "reserve" and not game.is_grouped(index) and not (preferences.drag_groups and index in selected):
 			var pose := loose_die_pose(index)
 			add_die(reserve, index, pose.position, false, pose.angle)
-	var cup := make_zone(Rect2(1082, 324, 312, 330), "cup")
+	var cup := make_zone(Rect2(1082, 324, 358, 330), "cup")
+	cup_zone = cup
 	var cup_button := button(cup, "", Rect2(Backdrop.CUP_RECT.position - cup.position, Backdrop.CUP_RECT.size), inspect_cup)
 	cup_button.name = "InspectCup"
 	cup_button.tooltip_text = "Ver vaso"
 	for state in ["normal", "hover", "pressed"]: cup_button.add_theme_stylebox_override(state, StyleBoxEmpty.new())
+	cup.accept_through(cup_button)
+	var overlay := TableDragOverlay.new()
+	overlay.cup_zone = cup.get_rect()
+	overlay.smooth = not preferences.reduced_motion and preferences.speed != 0
+	overlay.reserve_ok = func(index: int) -> bool: return preferences.drag_groups and game.phase == "play" and index >= 0 and index < game.dice.size() and game.dice[index].zone == "reserve" and not game.is_grouped(index) and index not in selected
+	ui.add_child(overlay)
 
 func add_die(parent: Node, index: int, pos: Vector2, grouped := false, angle := 0.0) -> void:
 	var die := Die.new()

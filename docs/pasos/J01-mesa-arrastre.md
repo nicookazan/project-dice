@@ -2,7 +2,7 @@
 
 Etapa de jugabilidad e interactividad · 4 de noviembre de 2026.
 
-**Rama:** `feature/mesa-arrastre`. **Depende de:** J00 (preparación). **Estado actual:** Pendiente. **Decisiones vinculadas:** D14.
+**Rama:** `feature/mesa-arrastre`. **Depende de:** J00 (preparación). **Estado actual:** Implementado; a la espera de la prueba del autor en el juego. **Decisiones vinculadas:** D14.
 
 ## Objetivo
 Que soltar un dado sobre el vaso, el termo o la tela libre lo mande al vaso, y que la tela izquierda coincida con su borde dorado.
