@@ -66,3 +66,7 @@ No se cambia el balance provisional D01/D02/D04 ni se declara sesión humana rea
 - **Sorteo del jefe del nivel:** entre los candidatos con poder implementado; en builds de desarrollo (`Game.development_bosses`) entran todos. Si un nivel no tiene ninguno listo se usa el pool completo.
 - **Guardado v8:** migra los ids `prueba_l{n}_{k}` por nivel y posición, reconstruye campaña, encuentros y regla desde el catálogo y no toca semilla ni estado del azar. v7 se respalda al primer checkpoint nuevo; ids desconocidos se rechazan sin tocar el archivo.
 - **Pruebas:** `tests/boss_catalog_tests.gd` (catálogo contra la tabla del PRD, campaña, filtro de lanzamiento, tarjeta roja, migración v7 a v8).
+
+## Mano clickeable (plan de jefes, fase B — 04/11/2026)
+
+La mano del fondo (`Backdrop.HAND_RECT`) y el triángulo de Dios (`Backdrop.GOD_RECT`) llevan un botón transparente `InspectBoss` fuera de la tienda. `BossInfo.panel(game)` arma título y texto desde el catálogo y el estado del jefe (`boss_state`); es de solo lectura. Pruebas: `tests/boss_panel_tests.gd`; capturas: `tests/boss_hand_review.gd`.
