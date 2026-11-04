@@ -1151,6 +1151,7 @@ func render_table() -> void:
 func add_die(parent: Node, index: int, pos: Vector2, grouped := false, angle := 0.0) -> void:
 	var die := Die.new()
 	die.configure_appearance(game.dice[index], game.boss_context())
+	die.boss_mark = game.boss_marks().get(index, "")
 	for group in game.groups:
 		if group.get("assigned", {}).has(index): die.wild_number = group.assigned[index]
 	die.die_index = index

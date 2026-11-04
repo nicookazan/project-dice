@@ -174,6 +174,7 @@ static func score(dice: Array, groups: Array, passives: Array, boost: Variant, s
 	if not boss_context.is_empty() and not BossRules.valid_rule(boss_context): errors.append("Regla de jefe inválida.")
 	for group in groups:
 		if group is Dictionary and BossRules.forbidden(boss_context, group.get("category", "")): errors.append("El jefe prohíbe " + group.category + ".")
+		if group is Dictionary and group.get("ids") is Array and BossRules.abducted(boss_context) in group.ids: errors.append("El dado abducido no puede agruparse.")
 	if not Stickers.valid_levels(sticker_levels, sticker_catalog):
 		errors.append("Sticker sin datos de nivel o balance válidos.")
 	if not NumberUpgrades.valid_points(global_points):
@@ -200,6 +201,7 @@ static func score(dice: Array, groups: Array, passives: Array, boost: Variant, s
 	for group in groups:
 		for index in group.ids:
 			used[index] = true
+	if BossRules.abducted(boss_context) >= 0: used[BossRules.abducted(boss_context)] = true
 	var leftovers: Array = []
 	for index in range(dice.size()):
 		if not used.has(index): leftovers.append(index)

@@ -58,3 +58,9 @@ static func run(scene, check: Callable) -> void:
 	shop_game.open_shop()
 	check.call(shop_game.phase == "shop" and show(scene, shop_game) == null, "Boss panel: no hand button in the shop")
 	scene.detail.hide()
+
+static func bare_boss(id: String, values: Array):
+	var game = forced_boss(id, true)
+	game.roll()
+	preload("res://tests/support/game_fixture.gd").set_values(game, values)
+	return game

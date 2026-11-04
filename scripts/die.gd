@@ -23,6 +23,7 @@ var shell_broken := false
 var wild_number := 0
 var pip_material := ""
 var pip_suspended := false
+var boss_mark := ""
 var body_material := "basic"
 var element := ""
 var body_suspended := false
@@ -112,6 +113,11 @@ func _draw() -> void:
 		selection_brackets(Color("e6bc72"))
 	if wild_number > 0:
 		selection_brackets(Color("ffd35a"))
+	if boss_mark != "":
+		var badge: Dictionary = {"scared": ["P", Color("7f9fb4")], "loaded": ["1", Color("c24b4b")], "abducted": ["A", Color("63b86a")]}.get(boss_mark, ["?", Color.WHITE])
+		draw_circle(Vector2(52, 10), 9, badge[1])
+		draw_arc(Vector2(52, 10), 9, 0, TAU, 20, Color("1b1b24"), 1.5)
+		draw_string(ThemeDB.fallback_font, Vector2(48, 15), badge[0], HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color("101018"))
 		draw_string(ThemeDB.fallback_font, Vector2(36, 12), "=%d" % wild_number, HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color("ffd35a"))
 	if has_focus(): selection_brackets(Color("ffdc80"))
 	if shell_broken:
