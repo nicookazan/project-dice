@@ -431,6 +431,12 @@ func finish_throw() -> void:
 		throw_blocker.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		throw_blocker.queue_free()
 
+## Modo de desarrollo: --boss=l3_conde,l5_visitante fuerza esos jefes al entrar a su nivel.
+func forced_boss_arguments() -> Array:
+	for argument in OS.get_cmdline_user_args():
+		if argument.begins_with("--boss="): return Array(argument.trim_prefix("--boss=").split(",")).filter(func(id): return id != "")
+	return []
+
 func start_new_run(seed_value: int = -1, debug_run := false) -> void:
 	if is_instance_valid(background): background.thermos_configured = false
 	presentation.observed.clear()
@@ -439,6 +445,7 @@ func start_new_run(seed_value: int = -1, debug_run := false) -> void:
 	repair_selection.clear()
 	purchase_error = ""
 	pack_panel_open = true
+	game.forced_boss_ids = forced_boss_arguments()
 	if campaign_mode: game.begin_campaign(seed_value)
 	else: game.begin_run(seed_value)
 	if validation_profile or campaign_mode: ValidationProfile.apply(game)

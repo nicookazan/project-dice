@@ -37,7 +37,7 @@ Pasos 00–18 completos en alcance técnico; 19 (presentación/arte) reabierto p
 - Jugar: `Jugar.cmd` (Windows, busca `Godot*_win64.exe` en el Escritorio) / `./Jugar.command` (Mac) / abrir `project.godot` y F5.
 - Tests: `Probar.cmd`, o `<godot_console> --headless --path . --script res://tests/run_tests.gd` (exit ≠ 0 si falla; escribe `test-results/tests.json`).
 - Revisión visual: `godot --path . --script res://tests/<nombre>_review.gd`.
-- Modos: "Nueva partida debug" (daño y plata infinitos), `Nivel-corto.cmd` (40→70→110), `Validar-nivel.cmd` (perfil de prueba v1).
+- Modos: "Nueva partida debug" (daño y plata infinitos), `Nivel-corto.cmd` (40→70→110), `Validar-nivel.cmd` (perfil de prueba v1), `Jugar-jefe.cmd <id[,id]>` (fuerza jefes del catálogo).
 
 ## Convenciones de trabajo
 

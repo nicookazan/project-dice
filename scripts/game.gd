@@ -29,6 +29,8 @@ var boss_rule: Dictionary = BossRules.NONE.duplicate(true)
 var boss_state: Dictionary = {}
 ## Los jefes sin poder implementado solo se sortean en builds de desarrollo.
 var development_bosses: bool = OS.has_feature("debug")
+## Solo desarrollo: ids de jefe a forzar al entrar a su nivel (no se guarda; ver Jugar-jefe.cmd).
+var forced_boss_ids: Array = []
 var campaign: Array = []
 var level_index := 0
 var selected_bosses: Dictionary = {}
@@ -315,6 +317,11 @@ func _enter_campaign_level() -> void:
 	var level: Dictionary = campaign[level_index]
 	var key := str(level_index)
 	if not selected_bosses.has(key): selected_bosses[key] = _drawable_candidates(level)[rng.randi_range(0, _drawable_candidates(level).size() - 1)].id
+	if development_bosses:
+		for forced in forced_boss_ids:
+			var forced_row := BossCatalog.entry(forced)
+			if not forced_row.is_empty() and forced_row.level == level_index + 1 and Campaign.candidate(level, forced).size() > 0 and selected_bosses[key] != forced:
+				selected_bosses[key] = forced
 	var chosen := Campaign.candidate(level, selected_bosses[key])
 	level_encounters = Campaign.encounters(level, chosen)
 	boss_rule = chosen.rule.duplicate(true)
