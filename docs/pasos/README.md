@@ -50,8 +50,17 @@ Versión 1 · 25 de octubre de 2026.
 | [F02 — Nivel 8, simulación y jefe CMD](F02-simulacion-cmd.md) | Posterior | 20 | Diferido |
 | [F03 — Vasos, colección y progreso permanente](F03-vasos-progreso.md) | Posterior | F02 | Diferido |
 | [F04 — Otros materiales y sinergias futuras](F04-materiales-sinergias-futuras.md) | Posterior | 20 | Diferido |
+| [J00 — Preparación de la etapa de jugabilidad](J00-preparacion-jugabilidad.md) | Jugabilidad | 20 | Completado |
+| [J01 — Vaso, arrastre y Reservar](J01-mesa-arrastre.md) | Jugabilidad | J00 | Pendiente |
+| [J02 — Ficha del dado](J02-ficha-dado.md) | Jugabilidad | J01 | Pendiente |
+| [J03 — Jugadas posibles](J03-jugadas-posibles.md) | Jugabilidad | J01, J02 | Pendiente |
+| [J04 — Stickers al pasar el mouse](J04-stickers-hover.md) | Jugabilidad | J00 | Pendiente |
+| [J05 — Objetos del bar](J05-objetos-bar.md) | Jugabilidad | J04 | Pendiente |
+| [J06 — Vaso que tira](J06-vaso-tira.md) | Jugabilidad | J01, J05 | Pendiente |
+| [J07 — Mano del jefe](J07-mano-jefe.md) | Jugabilidad | J05 | Pendiente |
+| [J08 — Vuelo del sticker](J08-sticker-vuelo.md) | Jugabilidad | J00 | Pendiente |
 
-Orden no significa fecha ni duración. Se recomienda ejecutar una ficha por vez, comprobar su entrega y entonces habilitar la siguiente. Algunas dependencias permiten trabajo independiente, pero no se propone desarrollar todo simultáneamente.
+Las fichas J00–J08 son la etapa de jugabilidad e interactividad posterior al paso 20 (plan en Notion; decisiones en D14). Orden no significa fecha ni duración. Se recomienda ejecutar una ficha por vez, comprobar su entrega y entonces habilitar la siguiente. Algunas dependencias permiten trabajo independiente, pero no se propone desarrollar todo simultáneamente.
 
 ## Hitos verificables
 

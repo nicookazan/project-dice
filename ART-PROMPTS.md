@@ -55,3 +55,5 @@ El cuerpo del dado ahora usa el sprite transparente `assets/art/ivory-die-v3.png
 `assets/art/pixel-v3/stickers-termo-v3.png` (02/11/2026): los seis stickers de `stickers-v3.png` girados cada uno en su ángulo fijo del termo, con `py -3.13 tools/art/make_stickers_termo.py` (sin IA de imagen). Las celdas 2 a 7 de `tienda-iconos-v3.png` son el medallón con los números del 1 al 6 dibujados en píxel, generadas con `make_tienda.py`.
 
 `tools/art/maletin.py` (03/11/2026): maletín con la perspectiva corregida (tapa con marco parejo, base en bandeja honda con frente vertical) e interior de capitoné bordó oscuro, opción B1 elegida por el autor entre bocetos; `terciopelo-v3.png` pasa al mismo bordó oscuro, liso. Sin IA de imagen.
+
+`assets/art/pixel-v3/vaso-brillo-v3.png` y `vaso-frente-v3.png` (04/11/2026): `py tools/art/make_vaso_jugabilidad.py` (sin IA de imagen), derivados de `vaso-v3.png` sin modificarlo: contorno dorado en tres anillos y pared delantera del vaso. Los bocetos de jugabilidad (M1–M7, T1–T3) se reproducen con `tools/art/bocetos-jugabilidad/`.
