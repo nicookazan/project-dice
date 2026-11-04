@@ -94,3 +94,11 @@ Desde el paso 13, la libreta usa texto ajustado y desplazable, con decimales ín
 242 comprobaciones aprobadas: las 173 anteriores y 69 nuevas. tests/scoring_event_tests.gd cubre aritmética, desglose, validación, pureza y orden/idempotencia de eventos. tests/support/observed_game.gd es exclusivo de pruebas.
 
 test-results/tests.json contiene scoring_events_demo con resultados de aritmética y una secuencia de eventos. La captura test-results/desglose-puntos.png fue revisada: full servido de 122 con las contribuciones de los cinco dados y sus monedas.
+
+## Actualización: monedas nuevas en la puntuación
+
+- Orden dentro de un grupo con combinación: puntos del dado (mejoras globales, acero, elemento, monedas por dado e impulsos) → gema → multiplicadores (sticker, gemas, viento/cobre, monedas por dado, monedas de grupo) → factores (rubí, U05) → copias. Los puntos por categoría de monedas (C10–C16) entran como puntos añadidos al grupo (`row.coin_points`).
+- Puntos de mano (C18, C37, C38, C42, C49): una fila plana por moneda (`category: "Moneda · …"`, `source: "coin:…"`), sin multiplicar.
+- Reglas de combinación (C25 escalera de 4, C26 comodín, C28 par doble) llegan a `Rules.category`/`validate_groups` desde `CoinEffects.rules`. El comodín guarda `assigned` (id → número) en el grupo y en la fila.
+- Eventos nuevos: `coin_broken` (C18 llegó a 0). Las monedas crecientes avanzan en `hand_scored`, `hand_combo`/`hand_plain`, `encounter_won` y `boss_won`; jamás durante la previsión.
+- `roll()` registra `free: true` en el evento cuando el relanzo de un dado no gastó tirada.

@@ -1,7 +1,7 @@
 extends RefCounted
 ## Versioned local checkpoints. Variant bytes preserve int64 RNG; objects are disabled.
 const FORMAT := "dios-no-juega-save"
-const VERSION := 6
+const VERSION := 7
 const BossRules = preload("res://scripts/boss_rules.gd")
 const Game = preload("res://scripts/game.gd")
 const Validator = preload("res://scripts/save_validator.gd")
@@ -27,7 +27,7 @@ func read_file(file_path: String) -> Dictionary:
 	if parser.parse(file.get_as_text()) != OK or not parser.data is Dictionary: return error("invalid", "El archivo de guardado está dañado. Se conserva sin cambios.")
 	var envelope: Dictionary = parser.data
 	if envelope.get("format") != FORMAT: return error("invalid", "Formato de guardado desconocido. Se conserva el archivo.")
-	if envelope.get("version") != 1 and envelope.get("version") != 2 and envelope.get("version") != 3 and envelope.get("version") != 4 and envelope.get("version") != 5 and envelope.get("version") != VERSION: return error("version", "El guardado pertenece a otra versión. Se conserva el archivo.")
+	if envelope.get("version") != 1 and envelope.get("version") != 2 and envelope.get("version") != 3 and envelope.get("version") != 4 and envelope.get("version") != 5 and envelope.get("version") != 6 and envelope.get("version") != VERSION: return error("version", "El guardado pertenece a otra versión. Se conserva el archivo.")
 	if not envelope.get("payload") is String or not envelope.get("sha256") is String: return error("invalid", "Guardado incompleto. Se conserva el archivo.")
 	var bytes := Marshalls.base64_to_raw(envelope.payload)
 	if bytes.is_empty() or bytes.hex_encode().sha256_text() != envelope.sha256: return error("checksum", "El guardado está dañado. Se conserva el archivo.")
@@ -60,6 +60,10 @@ func read_file(file_path: String) -> Dictionary:
 		data = data.duplicate(true)
 		var migration_error: String = preload("res://scripts/save_migrations.gd").global_numbers(data.game)
 		if migration_error != "": return error("state", migration_error)
+	if envelope.version < 7 and data is Dictionary and data.get("game") is Dictionary:
+		data = data.duplicate(true)
+		var upgrade_error: String = preload("res://scripts/save_migrations.gd").coins_v7(data.game)
+		if upgrade_error != "": return error("state", upgrade_error)
 	var reason: String = Validator.validate(data)
 	if reason != "": return error("state", "El guardado contiene un estado inválido: " + reason)
 	return {"ok": true, "active": data.game.phase in ACTIVE, "code": "valid", "message": "", "data": data, "source": file_path}

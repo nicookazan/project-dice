@@ -3,6 +3,7 @@ extends RefCounted
 const ID := "nivel-corto-prueba-v1"
 const SAVE_PATH := "user://saves/validacion-nivel-v1.json"
 const Coins = preload("res://scripts/coins.gd")
+const Shop = preload("res://scripts/shop.gd")
 
 static func stickers() -> Dictionary:
 	return {
@@ -16,6 +17,9 @@ static func stickers() -> Dictionary:
 
 static func tables() -> Dictionary:
 	var result := {"coins": [], "components": [], "numbers": [], "stickers": [], "numeric_rarity_weights": {"common": 4.0, "rare": 2.0, "epic": 1.0, "legendary": 0.5}}
+	var staged := Shop.default_tables()
+	result["coin_type_weights"] = staged.coin_type_weights
+	result["coin_rarity_weights"] = staged.coin_rarity_weights
 	for id in Coins.catalog(): result.coins.append({"kind": "coin", "price": Coins.definition(id).price, "weight": 1.0, "effect": {"coin_id": id}})
 	for id in ["steel", "copper"]: result.components.append({"kind": "material", "price": 3, "weight": 1.0, "effect": {"id": id}})
 	for id in ["fire", "water", "electricity", "earth", "wind"]: result.components.append({"kind": "element", "price": 3, "weight": 1.0, "effect": {"id": id}})

@@ -9,7 +9,7 @@ static func run(check: Callable) -> Dictionary:
 	return _test_effects_and_contexts(check)
 
 static func _test_catalog_and_instances(check: Callable) -> void:
-	check.call(Coins.catalog().size() == 8 and Coins.PASSIVES.size() == 6 and Coins.CONSUMABLES.size() == 2, "coins: only initial six passives and two consumables are offered")
+	check.call(Coins.catalog().size() == 59 and Coins.PASSIVES.size() == 51 and Coins.CONSUMABLES.size() == 8, "coins: first batch is 51 passives (C01-C51) and 8 single-use coins")
 	for id in Coins.catalog():
 		var data := Coins.definition(id)
 		var complete := true
@@ -103,6 +103,7 @@ static func _test_effects_and_contexts(check: Callable) -> Dictionary:
 	check.call(parity.preview().rows[0].die_rows[0].points == 9 and parity.preview().total == 28, "coins: improved four worth seven still gets even bonus; odd leftovers also apply")
 	for context in ["shop", "hand_result", "reward", "repair", "sticker_choice", "won", "lost"]:
 		for id in Coins.CONSUMABLES:
+			if Coins.can_use(id, context): continue
 			var game = Game.new(104)
 			game.consumable = id
 			game.phase = context
@@ -118,7 +119,7 @@ static func _test_effects_and_contexts(check: Callable) -> Dictionary:
 	var dice: Array = boosted.dice.duplicate(true)
 	var budget: int = boosted.rolls_left
 	check.call(boosted.use_consumable() and boosted.boost and boosted.consumable == "" and boosted.rolls_left == budget and boosted.hand == 1, "U01: use consumes its instance, never a roll or hand")
-	check.call(boosted.groups == groups and boosted.dice == dice and boosted.preview().total == 31, "U01: locked group and leftovers gain points without changing dice or members")
+	check.call(boosted.groups == groups and boosted.dice == dice and boosted.preview().total == 25, "U01: locked group and leftovers gain points without changing dice or members")
 	var before := boosted.snapshot()
 	check.call(not boosted.use_consumable() and boosted.snapshot() == before, "U01: consumed instance never fires twice")
 	boosted.score_hand()

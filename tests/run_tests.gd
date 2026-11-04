@@ -29,6 +29,7 @@ const PurchaseTests = preload("res://tests/purchase_tests.gd")
 const ShopTests = preload("res://tests/shop_tests.gd")
 const CoinTests = preload("res://tests/coin_tests.gd")
 const RepairTests = preload("res://tests/repair_tests.gd")
+const CoinBatchTests = preload("res://tests/coin_batch_tests.gd")
 var checks := 0
 var failures: Array = []
 
@@ -61,6 +62,7 @@ func _initialize() -> void:
 	var repairs_demo: Dictionary = RepairTests.run(check)
 	var stickers_demo: Dictionary = StickerTests.run(check)
 	var coins_demo: Dictionary = CoinTests.run(check)
+	CoinBatchTests.run(check)
 	var shop_demo: Dictionary = ShopTests.run(check)
 	var purchases_demo: Dictionary = PurchaseTests.run(check)
 	check(Rules.category([1, 1]) == "Par", "exact pair")
@@ -109,7 +111,7 @@ func _initialize() -> void:
 	check(Rules.score(loose_dice, [], g.passives, false, false).total == 16, "parity applies to leftovers")
 	g.consumable = "boost"
 	check(g.use_consumable() and g.consumable == "", "consume boost")
-	check(Rules.score(loose_dice, [], g.passives, g.boost, false).total == 22, "1 and 3 gain three each with parity")
+	check(Rules.score(loose_dice, [], g.passives, g.boost, false).total == 19, "1 and 4 gain three each with parity")
 	check(not g.use_consumable(), "cannot consume twice")
 	var combo = Game.new(2)
 	set_values(combo, [3, 3, 3, 5, 5])

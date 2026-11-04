@@ -46,7 +46,7 @@ Pasos 00–18 completos en alcance técnico; 19 (presentación/arte) reabierto p
 - La previsión de puntos debe coincidir siempre con la anotación; el azar debe ser reproducible por semilla y exacto tras guardar/continuar (no re-sortear al cargar).
 - Redondeo: decimales se conservan y se redondea una sola vez al total de mano (0,5 hacia arriba).
 - Arte: respetar el pixel art existente y el diseño maestro de dados (`docs/DISENO-MAESTRO-DADOS.md`, imagen marfil frontal). No sustituir por geometría provisional. Registrar prompts/procedencia.
-- Guardado versionado (hoy v6) con migraciones; nunca sobrescribir archivos inválidos. Guardados y preferencias van en `%APPDATA%/DiosNoJuegaALosDados/`, fuera de Git.
+- Guardado versionado (hoy v7) con migraciones; nunca sobrescribir archivos inválidos. Guardados y preferencias van en `%APPDATA%/DiosNoJuegaALosDados/`, fuera de Git.
 - No publicar ni distribuir externamente sin instrucción explícita. Rama principal: `main` (única de larga vida); cada cambio va en `feature/<nombre>` con PR contra `main`.
 - Fuera de alcance salvo pedido: compra/venta de dados, más de 5 dados, destrucción del dado, usos seguros de cristal, dos tiradas por mano, victoria automática por generala servida, nivel 8/CMD.
 

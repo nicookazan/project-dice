@@ -17,9 +17,9 @@ static func definition(id: String) -> Dictionary:
 	result["repair_cost"] = REPAIR_COSTS[id]
 	return result
 
-static func repair_quote(dice: Array, ids: Array) -> Dictionary:
+static func repair_quote(dice: Array, ids: Array, options: Dictionary = {}) -> Dictionary:
+	# options: half (C47, rounded up per gem) and free_one (U07, the costliest chosen gem costs nothing).
 	var seen: Dictionary = {}
-	var cost := 0
 	var items: Array = []
 	for id in ids:
 		if not id is int or id < 0 or id >= dice.size() or seen.has(id):
@@ -29,8 +29,16 @@ static func repair_quote(dice: Array, ids: Array) -> Dictionary:
 		var shell: String = die.get("shell", "")
 		if not REPAIR_COSTS.has(shell) or not die.get("shell_broken", false):
 			return {"valid": false, "cost": 0, "items": [], "error": "Solo se reparan carcasas resquebrajadas conocidas."}
-		cost += REPAIR_COSTS[shell]
-		items.append({"id": id, "shell": shell, "cost": REPAIR_COSTS[shell]})
+		var price: int = REPAIR_COSTS[shell]
+		if options.get("half", false): price = int(ceil(price / 2.0))
+		items.append({"id": id, "shell": shell, "cost": price})
+	if options.get("free_one", false) and not items.is_empty():
+		var costliest := 0
+		for i in range(items.size()):
+			if items[i].cost > items[costliest].cost: costliest = i
+		items[costliest].cost = 0
+	var cost := 0
+	for item in items: cost += item.cost
 	return {"valid": true, "cost": cost, "items": items, "error": ""}
 
 static func evaluate(die: Dictionary, category: String, suspended := false) -> Dictionary:

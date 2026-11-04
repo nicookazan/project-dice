@@ -20,6 +20,7 @@ var combo_hint := false
 var sway_enabled := true
 var own_drag := false
 var shell_broken := false
+var wild_number := 0
 var pip_material := ""
 var pip_suspended := false
 var body_material := "basic"
@@ -109,6 +110,9 @@ func _draw() -> void:
 		selection_brackets(Color("e6bc72"))
 	elif combo_hint:
 		selection_brackets(Color("e6bc72"))
+	if wild_number > 0:
+		selection_brackets(Color("ffd35a"))
+		draw_string(ThemeDB.fallback_font, Vector2(36, 12), "=%d" % wild_number, HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color("ffd35a"))
 	if has_focus(): selection_brackets(Color("ffdc80"))
 	if shell_broken:
 		var bounds := Art.pip_bounds(pip_material, value)

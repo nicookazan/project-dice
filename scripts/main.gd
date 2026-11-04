@@ -15,6 +15,7 @@ const Elements = preload("res://scripts/elements.gd")
 const Gems = preload("res://scripts/gems.gd")
 const Stickers = preload("res://scripts/stickers.gd")
 const Coins = preload("res://scripts/coins.gd")
+const CoinEffects = preload("res://scripts/coin_effects.gd")
 const Purchases = preload("res://scripts/purchases.gd")
 const SaveStore = preload("res://scripts/save_store.gd")
 const ValidationProfile = preload("res://scripts/validation_profile.gd")
@@ -192,16 +193,17 @@ func _unhandled_key_input(event: InputEvent) -> void:
 	get_viewport().set_input_as_handled()
 
 func selection_preview() -> Dictionary:
-	var values: Array = []
 	for id in selected:
 		if not id is int or id < 0 or id >= game.dice.size() or game.is_grouped(id) or game.dice[id].zone != "reserve": return {"valid": false, "text": "Selección: reservá los dados antes de agrupar."}
-		values.append(game.dice[id].value)
-	var category: String = Rules.category(values)
+	var resolved := Rules.resolve_wildcards(game.dice, selected, game.active_rules())
+	var category: String = resolved.category
 	if BossRules.forbidden(game.boss_context(), category): return {"valid": false, "text": "Selección: el jefe prohíbe generala; podés armar trío + par."}
 	if category.is_empty(): return {"valid": false, "text": "Selección: %d dado(s) · sin combinación válida" % selected.size()}
 	var groups: Array = game.groups.duplicate(true)
-	groups.append({"category": category, "ids": selected.duplicate()})
-	var score := Rules.score(game.dice, groups, game.passives, game.boost, game.rolls_made == 1, game.global_points, game.cup.stickers, game.sticker_catalog, game.boss_context())
+	var candidate := {"ids": selected.duplicate(), "category": category}
+	if not resolved.assigned.is_empty(): candidate["assigned"] = resolved.assigned
+	groups.append(candidate)
+	var score := Rules.score(game.dice, groups, game.passives, game.impulses, game.rolls_made == 1, game.global_points, game.cup.stickers, game.sticker_catalog, game.boss_context(), game.coin_context())
 	if score.valid:
 		var row: Dictionary = score.rows[game.groups.size()]
 		return {"valid": true, "text": "Selección: %s · %s puntos · G para agrupar" % [category, number(row.total)], "row": row}
@@ -972,7 +974,8 @@ func render_notebook() -> void:
 	status.add_theme_color_override("default_color", ink)
 	status.add_theme_font_size_override("normal_font_size", 13)
 	status.text = purchase_error if not purchase_error.is_empty() else game.message
-	if game.boost: status.text += "\nImpulso activo: 1 y 3 +3 puntos."
+	for impulse in game.impulses: status.text += "\nImpulso activo: %s." % Coins.definition(impulse).name
+	if game.double_mult: status.text += "\nDoble mult activo en esta mano."
 	note.add_child(status)
 
 func money_text(amount: int) -> String:
@@ -1074,8 +1077,11 @@ func possible_combinations(index: int) -> Array:
 				ids.append(available[bit])
 				values.append(game.dice[available[bit]].value)
 		if index not in ids: continue
-		var category := Rules.category(values)
+		var resolved := Rules.resolve_wildcards(game.dice, ids, game.active_rules())
+		var category: String = resolved.category
 		if category.is_empty() or BossRules.forbidden(game.boss_context(), category): continue
+		for slot in range(ids.size()):
+			if resolved.assigned.has(ids[slot]): values[slot] = resolved.assigned[ids[slot]]
 		if not best.has(category): best[category] = {"category": category, "ids": ids, "values": values}
 	return best.values()
 
@@ -1140,6 +1146,8 @@ func render_table() -> void:
 func add_die(parent: Node, index: int, pos: Vector2, grouped := false, angle := 0.0) -> void:
 	var die := Die.new()
 	die.configure_appearance(game.dice[index], game.boss_context())
+	for group in game.groups:
+		if group.get("assigned", {}).has(index): die.wild_number = group.assigned[index]
 	die.die_index = index
 	die.chosen = index in selected
 	die.locked = grouped or game.phase != "play"
@@ -1185,27 +1193,41 @@ func move_selected(destination: String) -> void:
 
 func render_inventory() -> void:
 	label(ui, "%d/%d" % [game.passives.size(), game.coin_inventory.shared_capacity], Vector2(42, 750), 14, gold)
+	var step := minf(90.0, 740.0 / maxf(game.coin_inventory.shared_capacity, 1))
 	for i in range(game.passives.size()):
 		var coin: String = game.passives[i]
-		var b := button(ui, "", Rect2(175 + i * 90, 748, 64, 60), func(): inspect_coin(coin))
+		var b := button(ui, "", Rect2(175 + i * step, 748, 64, 60), func(): inspect_coin(coin))
 		b.name = "EquippedCoin_" + str(i)
 		for state in ["normal", "hover", "pressed", "disabled", "focus"]: b.add_theme_stylebox_override(state, StyleBoxEmpty.new())
 		add_coin(b, coin, Rect2(1, 1, 58, 58))
-		b.tooltip_text = Rules.COINS[coin].name + "\n" + Rules.COINS[coin].description
+		b.tooltip_text = Rules.COINS[coin].name + "\n" + coin_state_text(game.coin_inventory.equipped[i]) + Rules.COINS[coin].description
 		if BossRules.suspended(game.boss_context(), "coin", coin):
 			label(b, "SUSP", Vector2(1, 43), 11, gold)
 			b.tooltip_text += " Suspendida por el jefe; conserva su espacio."
 	label(ui, "UN USO", Vector2(922, 751), 13, gold)
-	if game.consumable != "":
-		var use := button(ui, "", Rect2(999, 748, 64, 60), func(): act(game.use_consumable), not Coins.can_use(game.consumable, game.phase) or BossRules.suspended(game.boss_context(), "coin", game.consumable))
-		use.name = "ConsumableCoin"
+	for i in range(game.coin_inventory.consumables.size()):
+		var stored: String = game.coin_inventory.consumables[i].coin_id
+		var slot := i
+		var use := button(ui, "", Rect2(999 + i * 74, 748, 64, 60), func(): act(func(): game.use_consumable(slot)), not Coins.can_use(stored, game.phase) or BossRules.suspended(game.boss_context(), "coin", stored))
+		use.name = "ConsumableCoin" if i == 0 else "ConsumableCoin_" + str(i)
 		for state in ["normal", "hover", "pressed", "disabled", "focus"]: use.add_theme_stylebox_override(state, StyleBoxEmpty.new())
-		use.tooltip_text = Rules.COINS[game.consumable].description + " Clic para consumir."
-		add_coin(use, game.consumable, Rect2(1, 1, 58, 58))
-		if BossRules.suspended(game.boss_context(), "coin", game.consumable):
+		use.tooltip_text = Rules.COINS[stored].description + " Clic para consumir."
+		add_coin(use, stored, Rect2(1, 1, 58, 58))
+		if BossRules.suspended(game.boss_context(), "coin", stored):
 			label(use, "SUSP", Vector2(1, 43), 11, gold)
 			use.tooltip_text = "Suspendida por el jefe. No se consume y conserva su espacio."
 	button(ui, "Ayuda", Rect2(1273, 748, 120, 60), show_help)
+
+## Progress of coins that keep state (C18, C48-C51), one line for tooltips and the inspector.
+func coin_state_text(instance: Dictionary) -> String:
+	var state: Dictionary = instance.state
+	match instance.coin_id:
+		"spent": return "Fuerza %d / 40\n" % state.strength
+		"veteran": return "+%s mult acumulado\n" % number(state.wins * 0.5)
+		"accumulated": return "+%d puntos acumulados\n" % (state.hands * 3)
+		"streak": return "+%s mult de racha\n" % number(state.streak * 0.5)
+		"bosshunter": return "+%d mult acumulado\n" % state.bosses
+	return ""
 
 func add_coin(parent: Node, coin: String, rect: Rect2) -> void:
 	var icon := CoinArt.new()
@@ -1218,9 +1240,15 @@ func inspect_coin(coin: String) -> void:
 	var data := Coins.definition(coin)
 	if data.is_empty(): return
 	var duration: String = {"equipped": "Mientras está equipada", "hand": "Mano actual", "encounter": "Encuentro actual"}[data.duration]
-	var context := "Pasiva al puntuar; no se consume." if data.type == "passive" else "Usar antes de anotar, incluso antes de tirar. No se usa en tienda."
+	var windows := {"play": "durante la jugada", "shop": "en la tienda", "repair": "en la fase de reparación"}
+	var use_windows: Array = data.use_contexts.map(func(window): return windows.get(window, window))
+	var context := "Pasiva al puntuar; no se consume." if data.type == "passive" else "Se usa " + ", ".join(use_windows) + "."
+	if data.type == "consumable" and "shop" not in data.use_contexts: context += " No se usa en tienda."
 	if BossRules.suspended(game.boss_context(), "coin", coin): context += "\nSUSPENDIDA POR JEFE: conserva su espacio; sin poder durante el encuentro."
-	present_detail("Moneda · " + data.name, "%s\n\n%s · %s\nDuración: %s\n%s\nPrecio: $%d · Reventa: $%d" % [data.description, data.code, "Pasiva equipada" if data.type == "passive" else "Un uso", duration, context, data.price, data.resale], true)
+	var progress := ""
+	for instance in game.coin_inventory.equipped:
+		if instance.coin_id == coin: progress = coin_state_text(instance)
+	present_detail("Moneda · " + data.name, "%s\n\n%s%s · %s · %s\nDuración: %s\n%s\nPrecio: $%d · Reventa: $%d" % [data.description, progress, data.code, Coins.RARITY_NAMES[data.rarity], "Pasiva equipada" if data.type == "passive" else "Un uso", duration, context, data.price, data.resale], true)
 
 func show_help() -> void:
 	present_detail("Cómo jugar", "1. Tirás cinco dados; tres tiradas por mano y dos manos por rival.\n2. Seleccionás dados y armás grupos exactos. La selección muestra su categoría y puntos; no reparte dados automáticamente.\n3. Conservás sueltos o los enviás al vaso. Enviarlos fija los grupos; retirarlos no los desbloquea.\n4. Anotás grupos y sobrantes. Los sobrantes forman un único grupo sin combinación.\n\nDoble par: elegí 2-2-5-5; base 15 + caras 14 = 29, más los sobrantes. También podés formar dos pares separados.\nServida: anotar tras la primera tirada sin relanzar. Escaleras: 12345, 23456 y 34561.\nCon generala prohibida podés separar cinco iguales en trío + par. Consultá Recorrido para la regla de este nivel. Al alcanzar el objetivo podés cobrar o jugar otra mano disponible.\n\nSEL indica selección; FIJO indica grupo bloqueado. R y una grieta indican carcasa resquebrajada: solo suspende la gema.\nClic derecho en un dado para su ficha; Ver termo muestra los stickers pegados al termo del mate. Las ilustraciones actuales de monedas son provisionales.\n\nPodés activar Armar grupos arrastrando en la mesa o en Opciones: llevá los dados al sector izquierdo y pulsá Armar grupo. Arrastralos de vuelta para corregir el borrador. Al pasar el mouse por un dado se muestran sus combinaciones posibles.\n\nTeclado: con el modo de clic, 1–5 seleccionan dados, G agrupa, C envía al vaso, V reserva, espacio tira, I inspecciona la selección, Esc la limpia y F1 abre ayuda. Tab recorre botones; Enter los activa.\nUsá monedas de un uso antes de anotar; sus fichas explican duración y contexto. Cada sección de la tienda tiene su propio costo de renovación. Cancelar una compra sin confirmar no cobra. Un paquete ya pagado conserva sus opciones al cerrar el panel.")
@@ -1228,7 +1256,8 @@ func show_help() -> void:
 func shop_offer_text(offer: Dictionary) -> Array:
 	var effect: Dictionary = offer.effect
 	match offer.kind:
-		"coin": return [Coins.definition(effect.coin_id).name, Coins.definition(effect.coin_id).description]
+		"coin": return [Coins.definition(effect.coin_id).name, "%s · %s
+%s" % [Coins.definition(effect.coin_id).code, Coins.RARITY_NAMES[Coins.definition(effect.coin_id).rarity], Coins.definition(effect.coin_id).description]]
 		"material": return ["Acero" if effect.id == "steel" else "Cobre", "+3 puntos propios al conservarlo en un relanzamiento ajeno; relanzarlo borra el bono. Dura el encuentro." if effect.id == "steel" else "+0.5 al multiplicador de su grupo por relanzamiento propio. Dura el encuentro."]
 		"shell":
 			var shell: Dictionary = Gems.definition(effect.id)
@@ -1327,10 +1356,10 @@ func shop_card(parent: Node, section: String, index: int, rect: Rect2) -> void:
 	object_hover.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
 	object_hover.tooltip_text = text[0] + "\n" + text[1]
 	card.add_child(object_hover)
-	var unavailable: bool = game.phase != "shop" or not game.can_afford(offer.price) or not Purchases.valid_offer(section, offer, game.sticker_catalog)
+	var unavailable: bool = game.phase != "shop" or not game.can_afford(game.offer_price(offer.price)) or not Purchases.valid_offer(section, offer, game.sticker_catalog)
 	if offer.kind == "coin": unavailable = unavailable or not Coins.can_store(game.coin_inventory, offer.effect.coin_id)
 	var id: String = offer.offer_id
-	var purchase := button(card, "$%d" % offer.price, Rect2((rect.size.x - minf(102, rect.size.x - 8)) / 2, 109, minf(102, rect.size.x - 8), 30), func():
+	var purchase := button(card, "$%d" % game.offer_price(offer.price), Rect2((rect.size.x - minf(102, rect.size.x - 8)) / 2, 109, minf(102, rect.size.x - 8), 30), func():
 		var previous_stickers: Dictionary = game.cup.stickers.duplicate(true)
 		var result: Dictionary = game.begin_purchase(section, id)
 		purchase_error = "" if result.ok else result.message
@@ -1356,7 +1385,7 @@ func render_shop() -> void:
 	inventory.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
 	shop_caption(ui, "TUS MONEDAS %d/%d" % [game.passives.size(), game.coin_inventory.shared_capacity], Rect2(770, 777, 410, 18), 13)
 	for index in range(game.coin_inventory.shared_capacity):
-		var x := 785 + index * 78
+		var x := 785 + index * minf(78.0, 400.0 / maxf(game.coin_inventory.shared_capacity, 1))
 		if index < game.passives.size():
 			var coin: String = game.passives[index]
 			var inspect := owned_shop_coin(coin, game.coin_inventory.equipped[index].instance_id, Rect2(x, 798, 62, 38))
@@ -1388,10 +1417,16 @@ func render_shop() -> void:
 	thermos.size = cup_zone.size
 	thermos.stickers = game.cup.stickers.duplicate(true)
 	cup_zone.add_child(thermos)
-	if game.consumable != "":
-		var coin: String = game.consumable
-		var inspect := owned_shop_coin(coin, game.coin_inventory.consumables[0].instance_id, Rect2(1260, 798, 62, 38))
-		add_coin(inspect, coin, Rect2(11, 0, 40, 38))
+	for slot in range(game.coin_inventory.consumables.size()):
+		var stored: Dictionary = game.coin_inventory.consumables[slot]
+		var offset: float = 1260.0 - (game.coin_inventory.consumables.size() - 1) * 38.0 + slot * 76.0
+		var inspect := owned_shop_coin(stored.coin_id, stored.instance_id, Rect2(offset, 798, 62, 38))
+		add_coin(inspect, stored.coin_id, Rect2(11, 0, 40, 38))
+		if Coins.can_use(stored.coin_id, "shop"):
+			var slot_index := slot
+			var use_button := button(ui, "Usar", Rect2(offset, 838, 62, 20), func(): act(func(): game.use_consumable(slot_index)), game.phase != "shop")
+			use_button.name = "UseShopCoin_" + str(slot)
+			use_button.add_theme_font_size_override("font_size", 13)
 	var zones := {"numbers": Rect2(538, 252, 367, 179), "components": Rect2(929, 252, 388, 179), "coins": Rect2(525, 442, 380, 179), "stickers": Rect2(929, 442, 401, 179)}
 	var titles := {"numbers": "Números y caras", "components": "Componentes", "coins": "Monedas", "stickers": "Stickers"}
 	var renew_names := {"coins": "monedas", "components": "componentes", "numbers": "números", "stickers": "stickers"}
@@ -1488,7 +1523,7 @@ func render_purchase_target() -> void:
 	var offer: Dictionary = pending.offer
 	var text: Array = shop_offer_text(offer)
 	shop_caption(modal, text[0].to_upper(), Rect2(32, 24, 796, 38), 28, gold)
-	shop_caption(modal, "Precio: $%d   ·   Saldo: %s" % [offer.price, money_text(game.cash)], Rect2(32, 68, 796, 28), 18)
+	shop_caption(modal, "Precio: $%d   ·   Saldo: %s" % [game.offer_price(offer.price), money_text(game.cash)], Rect2(32, 68, 796, 28), 18)
 	shop_caption(modal, "1. ELEGÍ UN DADO", Rect2(32, 114, 796, 26), 18, gold)
 	var target: Dictionary = pending.target
 	for id in range(5):
@@ -1526,7 +1561,7 @@ func render_purchase_target() -> void:
 	var hint := "Reemplaza solo esta familia. Las otras mejoras se conservan."
 	if offer.kind == "face": hint = "La cara elegida pasará a tener un %d." % offer.effect.number
 	shop_caption(modal, hint, Rect2(32, 500, 796, 32), 17)
-	button(modal, "Confirmar · $%d" % offer.price, Rect2(64, 554, 732, 46), func():
+	button(modal, "Confirmar · $%d" % game.offer_price(offer.price), Rect2(64, 554, 732, 46), func():
 		var result: Dictionary = game.confirm_purchase()
 		purchase_error = "" if result.ok else result.message
 		render(), not preview.ok, true)
@@ -1658,6 +1693,12 @@ func render_encounter_choice() -> void:
 func render_repairs() -> void:
 	var modal := panel(ui, Rect2(350, 160, 740, 580), Color("263c3d"), gold)
 	label(modal, "REPARAR CARCASAS", Vector2(30, 24), 30, gold)
+	for slot in range(game.coin_inventory.consumables.size()):
+		var stored: Dictionary = game.coin_inventory.consumables[slot]
+		if Coins.can_use(stored.coin_id, "repair") and not game.repair_resolution.get("free_one", false):
+			var slot_index := slot
+			var use_button := button(modal, "Usar " + Coins.definition(stored.coin_id).name, Rect2(430, 18, 280, 40), func(): act(func(): game.use_consumable(slot_index)))
+			use_button.name = "UseRepairCoin"
 	label(modal, "Ya cobraste $%d · Saldo: %s\nElegí cuáles reparar o continuá sin reparar." % [game.payout.total, money_text(game.cash)], Vector2(30, 78), 21, cream, 680)
 	var y := 150.0
 	for id in game.repair_resolution.available_ids:
@@ -1666,7 +1707,7 @@ func render_repairs() -> void:
 		var choice := CheckBox.new()
 		choice.position = Vector2(30, y)
 		choice.size = Vector2(675, 36)
-		choice.text = "Dado %d · %s · $%d" % [id + 1, shell.name, shell.repair_cost]
+		choice.text = "Dado %d · %s · $%d" % [id + 1, shell.name, Gems.repair_quote(game.dice, [id], {"half": CoinEffects.gem_rule(game.passives, "repair_half")}).cost]
 		choice.button_pressed = id in repair_selection
 		choice.toggled.connect(func(pressed: bool):
 			if pressed: repair_selection.append(die_id)
