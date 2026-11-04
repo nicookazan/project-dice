@@ -1,32 +1,17 @@
 extends RefCounted
 ## Provisional D07 data for a technical 21-encounter campaign, not final content/balance.
 const Boss = preload("res://scripts/boss_rules.gd")
-const ID := "hasta-dios-prueba-v1"
+const Catalog = preload("res://scripts/boss_catalog.gd")
+const ID := "hasta-dios-jefes-v1"
 const NORMAL_REWARD := 8
 
 static func prototype() -> Array:
-	var targets := [[40, 70, 110], [70, 110, 160], [110, 160, 230], [160, 230, 320], [230, 320, 440], [320, 440, 600], [440, 600, 800]]
+	var targets := [[40, 70], [70, 110], [110, 160], [160, 230], [230, 320], [320, 440], [440, 600]]
 	var environments := ["dia", "tarde", "noche", "cierre", "espacio", "agujero_negro", "cielo"]
-	var kinds := [
-		[["forbid_category", "Generala"], ["suspend_material", "steel"], ["suspend_coin", "even"]],
-		[["suspend_material", "copper"], ["suspend_shell", "ruby"], ["suspend_coin", "odd"]],
-		[["forbid_category", "Generala"], ["suspend_shell", "sapphire"], ["suspend_coin", "poker"]],
-		[["suspend_material", "steel"], ["suspend_shell", "emerald"], ["suspend_coin", "full"]],
-		[["suspend_material", "copper"], ["suspend_shell", "diamond"], ["suspend_coin", "straight"]],
-		[["suspend_material", "all"], ["suspend_shell", "all"], ["suspend_coin", "all"]],
-		[["forbid_category", "Generala"], ["suspend_material", "all"], ["suspend_shell", "all"]]
-	]
-	var labels := {"steel": "Acero suspendido", "copper": "Cobre suspendido", "ruby": "Rubí suspendido", "sapphire": "Zafiro suspendido", "emerald": "Esmeralda suspendida", "diamond": "Diamante suspendido", "even": "Moneda Pares suspendida", "odd": "Moneda Impares suspendida", "poker": "Moneda Póker suspendida", "full": "Moneda Full suspendida", "straight": "Moneda Escalera suspendida"}
 	var levels: Array = []
 	for level in range(7):
-		var candidates: Array = []
-		for option in range(3):
-			var kind: String = kinds[level][option][0]
-			var target: String = kinds[level][option][1]
-			var name: String = "Generala prohibida" if kind == "forbid_category" else str(labels.get(target, {"suspend_material": "Metales suspendidos", "suspend_shell": "Carcasas suspendidas", "suspend_coin": "Monedas suspendidas"}.get(kind, "")))
-			var id := "prueba_l%d_%d" % [level + 1, option + 1]
-			candidates.append({"id": id, "name": "Dios · regla de prueba %d" % (option + 1) if level == 6 else "Jefe de prueba %d-%d" % [level + 1, option + 1], "rule": {"id": id, "name": name, "kind": kind, "target": target}, "target": targets[level][2] + option * (50 if level == 6 else 10), "base_reward": 8})
-		levels.append({"id": "nivel_" + str(level + 1), "name": "Dios" if level == 6 else "Nivel " + str(level + 1), "environment": environments[level], "targets": [targets[level][0], targets[level][1]], "candidates": candidates})
+		var candidates: Array = Catalog.of_level(level + 1).map(func(row): return Catalog.candidate_of(row))
+		levels.append({"id": "nivel_" + str(level + 1), "name": "Dios" if level == 6 else "Nivel " + str(level + 1), "environment": environments[level], "targets": targets[level], "candidates": candidates})
 	return levels
 
 static func valid(levels: Variant) -> bool:

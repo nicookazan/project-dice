@@ -12,6 +12,7 @@ const Shop = preload("res://scripts/shop.gd")
 const Purchases = preload("res://scripts/purchases.gd")
 const BossRules = preload("res://scripts/boss_rules.gd")
 const Campaign = preload("res://scripts/campaign.gd")
+const BossCatalog = preload("res://scripts/boss_catalog.gd")
 const INITIAL_ROLL := "initial_roll"
 const REROLL := "reroll"
 const HAND_SCORED := "hand_scored"
@@ -24,6 +25,10 @@ var phase := "play"
 var rival := 0
 var level_encounters: Array = BossRules.default_encounters()
 var boss_rule: Dictionary = BossRules.NONE.duplicate(true)
+## Estado propio del jefe (sorteos). Se reinicia al cambiar de encuentro y se guarda tal cual.
+var boss_state: Dictionary = {}
+## Los jefes sin poder implementado solo se sortean en builds de desarrollo.
+var development_bosses: bool = OS.has_feature("debug")
 var campaign: Array = []
 var level_index := 0
 var selected_bosses: Dictionary = {}
@@ -153,7 +158,11 @@ func _start_encounter() -> void:
 	last_purchase_result = {}
 	for die in dice:
 		DiceState.reset_encounter(die)
+	_refresh_boss_state()
 	start_hand()
+
+func _refresh_boss_state() -> void:
+	boss_state = BossRules.draw_state(boss_rule, run_seed, level_index, rival, passives) if is_boss() else {}
 
 func start_hand() -> void:
 	rolls_left = BASE_ROLLS + int(CoinEffects.sum_of(passives, "extra_rolls"))
@@ -172,7 +181,7 @@ func snapshot() -> Dictionary:
 	return {
 		"run_seed": run_seed, "rng_state": rng.state,
 		"phase": phase, "rival": rival, "cash": cash, "debug_mode": debug_mode,
-		"level_encounters": level_encounters, "boss_rule": boss_rule,
+		"level_encounters": level_encounters, "boss_rule": boss_rule, "boss_state": boss_state,
 		"campaign": campaign, "level_index": level_index, "selected_bosses": selected_bosses, "completed_encounters": completed_encounters,
 		"hand": hand, "points": points,
 		"rolls_left": rolls_left, "rolls_made": rolls_made,
@@ -284,7 +293,7 @@ func is_boss(index: int = -1) -> bool:
 	return level_encounters[rival if index < 0 else index].kind == "boss"
 
 func boss_context() -> Dictionary:
-	return BossRules.context(boss_rule, is_boss() and phase in ["play", "hand_result"])
+	return BossRules.context(boss_rule, is_boss() and phase in ["play", "hand_result"], boss_state)
 
 func has_next_encounter() -> bool:
 	return rival + 1 < level_encounters.size() or (not campaign.is_empty() and level_index + 1 < campaign.size())
@@ -300,7 +309,7 @@ func begin_campaign(seed_value: int = -1, definitions: Array = []) -> bool:
 func _enter_campaign_level() -> void:
 	var level: Dictionary = campaign[level_index]
 	var key := str(level_index)
-	if not selected_bosses.has(key): selected_bosses[key] = level.candidates[rng.randi_range(0, 2)].id
+	if not selected_bosses.has(key): selected_bosses[key] = _drawable_candidates(level)[rng.randi_range(0, _drawable_candidates(level).size() - 1)].id
 	var chosen := Campaign.candidate(level, selected_bosses[key])
 	level_encounters = Campaign.encounters(level, chosen)
 	boss_rule = chosen.rule.duplicate(true)
@@ -308,6 +317,11 @@ func _enter_campaign_level() -> void:
 	_start_encounter()
 	phase = "level_intro"
 	message = "Campaña de prueba · nivel %d / 7. %s" % [level_index + 1, BossRules.description(boss_rule)]
+
+func _drawable_candidates(level: Dictionary) -> Array:
+	## Sin jefes con poder en el nivel (hasta terminar la fase D) se usa el pool completo para no romper la campaña.
+	var ready: Array = level.candidates.filter(func(entry): return BossCatalog.playable(entry.id, development_bosses))
+	return level.candidates if ready.is_empty() else ready
 
 func environment_id() -> String:
 	return "dia" if campaign.is_empty() else campaign[level_index].environment
@@ -337,6 +351,7 @@ func begin_run(seed_value: int = -1, encounters: Array = [], candidates: Array =
 	restart(seed_value)
 	level_encounters = plan.duplicate(true)
 	boss_rule = BossRules.choose(pool, rng)
+	_refresh_boss_state()
 	phase = "level_intro"
 	message = "Nivel de prueba: 40 → 70 → 110. " + BossRules.description(boss_rule)
 	return true

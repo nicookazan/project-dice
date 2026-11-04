@@ -51,3 +51,43 @@ static func coins_v7(game: Dictionary) -> String:
 		game.shop_tables["coin_type_weights"] = staged.coin_type_weights
 		game.shop_tables["coin_rarity_weights"] = staged.coin_rarity_weights
 	return ""
+
+## v7 -> v8: los ids de prueba pasan al catálogo de jefes (por nivel y posición) y aparece `boss_state`.
+## Se conservan semilla, estado del azar, cartera, inventario y progreso; la regla pasa a ser la del jefe del catálogo.
+static func bosses_v8(game: Dictionary) -> String:
+	const Catalog = preload("res://scripts/boss_catalog.gd")
+	const BossRules = preload("res://scripts/boss_rules.gd")
+	const Campaign = preload("res://scripts/campaign.gd")
+	if game.has("boss_state"): return ""
+	game["boss_state"] = {}
+	if not game.get("campaign") is Array or game.campaign.is_empty(): return ""
+	if not game.get("selected_bosses") is Dictionary or not game.get("completed_encounters") is Array or not game.get("level_index") is int or not game.get("level_encounters") is Array: return "campaña anterior inválida"
+	var selected := {}
+	for key in game.selected_bosses:
+		var mapped: String = Catalog.map_legacy_id(str(game.selected_bosses[key]))
+		if mapped == "": return "jefe de campaña anterior desconocido"
+		selected[key] = mapped
+	var completed: Array = []
+	for id in game.completed_encounters:
+		var mapped: String = Catalog.map_legacy_id(str(id))
+		if mapped == "": return "encuentro anterior desconocido"
+		completed.append(mapped)
+	var levels: Array = Campaign.prototype()
+	if game.level_index < 0 or game.level_index >= levels.size(): return "nivel anterior fuera de rango"
+	var chosen := Campaign.candidate(levels[game.level_index], selected.get(str(game.level_index), ""))
+	if chosen.is_empty(): return "jefe del nivel actual desconocido"
+	game.campaign = levels
+	game.selected_bosses = selected
+	game.completed_encounters = completed
+	game.level_encounters = Campaign.encounters(levels[game.level_index], chosen)
+	game.boss_rule = chosen.rule.duplicate(true)
+	# El objetivo del jefe cambia con el catálogo: un cobro ya acreditado no se invalida.
+	if game.get("phase") in ["reward", "repair", "won", "shop", "purchase_target", "sticker_choice"] and game.get("points") is int and game.get("rival") is int and game.rival < game.level_encounters.size():
+		game.points = maxi(game.points, game.level_encounters[game.rival].target)
+	if game.get("rival") is int and game.rival >= 0 and game.rival < game.level_encounters.size() and game.level_encounters[game.rival].kind == "boss":
+		var ids: Array = []
+		if game.get("coin_inventory") is Dictionary and game.coin_inventory.get("equipped") is Array:
+			for coin in game.coin_inventory.equipped:
+				if coin is Dictionary: ids.append(str(coin.get("coin_id", "")))
+		game.boss_state = BossRules.draw_state(game.boss_rule, int(game.get("run_seed", 0)), game.level_index, game.rival, ids)
+	return ""
