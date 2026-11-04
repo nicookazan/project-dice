@@ -2,6 +2,7 @@ extends RefCounted
 const Game = preload("res://scripts/game.gd")
 const Rules = preload("res://scripts/rules.gd")
 const Coins = preload("res://scripts/coins.gd")
+const CoinEffects = preload("res://scripts/coin_effects.gd")
 const Shop = preload("res://scripts/shop.gd")
 const Stickers = preload("res://scripts/stickers.gd")
 const Numbers = preload("res://scripts/number_upgrades.gd")
@@ -103,12 +104,12 @@ static func validate(data: Variant) -> String:
 	if g.rolls_made == 0 and not g.groups.is_empty(): return "grupos antes de tirar"
 	for group in g.groups:
 		if not group is Dictionary or not ids(group.get("ids")) or not group.get("category") is String or not group.get("locked") is bool: return "grupo inválido"
-	if not g.groups.is_empty() and not Rules.validate_groups(g.dice, g.groups).is_empty(): return "agrupación inconsistente"
+	if not g.groups.is_empty() and not Rules.validate_groups(g.dice, g.groups, CoinEffects.rules(g.passives)).is_empty(): return "agrupación inconsistente"
 	if g.level_encounters[g.rival].kind == "boss":
 		for group in g.groups:
 			if BossRules.forbidden(g.boss_rule, group.category): return "categoría prohibida por jefe"
 	var inventory: Dictionary = g.coin_inventory
-	if inventory.get("shared_capacity") != 5 or inventory.get("consumable_capacity") != 1 or not inventory.get("equipped") is Array or not inventory.get("consumables") is Array or inventory.equipped.size() > 5 or inventory.consumables.size() > 1: return "inventario inválido"
+	if not inventory.get("equipped") is Array or not inventory.get("consumables") is Array or not inventory.get("shared_capacity") is int or not inventory.get("consumable_capacity") is int or inventory.equipped.size() > 12 or inventory.consumables.size() > 4: return "inventario inválido"
 	var instances: Array = []
 	var equipped: Array = []
 	for list in [inventory.equipped, inventory.consumables]:
@@ -121,6 +122,16 @@ static func validate(data: Variant) -> String:
 				if def.type != "passive" or coin.coin_id in equipped: return "moneda equipada inválida"
 				equipped.append(coin.coin_id)
 			elif def.type != "consumable": return "moneda de un uso inválida"
+	var limits := Coins.capacity(equipped)
+	if inventory.shared_capacity != limits.shared or inventory.consumable_capacity != limits.consumable or inventory.equipped.size() > limits.shared or inventory.consumables.size() > limits.consumable: return "capacidad de inventario inconsistente"
+	for list in [inventory.equipped, inventory.consumables]:
+		for coin in list:
+			if not Coins.valid_state(coin.coin_id, coin.state): return "estado de moneda inválido"
+	var seen_impulses: Array = []
+	for id in g.impulses:
+		if not id is String or id in seen_impulses or Coins.effects(id).is_empty() or Coins.effects(id)[0].kind != "impulse": return "impulsos inválidos"
+		seen_impulses.append(id)
+	if g.free_reroll_tokens < 0 or g.free_reroll_tokens > 20 or g.free_renewals < 0 or g.free_renewals > 20: return "contadores de moneda inválidos"
 	if g.passives != equipped or g.consumable != (inventory.consumables[0].coin_id if not inventory.consumables.is_empty() else ""): return "vistas de inventario inconsistentes"
 	if not g.last_score.is_empty() and not score(g.last_score): return "resultado incompleto"
 	if g.phase in ["hand_result", "reward", "repair", "won", "lost"] and g.last_score.is_empty(): return "falta resultado anotado"

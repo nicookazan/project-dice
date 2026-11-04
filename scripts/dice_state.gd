@@ -9,6 +9,7 @@ static func create_die(id: int) -> Dictionary:
 		"material": "basic",
 		"shell": "",
 		"shell_broken": false,
+		"shell_saved": false,
 		"element": "",
 		"encounter_effects": {},
 		"hand_effects": {},

@@ -38,3 +38,14 @@ Al cierre del paso 10: **795 comprobaciones aprobadas, cero fallos:** 722 anteri
 Capturas revisadas: test-results/monedas-inventario.png, moneda-inspeccion.png y monedas-limites-tienda.png. Implementación en scripts/coins.gd, scripts/game.gd, scripts/rules.gd y scripts/main.gd. Capturas mediante tests/visual_review.gd.
 
 No se implementan cooldowns, rescates, duplicados habilitados ni recompensas permanentes. D03 conserva el catálogo futuro. La tienda por secciones se incorporó en 11, con cuatro ofertas de monedas mixtas sin garantizar una de cada tipo. Sus datos comerciales mantienen D01/D02/D04 pendientes. Ver [contrato](TIENDA-POR-SECCIONES.md).
+
+## Actualización: arquitectura data-driven (primera tanda de monedas nuevas)
+
+El catálogo ya no se limita a ocho monedas. `Coins.DATA` (scripts/coins.gd) tiene 51 pasivas (C01–C51) y 8 de un uso (U01–U08); cada fila declara `code`, `name`, `description`, `rarity`, `family` y una lista `effects`. `scripts/coin_effects.gd` (puro, sin estado ni azar) evalúa esos efectos: `category_mult`, `category_points`, `die_points_if`, `die_mult_if`, `flat_group_mult`, `cond_mult`, `scaled_mult`, `state_mult`, `hand_points`, `rule`, `slots`, `credit`, `discount`, `free_renewals`, `extra_rolls`, `gem` y los de un uso. Precio y reventa se derivan de la rareza (pasivas 4/6/9/14 con reventa 2/3/4/7; un uso 2/3/5 con reventa 1/1/2) salvo que la fila los fije (C19: 10/1). **Sumar una moneda es escribir una fila.**
+
+- `Rules.score(..., boss_context, coin_context)`: el contexto (`hand`, `rolls_made`, `rolls_left`, `cash`, `equipped_count`, `sticker_total`, `states`, `double_mult`) lo arma `Game.coin_context()` y lo comparten previsión y anotación. Sin contexto el resultado es el de siempre.
+- Instancias: `Coins.instance` siembra `state` con `Coins.initial_state` (C18: `strength` 40 y `grace`; C48–C51: contadores en 0). El validador exige la misma forma de `state`.
+- Capacidad calculada: `Coins.capacity` (5 + bonos de C43; 1 + bonos de C44). `shared_capacity` y `consumable_capacity` se guardan pero el validador exige que coincidan con el cálculo. No se vende una moneda de ranura si sobrarían monedas.
+- Las monedas de un uso admiten más de una ranura (C44); la interfaz dibuja todas.
+- Ventanas de uso: `play` (U01–U05, U08), `shop` (U06), `repair` (U07).
+- Arte provisional: las monedas fuera del atlas de ocho se dibujan como moneda tintada por rareza con su abreviatura (`Coins.SHORT`).

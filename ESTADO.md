@@ -1,3 +1,5 @@
+> Actualización del 03/11/2026: **primera tanda de monedas nuevas implementada** (C07–C51, U01–U08) sobre un núcleo data-driven (`coins.gd` + `coin_effects.gd`), guardado v7, tienda por tipo y rareza, crédito, descuento, ranuras, gemas y cambios de regla (escalera de 4, comodín, par doble). Arte provisional (moneda en blanco con abreviatura). Sin simulación de balance (fase 9) ni sesión humana de juego. U01 pasó a "1 y 4". Detalle y decisiones en [MONEDAS-NUEVAS](docs/MONEDAS-NUEVAS.md). Suite: 2829 comprobaciones, cero fallos. La ruta natural de validación usa la primera semilla candidata que gana, porque el catálogo cambia lo que compra el bot.
+
 > Actualización del 02/11/2026: vaso, mate, paño y salón de la mesa con más textura; parteluces sobre las ventanas. Opciones elegidas por el autor entre bocetos. Ver el registro de avance de [PLAN-ARTE-PIXEL](docs/PLAN-ARTE-PIXEL.md). Suite: 2198 comprobaciones, cero fallos.
 
 > Actualización del 28/10/2026: materiales y elementos ya integrados en dados frontales, combinables con gemas brillantes y sin emblemas inferiores. Ver [Dados compuestos](docs/DADOS-COMPUESTOS.md). Suite: 2133 comprobaciones, cero fallos.

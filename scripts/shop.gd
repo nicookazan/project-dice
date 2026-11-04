@@ -11,7 +11,9 @@ static func default_tables() -> Dictionary:
 	var coins: Array = []
 	for id in Coins.catalog():
 		coins.append({"kind": "coin", "price": Coins.definition(id).price, "weight": 1.0, "effect": {"coin_id": id}})
-	return {"coins": coins, "components": [], "numbers": [], "stickers": [], "numeric_rarity_weights": {}}
+	return {"coins": coins, "components": [], "numbers": [], "stickers": [], "numeric_rarity_weights": {},
+		"coin_type_weights": {"passive": 75.0, "consumable": 25.0},
+		"coin_rarity_weights": {"passive": {"common": 60.0, "rare": 28.0, "epic": 9.0, "legendary": 3.0}, "consumable": {"common": 70.0, "rare": 25.0, "epic": 5.0}}}
 
 static func empty_state() -> Dictionary:
 	var result: Dictionary = {}
@@ -59,6 +61,32 @@ static func pick(pool: Array, rng: RandomNumberGenerator) -> Dictionary:
 		if draw < 0: return item.duplicate(true)
 	return pool[-1].duplicate(true)
 
+static func valid_weights(weights: Variant) -> bool:
+	if not weights is Dictionary or weights.is_empty(): return false
+	for key in weights:
+		if not positive(weights[key]): return false
+	return true
+
+## Stage one: coin type (passive / single use). Stage two: rarity. Stage three: uniform coin.
+## Empty stages are dropped (renormalized); a stage with one option consumes no randomness.
+static func staged_coin_pool(pool: Array, tables: Dictionary, rng: RandomNumberGenerator) -> Array:
+	var type_weights: Dictionary = tables.coin_type_weights
+	var types: Array = []
+	for type in type_weights:
+		if not pool.filter(func(item): return Coins.definition(item.effect.coin_id).type == type).is_empty():
+			types.append({"type": type, "weight": type_weights[type]})
+	if types.is_empty(): return pool
+	var chosen_type: String = types[0].type if types.size() == 1 else pick(types, rng).type
+	var of_type: Array = pool.filter(func(item): return Coins.definition(item.effect.coin_id).type == chosen_type)
+	var rarity_weights: Dictionary = tables.get("coin_rarity_weights", {}).get(chosen_type, {})
+	var rarities: Array = []
+	for rarity in rarity_weights:
+		if not of_type.filter(func(item): return Coins.rarity_of(item.effect.coin_id) == rarity).is_empty():
+			rarities.append({"rarity": rarity, "weight": rarity_weights[rarity]})
+	if rarities.is_empty(): return of_type
+	var chosen_rarity: String = rarities[0].rarity if rarities.size() == 1 else pick(rarities, rng).rarity
+	return of_type.filter(func(item): return Coins.rarity_of(item.effect.coin_id) == chosen_rarity)
+
 static func generate(section: String, tables: Dictionary, stickers: Dictionary, owned: Array,
 		rng_state: int, sequence: int) -> Dictionary:
 	if section not in SIZES or section == "cup": return {"valid": false}
@@ -71,6 +99,8 @@ static func generate(section: String, tables: Dictionary, stickers: Dictionary, 
 		pool.append(data)
 	var result: Dictionary = empty_state()[section]
 	if pool.is_empty(): return {"valid": true, "section": result, "rng_state": rng_state, "sequence": sequence}
+	var staged: bool = section == "coins" and tables.get("coin_type_weights") is Dictionary and not tables.coin_type_weights.is_empty()
+	if staged and (not valid_weights(tables.coin_type_weights) or not tables.get("coin_rarity_weights") is Dictionary): return {"valid": false}
 	var rarities: Array = []
 	if section == "numbers":
 		var weights = tables.get("numeric_rarity_weights", {})
@@ -91,6 +121,8 @@ static func generate(section: String, tables: Dictionary, stickers: Dictionary, 
 		if section == "numbers":
 			var rarity: String = pick(rarities, rng).rarity
 			eligible = pool.filter(func(item): return item.rarity == rarity)
+		elif staged:
+			eligible = staged_coin_pool(pool, tables, rng)
 		elif section == "stickers":
 			var kind := "sticker" if index == 0 else "pack"
 			eligible = pool.filter(func(item): return item.kind == kind)

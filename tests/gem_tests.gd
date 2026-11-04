@@ -33,10 +33,10 @@ static func _test_individual(check: Callable) -> void:
 		var gain: int = 5 if element == "water" else (3 if element == "electricity" else 6)
 		check.call(game.preview().rows[0].die_rows[0].points == (2 + gain) * 2, "emerald: doubles own " + element + " bonus")
 	var odd = _pair("emerald")
-	Fixture.set_results(odd, [3, 3, 1, 2, 4])
+	Fixture.set_results(odd, [1, 1, 3, 2, 4])
 	odd.passives = ["odd"]
 	odd.boost = true
-	check.call(odd.preview().rows[0].die_rows[0].points == 16 and odd.preview().rows[0].die_rows[1].points == 8, "emerald: odd coin and consumable enter own sum before doubling")
+	check.call(odd.preview().rows[0].die_rows[0].points == 12 and odd.preview().rows[0].die_rows[1].points == 6, "emerald: odd coin and consumable enter own sum before doubling")
 	var sapphire = _pair("sapphire")
 	sapphire.dice[1].shell = "sapphire"
 	check.call(sapphire.preview().rows[0].multiplier_sum == 5 and sapphire.preview().rows[0].total == 65, "sapphire: two shells add four to initial multiplier")

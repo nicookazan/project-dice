@@ -22,9 +22,10 @@ static func valid_offer(section: String, offer: Dictionary, catalog: Dictionary)
 	return Shop.valid_candidate(section, candidate, catalog)
 
 static func prepare(section: String, offer: Dictionary, target: Dictionary, dice: Array,
-		globals: Dictionary, levels: Dictionary, catalog: Dictionary, inventory: Dictionary, serial: int, cash: int, unlimited_funds := false) -> Dictionary:
+		globals: Dictionary, levels: Dictionary, catalog: Dictionary, inventory: Dictionary, serial: int, cash: int, unlimited_funds := false, credit := 0, price := -1) -> Dictionary:
 	if not valid_offer(section, offer, catalog): return error("invalid_offer", "La oferta no está disponible o tiene datos inválidos.")
-	if not unlimited_funds and (cash < 0 or cash < offer.price): return error("insufficient_funds", "No alcanza la plata para esta compra.")
+	var cost: int = offer.price if price < 0 else price
+	if not unlimited_funds and (cash - cost < -credit or cost < 0): return error("insufficient_funds", "No alcanza la plata para esta compra.")
 	var effect: Dictionary = offer.effect
 	var updates: Dictionary = {}
 	var label: String = offer.kind
@@ -38,7 +39,7 @@ static func prepare(section: String, offer: Dictionary, target: Dictionary, dice
 				updates["faces"] = staged[id].faces
 				label = "cara %d → %d" % [int(target.face_index) + 1, effect.number]
 			"shell":
-				updates = {"shell": effect.id, "shell_broken": false}
+				updates = {"shell": effect.id, "shell_broken": false, "shell_saved": false}
 				label = "carcasa " + Gems.definition(effect.id).name
 			"material":
 				var counters: Dictionary = dice[id].encounter_effects.duplicate(true)
@@ -52,8 +53,8 @@ static func prepare(section: String, offer: Dictionary, target: Dictionary, dice
 				counters.erase("wind_multiplier")
 				updates = {"element": effect.id, "hand_effects": counters}
 				label = "elemento " + Elements.definition(effect.id).name
-		return {"ok": true, "code": "purchased", "cost": offer.price, "changes": {"die_id": id, "die_fields": updates},
-			"message": "Dado %d: %s. Pagaste $%d." % [id + 1, label, offer.price]}
+		return {"ok": true, "code": "purchased", "cost": cost, "changes": {"die_id": id, "die_fields": updates},
+			"message": "Dado %d: %s. Pagaste $%d." % [id + 1, label, cost]}
 	match offer.kind:
 		"global":
 			var updated: Dictionary = globals.duplicate(true)
@@ -67,6 +68,7 @@ static func prepare(section: String, offer: Dictionary, target: Dictionary, dice
 			var item := Coins.instance(effect.coin_id, serial + 1)
 			if data.type in ["passive", "active"]: updated.equipped.append(item)
 			else: updated.consumables.append(item)
+			Coins.refresh_capacity(updated)
 			updates = {"coin_inventory": updated, "coin_sequence": serial + 1}
 			label = data.name
 		"sticker", "pack":
@@ -77,4 +79,4 @@ static func prepare(section: String, offer: Dictionary, target: Dictionary, dice
 				updates["pending_pack"] = {"source": "shop", "offer_id": offer.offer_id, "kind": "choose_one", "items": ids.duplicate(), "paid": offer.price}
 			else: updates["stickers"] = updated.levels
 			label = "paquete de stickers" if offer.kind == "pack" else "sticker " + Stickers.NAMES[effect.id]
-	return {"ok": true, "code": "purchased", "cost": offer.price, "changes": updates, "message": "Compraste %s por $%d." % [label, offer.price]}
+	return {"ok": true, "code": "purchased", "cost": cost, "changes": updates, "message": "Compraste %s por $%d." % [label, cost]}

@@ -42,3 +42,9 @@ Al cierre del paso 07: **581 comprobaciones aprobadas, cero fallos:** 524 anteri
 Capturas revisadas: test-results/gemas.png, gemas-desglose.png y gema-resquebrajada.png. Implementación: scripts/gems.gd, scripts/rules.gd y scripts/main.gd; capturas mediante tests/visual_review.gd. El fixture de composición en tests/element_tests.gd ahora activa su esmeralda equipada: 54 puntos propios y par 66; con moneda Pares aporta 58.
 
 Sin decisiones bloqueantes nuevas. Desde el paso 08 la rotura se sortea después de anotar; agrupar, reservar y prever siguen sin riesgo. Ver [rotura y reparación](ROTURA-Y-REPARACION.md). La compra llega en 12. El inicio normal conserva cinco dados básicos y los componentes se demuestran mediante estados controlados de pruebas.
+
+## Actualización: monedas de gemas (C46, C47, U07)
+
+- `shell_saved` (booleano) vive en cada dado. C46 convierte la primera rotura de esa gema en un fallo y marca el dado; el sorteo de rotura se consume siempre, con o sin la moneda. Comprar otra gema para el dado reinicia la marca. Vender y recomprar C46 no la renueva.
+- `Gems.repair_quote(dice, ids, options)` acepta `half` (C47, mitad por gema redondeando hacia arriba) y `free_one` (U07, la gema elegida más cara sale gratis).
+- U07 solo se usa en la fase de reparación y deja `free_one` en `repair_resolution`.

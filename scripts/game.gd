@@ -7,6 +7,7 @@ const Elements = preload("res://scripts/elements.gd")
 const Gems = preload("res://scripts/gems.gd")
 const Stickers = preload("res://scripts/stickers.gd")
 const Coins = preload("res://scripts/coins.gd")
+const CoinEffects = preload("res://scripts/coin_effects.gd")
 const Shop = preload("res://scripts/shop.gd")
 const Purchases = preload("res://scripts/purchases.gd")
 const BossRules = preload("res://scripts/boss_rules.gd")
@@ -15,6 +16,8 @@ const INITIAL_ROLL := "initial_roll"
 const REROLL := "reroll"
 const HAND_SCORED := "hand_scored"
 const ENCOUNTER_CLOSED := "encounter_closed"
+const COIN_BROKEN := "coin_broken"
+const BASE_ROLLS := 3
 var rng := RandomNumberGenerator.new()
 var run_seed: int
 var phase := "play"
@@ -45,6 +48,7 @@ var passives: Array:
 		for id in value:
 			coin_instance_sequence += 1
 			coin_inventory.equipped.append(Coins.instance(id, coin_instance_sequence))
+		Coins.refresh_capacity(coin_inventory)
 var consumable: String:
 	get: return coin_inventory.consumables[0].coin_id if not coin_inventory.consumables.is_empty() else ""
 	set(value):
@@ -52,7 +56,17 @@ var consumable: String:
 		if value != "":
 			coin_instance_sequence += 1
 			coin_inventory.consumables.append(Coins.instance(value, coin_instance_sequence))
-var boost := false
+# Active impulse coin ids for this encounter; `boost` is the legacy view of the single U01.
+var impulses: Array = []
+var boost: bool:
+	get: return "boost" in impulses
+	set(value):
+		if value and "boost" not in impulses: impulses.append("boost")
+		elif not value: impulses.erase("boost")
+var double_mult := false
+var free_reroll_tokens := 0
+var free_reroll_used := false
+var free_renewals := 0
 var shop_tables: Dictionary = Shop.default_tables()
 var shop_state: Dictionary = {}
 var shop_offer_sequence := 0
@@ -123,7 +137,8 @@ func restart(seed_value: int = -1) -> void:
 func _start_encounter() -> void:
 	points = 0
 	hand = 1
-	boost = false
+	impulses = []
+	free_renewals = 0
 	history = []
 	payout = {}
 	last_score = {}
@@ -141,8 +156,11 @@ func _start_encounter() -> void:
 	start_hand()
 
 func start_hand() -> void:
-	rolls_left = 3
+	rolls_left = BASE_ROLLS + int(CoinEffects.sum_of(passives, "extra_rolls"))
 	rolls_made = 0
+	double_mult = false
+	free_reroll_tokens = 0
+	free_reroll_used = false
 	groups = []
 	for die in dice:
 		DiceState.reset_hand(die)
@@ -160,7 +178,9 @@ func snapshot() -> Dictionary:
 		"rolls_left": rolls_left, "rolls_made": rolls_made,
 		"dice": dice, "global_points": global_points, "cup": cup,
 		"groups": groups, "passives": passives, "consumable": consumable,
-		"boost": boost, "offers": offers, "reroll_prices": reroll_prices,
+		"impulses": impulses, "double_mult": double_mult, "free_reroll_tokens": free_reroll_tokens,
+		"free_reroll_used": free_reroll_used, "free_renewals": free_renewals,
+		"offers": offers, "reroll_prices": reroll_prices,
 		"last_score": last_score, "payout": payout, "history": history,
 		"message": message, "events": events, "event_sequence": event_sequence,
 		"breakage_by_hand": breakage_by_hand, "repair_resolution": repair_resolution,
@@ -189,6 +209,47 @@ func _after_roll(event: Dictionary) -> void:
 func _breakage_roll() -> float:
 	return rng.randf()
 
+## Equipped passives whose power is not suspended by the current boss rule.
+func _active_passives() -> Array:
+	var context := boss_context()
+	return passives.filter(func(id): return not BossRules.suspended(context, "coin", id))
+
+func active_rules() -> Dictionary:
+	return CoinEffects.rules(_active_passives())
+
+## One builder for preview and scoring, so both always agree. It only reads state.
+func coin_context() -> Dictionary:
+	var sticker_total := 0
+	for level in cup.stickers.values(): sticker_total += int(level)
+	return {"hand": hand, "rolls_made": rolls_made, "rolls_left": rolls_left, "cash": cash,
+		"equipped_count": coin_inventory.equipped.size(), "sticker_total": sticker_total,
+		"states": Coins.state_of(coin_inventory.equipped), "double_mult": double_mult}
+
+func credit_limit() -> int:
+	return int(CoinEffects.sum_of(passives, "credit"))
+
+func offer_price(price: int) -> int:
+	return CoinEffects.discounted(price, passives)
+
+func free_reroll_ready() -> bool:
+	if rolls_made == 0: return false
+	return free_reroll_tokens > 0 or (active_rules().get("free_reroll", false) and not free_reroll_used)
+
+func _wear_coins(dice_rolled: int) -> void:
+	# C18-style coins lose strength per rolled die; a suspended coin neither pays nor wears.
+	var context := boss_context()
+	for item in coin_inventory.equipped.duplicate():
+		var def_effects := Coins.effects(item.coin_id)
+		for effect in def_effects:
+			if effect.kind != "wear" or BossRules.suspended(context, "coin", item.coin_id): continue
+			if item.state.get("grace", false): item.state.grace = false
+			else: item.state[effect.key] = maxi(int(item.state[effect.key]) - dice_rolled, 0)
+			if int(item.state[effect.key]) <= 0:
+				coin_inventory.equipped.erase(item)
+				Coins.refresh_capacity(coin_inventory)
+				_record_event(COIN_BROKEN, {"coin_id": item.coin_id, "instance_id": item.instance_id})
+				message = "%s se gastó del todo y se rompió." % Coins.definition(item.coin_id).name
+
 func _after_hand_scored(event: Dictionary) -> void:
 	# Commit the guard even for hands with zero eligible shells. Never check copies.
 	var key := str(event.hand)
@@ -196,6 +257,7 @@ func _after_hand_scored(event: Dictionary) -> void:
 	var checks: Array = []
 	breakage_by_hand[key] = checks
 	var seen: Dictionary = {}
+	var tempered := CoinEffects.gem_rule(_active_passives(), "save_first_break")
 	for row in event.payload.score.rows:
 		if row.get("category", "Sin combinación") == "Sin combinación": continue
 		for id in row.get("ids", []):
@@ -207,7 +269,13 @@ func _after_hand_scored(event: Dictionary) -> void:
 			var draw := _breakage_roll()
 			var risk: float = Gems.RISKS[die.shell]
 			die.shell_broken = draw < risk
-			checks.append({"id": id, "shell": die.shell, "draw": draw, "risk": risk, "broken": die.shell_broken})
+			var saved := false
+			# The draw is always consumed; C46 only turns the first break of each gem into a miss.
+			if die.shell_broken and tempered and not die.shell_saved:
+				die.shell_broken = false
+				die.shell_saved = true
+				saved = true
+			checks.append({"id": id, "shell": die.shell, "draw": draw, "risk": risk, "broken": die.shell_broken, "saved": saved})
 
 func target() -> int:
 	return level_encounters[rival].target
@@ -309,7 +377,7 @@ func move_die(index: int, zone: String) -> bool:
 	if phase != "play" or rolls_made == 0 or is_grouped(index): return false
 	if zone not in ["cup", "reserve"]: return false
 	if zone == "cup":
-		if rolls_left <= 0:
+		if rolls_left <= 0 and not free_reroll_ready():
 			message = "No quedan tiradas; anotá la mano o usá una moneda de tirada extra."
 			return false
 		lock_groups()
@@ -317,12 +385,15 @@ func move_die(index: int, zone: String) -> bool:
 	return true
 
 func roll() -> bool:
-	if phase != "play" or rolls_left <= 0: return false
+	if phase != "play": return false
 	var rolled_ids: Array = []
 	var kept_ids: Array = []
 	for die in dice:
 		if die.zone == "cup": rolled_ids.append(die.id)
 		else: kept_ids.append(die.id)
+	# A single-die reroll is free when a free-reroll source is available (C27 first, then U08).
+	var free := rolled_ids.size() == 1 and free_reroll_ready()
+	if rolls_left <= 0 and not free: return false
 	if rolled_ids.is_empty():
 		message = "Elegí al menos un dado para el vaso. No se gastó ninguna tirada."
 		return false
@@ -336,22 +407,29 @@ func roll() -> bool:
 			die.zone = "reserve"
 			results.append({"id": die.id, "face_index": die.face_index, "number": die.value})
 	rolls_made += 1
-	rolls_left -= 1
-	message = "Seleccioná dados para armar un grupo, reservarlos o enviarlos al vaso."
+	if free:
+		# The roll still counts as made (the hand stops being served) but costs no budget.
+		if active_rules().get("free_reroll", false) and not free_reroll_used: free_reroll_used = true
+		else: free_reroll_tokens -= 1
+		message = "Relanzo libre: no gastó tirada."
+	else:
+		rolls_left -= 1
+		message = "Seleccioná dados para armar un grupo, reservarlos o enviarlos al vaso."
 	var event := _record_event(INITIAL_ROLL if initial else REROLL,
-		{"rolled_ids": rolled_ids, "kept_ids": kept_ids, "results": results, "roll_number": rolls_made})
+		{"rolled_ids": rolled_ids, "kept_ids": kept_ids, "results": results, "roll_number": rolls_made, "free": free})
 	_after_roll(event)
+	_wear_coins(rolled_ids.size())
 	return true
 
 func form_group(ids: Array) -> bool:
 	if phase != "play" or rolls_made == 0 or ids.is_empty(): return false
-	var values: Array = []
 	var unique: Dictionary = {}
 	for index in ids:
 		if not index is int or index < 0 or index >= dice.size() or unique.has(index) or is_grouped(index) or dice[index].zone != "reserve": return false
 		unique[index] = true
-		values.append(dice[index].value)
-	var cat := Rules.category(values)
+	var rules := active_rules()
+	var resolved := Rules.resolve_wildcards(dice, ids, rules)
+	var cat: String = resolved.category
 	if cat.is_empty():
 		message = "La selección exacta no forma una combinación. Podés dejarla como sobrantes."
 		return false
@@ -359,7 +437,8 @@ func form_group(ids: Array) -> bool:
 		message = "Este jefe prohíbe generala. Podés dividir los cinco dados en trío y par."
 		return false
 	var candidate := {"ids": ids.duplicate(), "category": cat, "locked": false}
-	if not Rules.validate_groups(dice, groups + [candidate]).is_empty(): return false
+	if not resolved.assigned.is_empty(): candidate["assigned"] = resolved.assigned
+	if not Rules.validate_groups(dice, groups + [candidate], rules).is_empty(): return false
 	groups.append(candidate)
 	message = cat + " armado. Se bloquea cuando envíes otros dados al vaso."
 	return true
@@ -372,7 +451,7 @@ func ungroup(index: int) -> bool:
 
 func preview() -> Dictionary:
 	if rolls_made == 0: return Rules.finish_score([], false)
-	var calculation := Rules.score(dice, groups, passives, boost, rolls_made == 1, global_points, cup.stickers, sticker_catalog, boss_context())
+	var calculation := Rules.score(dice, groups, passives, impulses, rolls_made == 1, global_points, cup.stickers, sticker_catalog, boss_context(), coin_context())
 	if debug_mode and calculation.valid:
 		var bonus: int = maxi(0, target() - points - calculation.total)
 		if bonus > 0:
@@ -383,7 +462,8 @@ func preview() -> Dictionary:
 	return calculation
 
 func can_afford(cost: int) -> bool:
-	return debug_mode or (cash >= 0 and cash >= cost)
+	# C19 lets the balance fall to -credit; with no credit this is the old cash >= cost >= 0.
+	return debug_mode or (cash - cost >= -credit_limit() and cost >= 0)
 
 # Legacy explicit sticker operations for domain fixtures. Shop purchases use source=shop.
 func register_sticker_offer(kind: String, ids: Array, price: Variant) -> String:
@@ -439,9 +519,15 @@ func score_hand() -> bool:
 	message = "Mano anotada en azul."
 	var event := _record_event(HAND_SCORED, {"score": last_score, "accumulated": points})
 	_after_hand_scored(event)
+	var combined := false
+	for row in last_score.rows:
+		if not row.get("ids", []).is_empty() and row.category != "Sin combinación": combined = true
+	Coins.advance(coin_inventory.equipped, "hand_scored")
+	Coins.advance(coin_inventory.equipped, "hand_combo" if combined else "hand_plain")
+	double_mult = false
 	if points < target() and hand >= 2:
 		phase = "lost"
-		boost = false
+		impulses = []
 		message = "Se terminaron las manos. El azar se queda con esta."
 	return true
 
@@ -459,7 +545,9 @@ func close_encounter() -> bool:
 	if not campaign.is_empty() and is_boss(): base_reward = Campaign.candidate(campaign[level_index], selected_bosses[str(level_index)]).base_reward
 	payout = Rules.reward(cash, points, target(), 2 - hand, base_reward)
 	cash += payout.total
-	boost = false
+	impulses = []
+	Coins.advance(coin_inventory.equipped, "encounter_won")
+	if is_boss(): Coins.advance(coin_inventory.equipped, "boss_won")
 	if not campaign.is_empty(): completed_encounters.append(level_encounters[rival].id)
 	phase = "reward" if has_next_encounter() else "won"
 	var broken_ids: Array = []
@@ -475,7 +563,7 @@ func close_encounter() -> bool:
 	return true
 
 func repair_quote(ids: Array) -> Dictionary:
-	return Gems.repair_quote(dice, ids)
+	return Gems.repair_quote(dice, ids, {"half": CoinEffects.gem_rule(passives, "repair_half"), "free_one": repair_resolution.get("free_one", false)})
 
 func resolve_repairs(ids: Array) -> bool:
 	if phase != "repair" or repair_resolution.get("status", "") != "pending": return false
@@ -513,8 +601,9 @@ func open_shop() -> bool:
 	rng.state = generated.rng_state
 	shop_offer_sequence = generated.sequence
 	phase = "shop"
-	boost = false
+	impulses = []
 	reroll_prices = {"coins": 1, "components": 1, "numbers": 1, "stickers": 1}
+	free_renewals = int(CoinEffects.sum_of(passives, "free_renewals"))
 	return true
 
 func generate_offers() -> bool:
@@ -533,15 +622,19 @@ func inspect_shop_offer(section: String, id: String) -> Dictionary:
 	return {}
 
 func renewal_price(section: String) -> int:
-	return reroll_prices.get(section, 1)
+	# A free renewal (C21/U06) costs nothing; otherwise the section counter, with C45 discount.
+	if free_renewals > 0: return 0
+	return offer_price(reroll_prices.get(section, 1))
 
 func refresh_shop(section: String = "coins") -> bool:
 	var price := renewal_price(section)
 	if phase != "shop" or not can_afford(price) or not shop_state.has(section) or not reroll_prices.has(section): return false
 	var generated := Shop.generate(section, shop_tables, sticker_catalog, passives, rng.state, shop_offer_sequence)
 	if not generated.valid or not generated.section.configured: return false
-	if not debug_mode: cash -= price
-	reroll_prices[section] = price + 1
+	if free_renewals > 0: free_renewals -= 1
+	else:
+		if not debug_mode: cash -= price
+		reroll_prices[section] += 1
 	shop_state[section] = generated.section
 	rng.state = generated.rng_state
 	shop_offer_sequence = generated.sequence
@@ -559,17 +652,18 @@ func commit_shop_offer(section: String, id: String) -> bool:
 	return false
 
 func _purchase_plan(section: String, offer: Dictionary, target: Dictionary) -> Dictionary:
-	return Purchases.prepare(section, offer, target, dice, global_points, cup.stickers, sticker_catalog, coin_inventory, coin_instance_sequence, cash, debug_mode)
+	var price: int = offer_price(offer.get("price", 0)) if offer.get("price") is int else -1
+	return Purchases.prepare(section, offer, target, dice, global_points, cup.stickers, sticker_catalog, coin_inventory, coin_instance_sequence, cash, debug_mode, credit_limit(), price)
 
 func begin_purchase(section: String, id: String) -> Dictionary:
 	if phase != "shop" or not pending_sticker_pack.is_empty(): return Purchases.error("invalid_context", "Terminá la acción pendiente antes de comprar.")
 	var offer := inspect_shop_offer(section, id)
 	if not Purchases.valid_offer(section, offer, sticker_catalog): return Purchases.error("invalid_offer", "La oferta ya no está disponible.")
 	if offer.kind not in Purchases.TARGETED: return purchase_offer(section, id)
-	if not can_afford(offer.price): return Purchases.error("insufficient_funds", "No alcanza la plata para esta compra.")
+	if not can_afford(offer_price(offer.price)): return Purchases.error("insufficient_funds", "No alcanza la plata para esta compra.")
 	pending_purchase = {"section": section, "offer_id": id, "offer": offer, "target": {}}
 	phase = "purchase_target"
-	return {"ok": true, "code": "target_required", "message": "Elegí el dado" + (" y la cara." if offer.kind == "face" else "."), "cost": offer.price}
+	return {"ok": true, "code": "target_required", "message": "Elegí el dado" + (" y la cara." if offer.kind == "face" else "."), "cost": offer_price(offer.price)}
 
 func set_purchase_target(target: Dictionary) -> bool:
 	if phase != "purchase_target": return false
@@ -637,9 +731,13 @@ func sell(coin: String) -> bool:
 	var data := Coins.definition(coin)
 	if data.is_empty(): return false
 	if coin in passives:
+		if not Coins.can_remove(coin_inventory, coin):
+			message = "No podés vender esta moneda: quedarían más monedas que ranuras."
+			return false
 		coin_inventory.equipped.remove_at(passives.find(coin))
-	elif coin == consumable and consumable != "":
-		coin_inventory.consumables.remove_at(0)
+		Coins.refresh_capacity(coin_inventory)
+	elif coin in Coins.ids(coin_inventory.consumables):
+		coin_inventory.consumables.remove_at(Coins.ids(coin_inventory.consumables).find(coin))
 	else: return false
 	cash += data.resale
 	message = "Moneda vendida."
@@ -663,16 +761,35 @@ func _advance_encounter() -> bool:
 	_start_encounter()
 	return true
 
-func use_consumable() -> bool:
-	if not Coins.can_use(consumable, phase): return false
-	if BossRules.suspended(boss_context(), "coin", consumable): return false
-	var data := Coins.definition(consumable)
-	if data.effect == "boost":
-		boost = true
-		message = "Impulso activo: cada 1 y 3 suma +3 hasta terminar este encuentro."
-	elif data.effect == "extra_roll":
-		rolls_left += data.amount
-		message = "Una tirada adicional disponible en esta mano."
-	else: return false
-	coin_inventory.consumables.remove_at(0)
+func use_consumable(index: int = 0) -> bool:
+	if index < 0 or index >= coin_inventory.consumables.size(): return false
+	var id: String = coin_inventory.consumables[index].coin_id
+	if not Coins.can_use(id, phase): return false
+	if BossRules.suspended(boss_context(), "coin", id): return false
+	var data := Coins.definition(id)
+	var effect: Dictionary = data.effects[0]
+	match effect.kind:
+		"impulse":
+			if id not in impulses: impulses.append(id)
+			var shown: Array = effect.numbers.map(func(n): return str(n))
+			message = "Impulso activo: cada %s suma +%d hasta terminar este encuentro." % [" y ".join(shown), effect.amount]
+		"use_extra_roll":
+			rolls_left += int(effect.amount)
+			message = "Una tirada adicional disponible en esta mano."
+		"use_double_mult":
+			if double_mult: return false
+			double_mult = true
+			message = "Doble mult activo: el multiplicador de cada combinación de esta mano se duplica."
+		"use_free_renewal":
+			free_renewals += 1
+			message = "Tenés una renovación gratis disponible en esta visita."
+		"use_repair_free":
+			if repair_resolution.get("free_one", false): return false
+			repair_resolution["free_one"] = true
+			message = "La gema más cara que repares sale gratis."
+		"use_free_reroll":
+			free_reroll_tokens += 1
+			message = "Relanzo libre: tu próximo relanzo de un solo dado no gasta tirada."
+		_: return false
+	coin_inventory.consumables.remove_at(index)
 	return true

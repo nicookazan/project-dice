@@ -47,3 +47,10 @@ Al cierre del paso 11: **848 comprobaciones aprobadas, cero fallos:** 795 anteri
 Capturas revisadas: test-results/tienda-monedas-cuatro.png, tienda-componentes.png, tienda-numeros.png y tienda-stickers.png. Implementación: scripts/shop.gd, scripts/game.gd y scripts/main.gd. Fixtures históricos ahora usan una vista de cuatro slots y fuerzan el consumible cuando prueban su ranura; no se conserva el antiguo cupo garantizado de dos ofertas.
 
 No se habilitan compras de dados, vaso ni valores comerciales finales. Siguiente paso: 12, aplicación transaccional y selección de objetivos con ofertas almacenadas; D01/D02/D04 permanecen visibles.
+
+## Actualización: monedas con rareza, descuento, crédito y renovación gratis
+
+- La sección de monedas sortea por etapas: tipo (pasiva 75 / un uso 25) → rareza (pasivas 60/28/9/3, un uso 70/25/5) → moneda uniforme. Los pesos viven en `shop_tables.coin_type_weights` y `coin_rarity_weights`. Una etapa con una sola opción no consume azar y las etapas vacías se renormalizan. Con tablas sin esos pesos (fixtures) rige el sorteo uniforme de antes.
+- C45: `Game.offer_price` aplica −20 % (redondeo al más cercano, 0,5 hacia arriba) a ofertas y renovaciones. El contador de renovación sube sobre el precio base.
+- C19: `Game.can_afford` permite llegar a −$10; las reparaciones ya admitían deuda.
+- C21 / U06: `Game.free_renewals` cuenta las renovaciones gratis de la visita; una renovación gratis no sube el contador de su sección.
