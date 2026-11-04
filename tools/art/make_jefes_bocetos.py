@@ -120,16 +120,13 @@ def murcielago():
         glow(im, 35, 43, 24, hexc("#fff3a8"), 1.8)
         glow(im, 35, 43, 17, hexc("#fff9d2"), 1.0)
         d.ellipse([22, 36, 48, 50], fill=hexc("#fff7c4"))
-        # silueta de murciélago dentro de la señal
-        bat = [(35, 40), (38, 42), (43, 40), (41, 44), (38, 46), (35, 48), (32, 46), (29, 44), (27, 40), (32, 42)]
-        d.polygon(bat, fill=hexc("#10131c"))
-        d.point([(34, 39), (36, 39)], fill=hexc("#10131c"))
+        # solo la luz proyectada, sin figura dentro
     def front(im):
         d = ImageDraw.Draw(im)
         x, y = hp(30, 6)
         d.rectangle([x - 4, y, x + 14, y + 2], fill=hexc("#3b4150"))  # puño
         d.point([(x, y), (x + 4, y), (x + 8, y)], fill=hexc("#8a93a8"))
-    return scene("3A · El Murciélago de Gotica", sky("#070a1a", "#1a2347", True, 3),
+    return scene("3A · El Gótico", sky("#070a1a", "#1a2347", True, 3),
                  ["#10152e", "#1c2750", "#2c3a73", "#4a5b9b"],
                  ["#0a0b10", "#181a24", "#2a2e3d", "#434a5e", "#6a7391"], back, front)
 

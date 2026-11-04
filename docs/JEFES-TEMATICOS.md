@@ -46,7 +46,7 @@ Tipo de poder: **E** = ya existe en `boss_rules.gd`; **E+** = existe pero hay qu
 ### Nivel 3 — Noche (P = 230)
 | | Jefe (mano) | Textura y objeto | Poder | Tipo | Sev. | Obj. | $ |
 |---|---|---|---|---|---|---|---|
-| A | **El Murciélago de Gotica** | Guante de cuero negro; una señal luminosa proyecta la nube de fondo | *Sombra*: el dado más alto de la 1.ª tirada de cada mano queda valiendo 1 hasta relanzarlo | N | ●●● | 230 | 8 |
+| A | **El Gótico** | Guante de cuero negro; una luz potente proyectada sobre las nubes de fondo, sin ninguna figura dentro | *Sombra*: el dado más alto de la 1.ª tirada de cada mano queda valiendo 1 hasta relanzarlo | N | ●●● | 230 | 8 |
 | B | **El Conde Sed** | Piel pálida, uñas largas negras, anillo de sello y copa de líquido rojo | *Fuego apagado*: elemento fuego suspendido | N | ●● | 255 | 10 |
 | C | **El Lobizón** | Pelaje gris y garras, luna llena enorme detrás | *Maldición del séptimo hijo*: las caras 6 valen 0 de cara (las combinaciones no cambian) | N | ●●● | 220 | 7 |
 
