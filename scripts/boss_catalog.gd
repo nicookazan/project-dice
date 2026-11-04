@@ -75,6 +75,21 @@ static func power_text(id: String) -> String:
 static func ready_for_release() -> bool:
 	return ROWS.all(func(row): return row.implemented)
 
+## Guardián de cada encuentro de Dios (assets/art/pixel-v3/guardianes/): ojo solar, figura de luz, dado cósmico.
+const GUARDIANS := {"l7_dios_dados": 0, "l7_dios_metales": 1, "l7_dios_carcasas": 2}
+
+static func guardian(id: String) -> int:
+	return GUARDIANS.get(id, -1)
+
+static func hand_row(id: String) -> int:
+	## Fila de la hoja de manos (manos-jefes-v3.png): una por jefe de los niveles 1–6, en el orden de ROWS. Dios no tiene (-1).
+	var row := 0
+	for entry_row in ROWS:
+		if entry_row.level > GOD_LEVEL: break
+		if entry_row.id == id: return row
+		row += 1
+	return -1
+
 static func map_legacy_id(id: String) -> String:
 	## prueba_l{n}_{k} (guardado v7) -> id estable por nivel y posición.
 	if not id.begins_with("prueba_l"): return id
