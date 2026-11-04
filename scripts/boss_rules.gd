@@ -2,6 +2,7 @@ extends RefCounted
 ## Definitions and pure context; selection happens once at level entry, never on load.
 const Coins = preload("res://scripts/coins.gd")
 const Catalog = preload("res://scripts/boss_catalog.gd")
+const CATEGORIES := ["Par", "Doble par", "Trío", "Escalera", "Full", "Póker", "Generala"]
 const NONE = {"id": "sin_generala", "name": "Generala prohibida", "kind": "forbid_category", "target": "Generala"}
 
 static func default_encounters() -> Array:
@@ -10,7 +11,7 @@ static func default_encounters() -> Array:
 static func valid_rule(rule: Variant) -> bool:
 	if not rule is Dictionary or rule.size() != 4 or not rule.get("id") is String or rule.id == "" or not rule.get("name") is String or rule.name == "": return false
 	match rule.get("kind"):
-		"forbid_category": return rule.get("target") == "Generala"
+		"forbid_category": return rule.get("target") in ["Generala", "Par,Doble par"]
 		"suspend_material": return rule.get("target") in ["steel", "copper", "all"]
 		"suspend_shell": return rule.get("target") in ["emerald", "sapphire", "ruby", "diamond", "all"]
 		"suspend_coin": return rule.get("target") == "all" or (rule.get("target") is String and not Coins.definition(rule.target).is_empty())
@@ -19,6 +20,8 @@ static func valid_rule(rule: Variant) -> bool:
 		"suspend_element": return rule.get("target") in ["fire", "water", "electricity", "earth", "wind", "all"]
 		"suspend_stickers": return rule.get("target") == "all"
 		"hand_factor": return rule.get("target") in ["0.5", "1.5"]
+		"face_scale": return rule.get("target") in ["6=0", "5,6=0.5"]
+		"repeat_half": return rule.get("target") is String and not rule.target.is_empty() and Array(rule.target.split(",")).all(func(name): return name in CATEGORIES)
 	return false
 
 static func valid_encounters(encounters: Variant) -> bool:
@@ -55,6 +58,13 @@ static func context(rule: Dictionary, active: bool, state: Dictionary = {}, hand
 				translated.merge({"kind": "suspend_coin", "target": coin})
 			"thermos_theft": translated.merge({"kind": "suspend_stickers", "target": "all"})
 			"fire_out": translated.merge({"kind": "suspend_element", "target": "fire"})
+			"closed_list": translated.merge({"kind": "forbid_category", "target": "Par,Doble par"})
+			"seventh_son": translated.merge({"kind": "face_scale", "target": "6=0"})
+			"gravity": translated.merge({"kind": "face_scale", "target": "5,6=0.5"})
+			"no_repeat":
+				var scored: Array = state.get("scored", [])
+				if hand < 2 or scored.is_empty(): return {}
+				translated.merge({"kind": "repeat_half", "target": ",".join(scored)})
 			"time_stop":
 				var roulette: Array = state.get("roulette", [])
 				if roulette.size() != 2: return {}
@@ -62,6 +72,25 @@ static func context(rule: Dictionary, active: bool, state: Dictionary = {}, hand
 			_: return rule.duplicate(true)
 		return translated
 	return rule.duplicate(true)
+
+## Escala de la cara (Lobizón: 6=0; Horizonte: 5 y 6 a la mitad). 1.0 si la cara no está afectada.
+static func face_scale(context_value: Dictionary, number: int) -> float:
+	if context_value.get("kind") != "face_scale": return 1.0
+	var parts: PackedStringArray = str(context_value.target).split("=")
+	return float(parts[1]) if parts.size() == 2 and str(number) in parts[0].split(",") else 1.0
+
+## 0.5 para una categoría ya anotada en la mano 1 (Chamuyero), 1.0 en cualquier otro caso.
+static func repeat_factor(context_value: Dictionary, category: String) -> float:
+	return 0.5 if context_value.get("kind") == "repeat_half" and category in str(context_value.target).split(",") else 1.0
+
+## Memoria entre manos: lo que el jefe recuerda de la mano 1 para la mano 2.
+static func after_hand(rule: Dictionary, state: Dictionary, score: Dictionary, hand: int) -> Dictionary:
+	if is_power(rule, "no_repeat") and hand == 1:
+		var scored: Array = []
+		for row in score.get("rows", []):
+			if not row.get("ids", []).is_empty() and row.category in CATEGORIES and row.category not in scored: scored.append(row.category)
+		return {"scored": scored}
+	return state
 
 static func stickers_suspended(context_value: Dictionary) -> bool:
 	return context_value.get("kind") == "suspend_stickers"
@@ -82,6 +111,7 @@ static func draw_state(rule: Dictionary, run_seed: int, level: int, encounter: i
 		var generator := RandomNumberGenerator.new()
 		generator.seed = ("%d:%d:%d:%s" % [run_seed, level, encounter, rule.target]).hash()
 		return {"coin": ids[generator.randi_range(0, ids.size() - 1)]}
+	if is_power(rule, "no_repeat"): return {"scored": []}
 	if is_power(rule, "time_stop"):
 		var roulette: Array = []
 		for hand in [1, 2]:
@@ -96,12 +126,19 @@ static func valid_state(rule: Dictionary, state: Variant, boss_active: bool) -> 
 	if boss_active and is_power(rule, "time_stop"):
 		if state.size() != 1 or not state.get("roulette") is Array or state.roulette.size() != 2: return false
 		return state.roulette.all(func(value): return (value is float or value is int) and float(value) in [0.5, 1.5])
+	if boss_active and is_power(rule, "no_repeat"):
+		if state.size() != 1 or not state.get("scored") is Array: return false
+		return state.scored.all(func(name): return name is String and name in CATEGORIES) and state.scored.size() == Array(state.scored).reduce(func(seen, name): return seen if name in seen else seen + [name], []).size()
 	if not boss_active or not is_power(rule, "red_card"): return state.is_empty()
 	if state.size() != 1 or not state.get("coin") is String: return false
 	return state.coin == "" or Coins.definition(state.coin).get("type") == "passive"
 
 static func forbidden(context_value: Dictionary, category: String) -> bool:
-	return context_value.get("kind") == "forbid_category" and context_value.get("target") == category
+	return context_value.get("kind") == "forbid_category" and category in str(context_value.get("target", "")).split(",")
+
+static func forbid_message(context_value: Dictionary, category: String) -> String:
+	if category == "Generala": return "Este jefe prohíbe generala. Podés dividir los cinco dados en trío y par."
+	return "Este jefe prohíbe " + category.to_lower() + "."
 
 static func suspended(context_value: Dictionary, family: String, id: String) -> bool:
 	return id != "" and context_value.get("kind") == "suspend_" + family and context_value.get("target") in [id, "all"]

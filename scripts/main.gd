@@ -198,7 +198,7 @@ func selection_preview() -> Dictionary:
 		if not id is int or id < 0 or id >= game.dice.size() or game.is_grouped(id) or game.dice[id].zone != "reserve": return {"valid": false, "text": "Selección: reservá los dados antes de agrupar."}
 	var resolved := Rules.resolve_wildcards(game.dice, selected, game.active_rules())
 	var category: String = resolved.category
-	if BossRules.forbidden(game.boss_context(), category): return {"valid": false, "text": "Selección: el jefe prohíbe generala; podés armar trío + par."}
+	if BossRules.forbidden(game.boss_context(), category): return {"valid": false, "text": "Selección: el jefe prohíbe %s%s." % [category.to_lower(), "; podés armar trío + par" if category == "Generala" else ""]}
 	if category.is_empty(): return {"valid": false, "text": "Selección: %d dado(s) · sin combinación válida" % selected.size()}
 	var groups: Array = game.groups.duplicate(true)
 	var candidate := {"ids": selected.duplicate(), "category": category}
@@ -1002,6 +1002,9 @@ func source_name(source: String) -> String:
 		return "%s · dado %d" % [material, source.get_slice(":", 2).to_int() + 1]
 	if source.begins_with("number:global:"):
 		return "Mejora global del " + source.get_slice(":", 2)
+	if source.begins_with("boss:face:"): return "Jefe · cara " + source.get_slice(":", 2) + " rebajada"
+	if source == "boss:repeat": return "Jefe · categoría repetida al 50 %"
+	if source == "boss:roulette": return "Jefe · ruleta de la mano"
 	var coin := source.trim_prefix("coin:").trim_prefix("consumable:")
 	return Rules.COINS[coin].name if Rules.COINS.has(coin) else source
 

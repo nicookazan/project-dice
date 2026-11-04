@@ -225,6 +225,8 @@ static func score(dice: Array, groups: Array, passives: Array, boost: Variant, s
 			var global_bonus: int = global_points.get(str(number), 0)
 			if global_bonus > 0:
 				additions.append({"source": "number:global:" + str(number), "amount": global_bonus})
+			var face_loss: float = number - number * BossRules.face_scale(boss_context, number)
+			if face_loss > 0: additions.append({"source": "boss:face:" + str(number), "amount": -face_loss})
 			var steel_bonus := 0.0 if BossRules.suspended(boss_context, "material", die.material) else Materials.steel_points(die)
 			if steel_bonus > 0:
 				additions.append({"source": "material:steel:" + str(die.id), "amount": steel_bonus})
@@ -275,6 +277,8 @@ static func score(dice: Array, groups: Array, passives: Array, boost: Variant, s
 			multiplier_additions.append_array(CoinEffects.group_mult(effective_passives, cat, rules, context))
 			coin_points = CoinEffects.group_points(effective_passives, cat, rules)
 			if double_mult: multiplier_factors.append({"source": "consumable:double_mult", "amount": 2.0})
+		var repeat_factor := BossRules.repeat_factor(boss_context, cat)
+		if repeat_factor != 1.0: multiplier_factors.append({"source": "boss:repeat", "amount": repeat_factor})
 		var hand_factor := BossRules.hand_factor(boss_context)
 		if hand_factor != 1.0: multiplier_factors.append({"source": "boss:roulette", "amount": hand_factor})
 		var row := resolve_group(base, face_points, own_points - face_points + sticker_points + _sum(coin_points), 1.0, multiplier_additions, multiplier_factors, copies)

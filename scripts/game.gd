@@ -449,7 +449,7 @@ func form_group(ids: Array) -> bool:
 		message = "La selección exacta no forma una combinación. Podés dejarla como sobrantes."
 		return false
 	if BossRules.forbidden(boss_context(), cat):
-		message = "Este jefe prohíbe generala. Podés dividir los cinco dados en trío y par."
+		message = BossRules.forbid_message(boss_context(), cat)
 		return false
 	var candidate := {"ids": ids.duplicate(), "category": cat, "locked": false}
 	if not resolved.assigned.is_empty(): candidate["assigned"] = resolved.assigned
@@ -530,6 +530,7 @@ func score_hand() -> bool:
 	last_score = calculation
 	points += last_score.total
 	history.append({"hand": hand, "score": last_score.duplicate(true), "accumulated": points})
+	if is_boss(): boss_state = BossRules.after_hand(boss_rule, boss_state, last_score, hand)
 	phase = "hand_result"
 	message = "Mano anotada en azul."
 	var event := _record_event(HAND_SCORED, {"score": last_score, "accumulated": points})

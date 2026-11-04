@@ -108,7 +108,7 @@ static func validate(data: Variant) -> String:
 	if not g.groups.is_empty() and not Rules.validate_groups(g.dice, g.groups, CoinEffects.rules(g.passives)).is_empty(): return "agrupación inconsistente"
 	if g.level_encounters[g.rival].kind == "boss":
 		for group in g.groups:
-			if BossRules.forbidden(g.boss_rule, group.category): return "categoría prohibida por jefe"
+			if BossRules.forbidden(BossRules.context(g.boss_rule, true, g.boss_state, g.hand), group.category): return "categoría prohibida por jefe"
 	var inventory: Dictionary = g.coin_inventory
 	if not inventory.get("equipped") is Array or not inventory.get("consumables") is Array or not inventory.get("shared_capacity") is int or not inventory.get("consumable_capacity") is int or inventory.equipped.size() > 12 or inventory.consumables.size() > 4: return "inventario inválido"
 	var instances: Array = []
