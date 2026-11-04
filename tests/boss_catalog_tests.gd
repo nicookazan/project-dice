@@ -82,6 +82,7 @@ static func run(check: Callable) -> Dictionary:
 	_release_filter(check)
 	_red_card(check)
 	_migration(check)
+	_art(check)
 	return {"catalog": Catalog.ROWS.size(), "implemented": Catalog.ROWS.filter(func(row): return row.implemented).size(), "save_version": Store.VERSION}
 
 static func _catalog(check: Callable) -> void:
@@ -217,3 +218,41 @@ static func _migration(check: Callable) -> void:
 	var future = SaveTests.store()
 	write_version(future, SaveTests.payload(original), 9)
 	check.call(future.read_file(future.path).code == "version", "Boss migration: a newer version is refused and kept")
+
+static func _art(check: Callable) -> void:
+	## Fase C: hoja de manos (18 filas de 8 cuadros de 61×53) y guardianes de Dios.
+	var sheet: Texture2D = load("res://assets/art/pixel-v3/manos-jefes-v3.png")
+	var rivals := Catalog.ROWS.filter(func(row): return row.level <= Catalog.GOD_LEVEL)
+	check.call(sheet != null and sheet.get_size() == Vector2(61 * 8, 53 * 18) and rivals.size() == 18, "Boss hands: 18 rows of 8 frames of 61x53")
+	var rows := {}
+	for row in rivals: rows[Catalog.hand_row(row.id)] = true
+	check.call(rows.size() == 18 and not rows.has(-1) and rows.keys().all(func(r): return r >= 0 and r < 18), "Boss hands: every rival and boss has its own row")
+	check.call(Catalog.hand_row("l7_dios_dados") == -1 and Catalog.hand_row("fuera_del_catalogo") == -1, "Boss hands: God and unknown ids keep the common hand")
+	var guardians := {}
+	for id in ["l7_dios_dados", "l7_dios_metales", "l7_dios_carcasas"]: guardians[Catalog.guardian(id)] = true
+	check.call(guardians.size() == 3 and guardians.keys().all(func(g): return g >= 0 and g < 3) and Catalog.guardian("l1_kioskero") == -1, "Boss guardians: each God encounter has a distinct guardian")
+	# Como en los otros niveles, la semilla sortea cuál de los tres candidatos toca y el guardián lo sigue.
+	var seen := {}
+	var follows := true
+	for seed_value in range(1, 41):
+		var game = Game.new(seed_value)
+		game.begin_campaign(seed_value)
+		game.level_index = 6
+		game._enter_campaign_level()
+		var picked: String = game.selected_bosses["6"]
+		var again = Game.new(seed_value)
+		again.begin_campaign(seed_value)
+		again.level_index = 6
+		again._enter_campaign_level()
+		follows = follows and again.selected_bosses["6"] == picked and Catalog.guardian(picked) >= 0 and game.boss_rule.id == picked
+		seen[Catalog.guardian(picked)] = true
+	check.call(follows and seen.size() == 3, "Boss guardians: the seed picks the God encounter (reproducible) and all three guardians come up")
+	var backdrop = load("res://scripts/backdrop.gd").new()
+	var profile := {"environment": "cielo", "actor": "god", "level": 6, "boss_id": "l7_dios_metales"}
+	var preferences := {"reduced_motion": true, "speed": 1}
+	backdrop.configure(profile, preferences)
+	var guardian_ok: bool = backdrop.guardian == 1 and backdrop.hand_row == -1
+	profile.actor = "kind"; profile.boss_id = "l3_conde"
+	backdrop.configure(profile, preferences)
+	check.call(guardian_ok and backdrop.guardian == -1 and backdrop.hand_row == Catalog.hand_row("l3_conde"), "Backdrop: God shows its guardian, bosses their hand, rivals the common hand")
+	backdrop.free()

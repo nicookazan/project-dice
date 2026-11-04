@@ -15,7 +15,11 @@ const MATE_V3 = preload("res://assets/art/pixel-v3/mate-v3.png")
 const CUP_V3 = preload("res://assets/art/pixel-v3/vaso-v3.png")
 const CLOUD_V3 = preload("res://assets/art/pixel-v3/nube-v3.png")
 const HAND_V3 = preload("res://assets/art/pixel-v3/mano-v3.png")
+const BOSS_HANDS = preload("res://assets/art/pixel-v3/manos-jefes-v3.png")
+const BossCatalog = preload("res://scripts/boss_catalog.gd")
+const GUARDIAN_ART := [preload("res://assets/art/pixel-v3/guardianes/guardian-ojo-v3.png"), preload("res://assets/art/pixel-v3/guardianes/guardian-figura-v3.png"), preload("res://assets/art/pixel-v3/guardianes/guardian-dado-v3.png")]
 const HAND_FRAMES := 8
+const HAND_SIZE := Vector2i(61, 53)
 const HAND_FRAME_SECONDS := 0.11
 const StickerArt = preload("res://scripts/sticker_art.gd")
 const StickerDefinitions = preload("res://scripts/stickers.gd")
@@ -26,7 +30,7 @@ const SHOP_THERMOS_RECT = Rect2(65, 525, 145, 330)
 const CUP_RECT = Rect2(1260, 400, 145, 180)
 ## Zona clickeable de la mano del fondo (con el vaivén) y del triángulo de Dios.
 const HAND_RECT = Rect2(624, 31, 122, 112)
-const GOD_RECT = Rect2(612, 68, 110, 68)
+const GOD_RECT = Rect2(567, 25, 200, 170)
 const CUP_MOUTH = Vector2(1330, 425)
 ## Termo robado por Don Cebador: flota junto a la mano mientras dura el jefe (solo presentación).
 const STOLEN_THERMOS_POS := Vector2(792, 34)
@@ -36,6 +40,10 @@ const THERMOS_FLIGHT_SECONDS := 2.6
 var thermos_stolen := false
 var thermos_t := 0.0
 var thermos_configured := false
+## Fila de la hoja de manos de jefe (-1: la mano común).
+var hand_row := -1
+## Guardián de Dios (-1: sin figura, queda el triángulo provisional).
+var guardian := -1
 var shop_mode := false
 const WINDOWS = [Rect2(470, 0, 47, 217), Rect2(534, 0, 378, 219), Rect2(952, 0, 92, 215), Rect2(1198, 43, 73, 177)]
 var environment_id := "dia"
@@ -54,6 +62,8 @@ func configure(profile: Dictionary, preferences: Dictionary) -> void:
 	thermos_configured = true
 	environment_id = profile.environment
 	actor = profile.actor
+	guardian = BossCatalog.guardian(profile.get("boss_id", "")) if actor == "god" else -1
+	hand_row = BossCatalog.hand_row(profile.get("boss_id", "")) if actor != "common" and actor != "god" else -1
 	level = profile.level
 	motion = not preferences.reduced_motion and preferences.speed != 0
 	speed = preferences.speed
@@ -141,6 +151,11 @@ func _draw() -> void:
 	draw_texture_rect(CUP_V3, Rect2(1280, 426, 144, 188), false)
 	# God remains a provisional silhouette; ordinary hands retain existing art.
 	var center := Vector2(667, 105 + (sin(elapsed * 1.1) * 3 if motion else 0))
+	if actor == "god" and guardian >= 0:
+		# Pixel-v3: 124×100 logical px on 2×2 blocks, centered where the triangle was; the bob moves in 2 px steps.
+		var god_bob := 2.0 * roundf(sin(elapsed * 1.1) * 1.5) if motion else 0.0
+		draw_texture_rect(GUARDIAN_ART[guardian], Rect2(center.x - 124, 5 + god_bob, 248, 200), false)
+		return
 	if actor == "god":
 		draw_colored_polygon(PackedVector2Array([center + Vector2(0, -35), center + Vector2(-53, 29), center + Vector2(53, 29)]), Color("eac16c"))
 		draw_circle(center + Vector2(0, 7), 18, Color("f6eed4"))
@@ -151,5 +166,6 @@ func _draw() -> void:
 	var bob := 2.0 * roundf(sin(elapsed * 1.1) * 1.5) if motion else 0.0
 	var frame := int(elapsed / HAND_FRAME_SECONDS) % HAND_FRAMES if motion else 0
 	draw_texture_rect(CLOUD_V3, Rect2(552, 0, 262, 40), false)
-	draw_texture_rect_region(HAND_V3, Rect2(624, 34 + bob, 122, 106), Rect2(frame * 61, 0, 61, 53))
+	if hand_row >= 0: draw_texture_rect_region(BOSS_HANDS, Rect2(624, 34 + bob, 122, 106), Rect2(frame * HAND_SIZE.x, hand_row * HAND_SIZE.y, HAND_SIZE.x, HAND_SIZE.y))
+	else: draw_texture_rect_region(HAND_V3, Rect2(624, 34 + bob, 122, 106), Rect2(frame * 61, 0, 61, 53))
 

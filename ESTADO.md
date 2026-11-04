@@ -219,3 +219,10 @@ Actualización de dados v3: cuerpo ilustrado de marfil cálido con biseles, text
 Dados v4: cara de resultado frontal y ortogonal según la nueva referencia del autor, con volumen limitado al plano superior y biseles. Sprite generado con imagegen en assets/art/ivory-die-front-v4.png, prompt en assets/art/ivory-die-front-v4-prompt.md. Grilla de puntos sin inclinación. Revisadas las seis caras y aprobadas las 105 comprobaciones existentes. Respaldo: backups/dice-before-v4/.
 
 
+
+## Fase C de jefes: manos y guardianes (4 de noviembre de 2026, rama `feature/jefes-manos`, sin PR)
+
+- `tools/art/make_jefes_manos.py` genera `assets/art/pixel-v3/manos-jefes-v3.png` (18 filas de 8 cuadros de 61×53): misma silueta y animación de la mano común, rampa de 5 tonos y un objeto de 8 a 14 px. `Backdrop` elige la fila por id de jefe (`BossCatalog.hand_row`).
+- Los tres guardianes de `pixel-v3/guardianes/` reemplazan al triángulo en los tres encuentros de Dios (`BossCatalog.GUARDIANS`: ojo → Generala prohibida, figura → metales, dado → carcasas). La semilla sortea el encuentro como en los otros niveles. El orden es una tabla de datos, cambiable.
+- Pendiente: aprobación del autor de las 18 manos en capturas reales (dudas de contraste: El Gótico, El Horizonte) antes de commit y PR. Capturas: `tests/boss_hands_review.gd`.
+- Suite: 3251 comprobaciones, 0 fallos.
