@@ -70,3 +70,7 @@ No se cambia el balance provisional D01/D02/D04 ni se declara sesión humana rea
 ## Mano clickeable (plan de jefes, fase B — 04/11/2026)
 
 La mano del fondo (`Backdrop.HAND_RECT`) y el triángulo de Dios (`Backdrop.GOD_RECT`) llevan un botón transparente `InspectBoss` fuera de la tienda. `BossInfo.panel(game)` arma título y texto desde el catálogo y el estado del jefe (`boss_state`); es de solo lectura. Pruebas: `tests/boss_panel_tests.gd`; capturas: `tests/boss_hand_review.gd`.
+
+## Poderes por familia (plan de jefes, fase D)
+
+`BossRules.context` traduce cada poder propio a un contexto que ya entiende el motor: `suspend_coin` (Referí), `suspend_stickers` (Cebador), `suspend_element` (Conde) y `hand_factor` (Ruleta). `Rules.score` lee ese contexto para la previsión y la anotación. **Relojero:** *Ruleta del instante* reemplaza a *Tiempo detenido* hasta que exista F01; el multiplicador de cada mano sale de `boss_state.roulette` y se muestra en el texto de la regla antes de tirar.

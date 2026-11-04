@@ -293,7 +293,7 @@ func is_boss(index: int = -1) -> bool:
 	return level_encounters[rival if index < 0 else index].kind == "boss"
 
 func boss_context() -> Dictionary:
-	return BossRules.context(boss_rule, is_boss() and phase in ["play", "hand_result"], boss_state)
+	return BossRules.context(boss_rule, is_boss() and phase in ["play", "hand_result"], boss_state, hand)
 
 func has_next_encounter() -> bool:
 	return rival + 1 < level_encounters.size() or (not campaign.is_empty() and level_index + 1 < campaign.size())

@@ -228,7 +228,7 @@ static func score(dice: Array, groups: Array, passives: Array, boost: Variant, s
 			var steel_bonus := 0.0 if BossRules.suspended(boss_context, "material", die.material) else Materials.steel_points(die)
 			if steel_bonus > 0:
 				additions.append({"source": "material:steel:" + str(die.id), "amount": steel_bonus})
-			var element_effect := Elements.evaluate(die, dice, group.ids, cat)
+			var element_effect := {} if BossRules.suspended(boss_context, "element", die.get("element", "")) else Elements.evaluate(die, dice, group.ids, cat)
 			if not element_effect.is_empty() and element_effect.points > 0:
 				additions.append({"source": element_effect.source, "amount": element_effect.points})
 			additions.append_array(CoinEffects.die_points(effective_passives, effective_impulses, die, number))
@@ -247,7 +247,7 @@ static func score(dice: Array, groups: Array, passives: Array, boost: Variant, s
 		var multiplier_additions: Array = []
 		var multiplier_factors: Array = []
 		var copies: Array = []
-		var sticker_effect := Stickers.evaluate(cat, sticker_levels, sticker_catalog)
+		var sticker_effect := {} if BossRules.stickers_suspended(boss_context) else Stickers.evaluate(cat, sticker_levels, sticker_catalog)
 		var sticker_points := 0.0
 		if not sticker_effect.is_empty():
 			sticker_points = sticker_effect.points
@@ -275,6 +275,8 @@ static func score(dice: Array, groups: Array, passives: Array, boost: Variant, s
 			multiplier_additions.append_array(CoinEffects.group_mult(effective_passives, cat, rules, context))
 			coin_points = CoinEffects.group_points(effective_passives, cat, rules)
 			if double_mult: multiplier_factors.append({"source": "consumable:double_mult", "amount": 2.0})
+		var hand_factor := BossRules.hand_factor(boss_context)
+		if hand_factor != 1.0: multiplier_factors.append({"source": "boss:roulette", "amount": hand_factor})
 		var row := resolve_group(base, face_points, own_points - face_points + sticker_points + _sum(coin_points), 1.0, multiplier_additions, multiplier_factors, copies)
 		if not sticker_effect.is_empty(): row.sticker_effect = sticker_effect
 		row.merge({
