@@ -45,21 +45,35 @@ static func write_version(service, data: Dictionary, version: int) -> void:
 	DirAccess.make_dir_recursive_absolute(service.path.get_base_dir())
 	service.write_text(service.path, JSON.stringify({"format": Store.FORMAT, "version": version, "payload": Marshalls.raw_to_base64(bytes), "sha256": bytes.hex_encode().sha256_text()}))
 
-static func red_card_game(seed_value: int, coins: Array):
-	## Campaña técnica cuyo primer nivel ofrece los tres jefes del nivel 2; sin desarrollo solo sale Referí.
-	var levels: Array = Campaign.prototype()
-	var swapped: Array = levels[1].candidates
-	levels[1].candidates = levels[0].candidates
-	levels[0].candidates = swapped
+static func forced_boss(id: String, at_boss: bool, seed_value: int = -1):
+	## Campaña consistente (guardable) parada en el jefe pedido, en desarrollo para poder forzar cualquiera.
+	var row := Catalog.entry(id)
+	if seed_value < 0: seed_value = 900 + row.level * 10 + row.slot
 	var game = Game.new(seed_value)
-	game.development_bosses = false
-	game.begin_campaign(seed_value, levels)
+	game.development_bosses = true
+	game.begin_campaign(seed_value)
+	var level: int = row.level - 1
+	var completed: Array = []
+	var selected := {}
+	for earlier in range(level):
+		selected[str(earlier)] = game.campaign[earlier].candidates[0].id
+		completed.append_array([game.campaign[earlier].id + "_r1", game.campaign[earlier].id + "_r2", game.campaign[earlier].candidates[0].id])
+	selected[str(level)] = id
+	game.level_index = level
+	game.selected_bosses = selected
+	game.completed_encounters = completed
+	game._enter_campaign_level()
 	game.begin_level()
+	if at_boss:
+		game.rival = 2
+		game.completed_encounters.append_array([game.campaign[level].id + "_r1", game.campaign[level].id + "_r2"])
+		game._start_encounter()
+	return game
+
+static func red_card_game(seed_value: int, coins: Array):
+	var game = forced_boss("l2_referi", true, seed_value)
 	game.passives = coins
-	game.rival = 2
-	game.completed_encounters = [game.level_encounters[0].id, game.level_encounters[1].id]
-	game.phase = "play"
-	game._start_encounter()
+	game._refresh_boss_state()
 	return game
 
 static func run(check: Callable) -> Dictionary:
@@ -87,7 +101,7 @@ static func _catalog(check: Callable) -> void:
 			check.call(Catalog.target_of(row) == int(round(Catalog.PIVOT[row.level - 1] * row.k / 5.0)) * 5, "Boss catalog: target is P x k rounded to 5 for " + row.id)
 			check.call(Catalog.reward_of(row) == maxi(6, 8 + int(round((row.k - 1.0) * 20.0))), "Boss catalog: reward formula for " + row.id)
 	check.call(Catalog.PIVOT == [110, 160, 230, 320, 440, 600, 800], "Boss catalog: provisional P per level")
-	check.call(Catalog.ROWS.filter(func(row): return row.implemented).map(func(row): return row.id) == ["l1_payador", "l2_referi", "l7_dios_dados", "l7_dios_metales", "l7_dios_carcasas"], "Boss catalog: only the existing powers are marked implemented in phase A")
+	check.call(Catalog.ROWS.filter(func(row): return row.implemented).map(func(row): return row.id) == ["l1_payador", "l2_cebador", "l2_referi", "l3_conde", "l6_relojero", "l7_dios_dados", "l7_dios_metales", "l7_dios_carcasas"], "Boss catalog: implemented powers are exactly the ones with engine hooks")
 	for power in Catalog.POWERS:
 		check.call(Catalog.ROWS.any(func(row): return row.target == power), "Boss catalog: power listed has a boss " + power)
 	check.call(Catalog.map_legacy_id("prueba_l3_2") == "l3_conde" and Catalog.map_legacy_id("prueba_l7_3") == "l7_dios_carcasas" and Catalog.map_legacy_id("l2_cebador") == "l2_cebador" and Catalog.map_legacy_id("prueba_l9_1") == "", "Boss catalog: legacy ids map by level and position")

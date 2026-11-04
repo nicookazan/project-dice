@@ -9,17 +9,7 @@ const CampaignTests = preload("res://tests/campaign_tests.gd")
 const CatalogTests = preload("res://tests/boss_catalog_tests.gd")
 
 static func forced_boss(id: String, at_boss: bool):
-	var row := Catalog.entry(id)
-	var game = Game.new(900 + row.level * 10 + row.slot)
-	game.development_bosses = true
-	game.begin_campaign(900 + row.level * 10 + row.slot)
-	game.level_index = row.level - 1
-	game.selected_bosses = {str(row.level - 1): id}
-	game._enter_campaign_level()
-	if at_boss:
-		game.rival = 2
-		game._start_encounter()
-	return game
+	return CatalogTests.forced_boss(id, at_boss)
 
 static func show(scene, game) -> Node:
 	scene.detail.hide()
