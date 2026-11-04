@@ -6,7 +6,7 @@ Diseño de contenido: [JEFES-TEMATICOS.md](JEFES-TEMATICOS.md) (18 jefes de los 
 2. **Tocar la mano muestra el poder del jefe.**
 3. **Manos con diseño propio** que combinen con el estilo actual del juego, que no destaquen de más y que no queden feas.
 
-Estado: plan, sin código. Convención del proyecto: una fase por vez, cada una en `feature/<nombre>` con PR contra `main`, suite verde antes de cerrar, resultado y límites en `ESTADO.md` y en el contrato del sistema. Todo número es provisional (D01/D02/D04/D07/D11).
+Estado: plan, sin código. También publicado en la página de Notion «Bosses - project-dice - PRD». Convención del proyecto: una fase por vez, cada una en `feature/<nombre>` con PR contra `main`, suite verde antes de cerrar, resultado y límites en `ESTADO.md` y en el contrato del sistema. Todo número es provisional (D01/D02/D04/D07/D11).
 
 > Las monedas nuevas ya están en `main` (PR #14). Las fases de jefes parten de `main` actualizado y tocan `game.gd`, `rules.gd`, `main.gd` y `save_*.gd`.
 
@@ -68,7 +68,7 @@ Reglas de diseño para que combinen y **no destaquen**:
 - **Paleta del juego.** Cada mano usa una rampa de 4–5 tonos derivada de la paleta de `pixel-v3` (cuero, bronce, tela, verde de fieltro), con saturación contenida. Nada de brillos, halos ni dither de luz alrededor.
 - **Un objeto por mano, de 8–14 px lógicos**, de 3–4 colores y con el mismo contorno oscuro del arte del juego. Ocupa la zona de la muñeca o los nudillos, que se mueve poco. Los objetos en la punta de un dedo siguen una tabla de desplazamiento por cuadro medida de la mano base.
 - **Sin fondos propios.** El ambiente ya existe (día, tarde, noche, cierre, espacio, agujero negro, cielo). Los bocetos de concepto con cielo y suelo no se usan en juego.
-- **Nube igual**, salvo un detalle chico en 3A (la señal sobre la nube) que se prueba y se descarta si distrae.
+- **Nube igual**, salvo un detalle chico en 3A El Gótico (la luz proyectada sobre la nube, sin figura) que se prueba y se descarta si distrae.
 - **Dios** no cambia: se conserva el triángulo con ojo.
 
 Proceso (convención del proyecto): generar por código en `tools/art/make_jefes_manos.py` (parte de `make_jefes_bocetos.py`), una hoja `assets/art/pixel-v3/manos-jefes-v3.png` con una fila de 8 cuadros por jefe (18 filas), y escribir prompts/procedencia. **Primero capturas dentro del juego real** (la mano sobre cada ambiente, a 1× y a la escala de pantalla) en una página de Artifact para que el autor apruebe antes de integrar; recién después se commitea y se abre el PR. `Backdrop` elige la fila por id de jefe; con movimiento reducido usa el cuadro 0.
@@ -86,7 +86,7 @@ Cada poder entra por `boss_context` y por un gancho en `Game` o `Rules`, con una
 |---|---|---|---|
 | Suspensiones nuevas | 2A Cebador (stickers), 3B Conde (fuego), 6B Relojero (ranura de moneda) | Nuevos `kind` `suspend_sticker`, `suspend_element`, `suspend_coin_slot` | `boss_rules.gd`, `rules.gd`, `game.gd`, UI de fichas |
 | Prohibiciones y valor | 4B Patovica (Par y Doble par), 3C Lobizón (6 valen 0 de cara), 6A Horizonte (5 y 6 a la mitad), 2B Chamuyero (repetir vale 50 %) | `forbid_category` con más objetivos; modificadores de valor de cara; penalización por repetir | `Rules.score`, `Rules.category`, selección |
-| Dados en la tirada | 1C Palomas (dado asustado), 4A Tahúr (dado cargado en 1), 4C Payaso (cara espejo), 3A Murciélago (dado alto vale 1), 5B Farolero (máx. 3 conservados), 5A Visitante (dado abducido) | Ganchos en `roll()` y en el conservado; marcas visibles en el dado | `game.gd`, `die.gd`, `main.gd` |
+| Dados en la tirada | 1C Palomas (dado asustado), 4A Tahúr (dado cargado en 1), 4C Payaso (cara espejo), 3A Gótico (dado alto vale 1), 5B Farolero (máx. 3 conservados), 5A Visitante (dado abducido) | Ganchos en `roll()` y en el conservado; marcas visibles en el dado | `game.gd`, `die.gd`, `main.gd` |
 | Memoria entre manos | 5C Computadora (categoría de la mano 1 bloqueada en la 2) | `boss_state` guarda la categoría | `game.gd`, validador |
 | Economía | 1A Kioskero ($2 por anotación) | Cobro al anotar, con el aviso en pantalla y sin dejar saldo ilegal | `game.gd`, `purchases.gd` |
 | Información | 6C Durmiente (previsión oculta) | Solo UI; la anotación no cambia | `main.gd` |
@@ -121,7 +121,7 @@ Orden sugerido dentro de la fase: suspensiones (barato), prohibiciones y valor, 
 | 2A Cebador | Suspensión de stickers + termo | D, E | No |
 | 2B Chamuyero | Repetición | D | No |
 | 2C Referí | Moneda expulsada | A | Sí |
-| 3A Murciélago | Dados | D | No |
+| 3A Gótico | Dados | D | No |
 | 3B Conde | Suspensión de elemento | D | No |
 | 3C Lobizón | Valor de cara | D | No |
 | 4A Tahúr | Dados | D | No |
@@ -137,7 +137,7 @@ Orden sugerido dentro de la fase: suspensiones (barato), prohibiciones y valor, 
 
 ## 5. Riesgos y decisiones abiertas
 
-- Cambios sin commitear de monedas en el mismo árbol de trabajo (ver arriba).
+- Las monedas nuevas comparten archivos con estas fases (`game.gd`, `rules.gd`, `main.gd`, `save_*.gd`): partir siempre de `main` actualizado y hacer una PR chica por vez.
 - Los poderes de dados modifican el flujo de tirada: son la parte más delicada y la que más pruebas necesita.
 - Legibilidad de las manos a escala real: se valida con capturas dentro del juego, no con los bocetos.
 - Pendientes de diseño: nombres definitivos y revisión de parecidos con marcas o personajes ajenos (D10), y el esquema `P × k`. El nivel 3 queda como está.
