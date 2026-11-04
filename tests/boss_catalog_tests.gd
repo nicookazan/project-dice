@@ -101,7 +101,7 @@ static func _catalog(check: Callable) -> void:
 			check.call(Catalog.target_of(row) == int(round(Catalog.PIVOT[row.level - 1] * row.k / 5.0)) * 5, "Boss catalog: target is P x k rounded to 5 for " + row.id)
 			check.call(Catalog.reward_of(row) == maxi(6, 8 + int(round((row.k - 1.0) * 20.0))), "Boss catalog: reward formula for " + row.id)
 	check.call(Catalog.PIVOT == [110, 160, 230, 320, 440, 600, 800], "Boss catalog: provisional P per level")
-	check.call(Catalog.ROWS.filter(func(row): return row.implemented).map(func(row): return row.id) == ["l1_payador", "l1_palomas", "l2_cebador", "l2_chamuyero", "l2_referi", "l3_gotico", "l3_conde", "l3_lobizon", "l4_tahur", "l4_patovica", "l4_payaso", "l5_visitante", "l5_farolero", "l6_horizonte", "l6_relojero", "l7_dios_dados", "l7_dios_metales", "l7_dios_carcasas"], "Boss catalog: implemented powers are exactly the ones with engine hooks")
+	check.call(Catalog.ROWS.all(func(row): return row.implemented), "Boss catalog: all 21 entries have a power with engine hooks")
 	for power in Catalog.POWERS:
 		check.call(Catalog.ROWS.any(func(row): return row.target == power), "Boss catalog: power listed has a boss " + power)
 	check.call(Catalog.map_legacy_id("prueba_l3_2") == "l3_conde" and Catalog.map_legacy_id("prueba_l7_3") == "l7_dios_carcasas" and Catalog.map_legacy_id("l2_cebador") == "l2_cebador" and Catalog.map_legacy_id("prueba_l9_1") == "", "Boss catalog: legacy ids map by level and position")
@@ -128,7 +128,7 @@ static func _release_filter(check: Callable) -> void:
 	fallback.level_index = 2
 	fallback._enter_campaign_level()
 	check.call(not Catalog.entry(fallback.selected_bosses["2"]).is_empty(), "Boss filter: a level without working powers falls back to its full pool instead of breaking")
-	check.call(not Catalog.ready_for_release(), "Boss filter: release gate stays closed until every power exists")
+	check.call(Catalog.ready_for_release(), "Boss filter: every catalog boss has its working power, so the release gate is open")
 	var seen := {}
 	for seed_value in range(620, 640):
 		var development = Game.new(seed_value)

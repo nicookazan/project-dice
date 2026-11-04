@@ -489,6 +489,7 @@ func _initialize() -> void:
 	var campaign_demo: Dictionary = await CampaignTests.run(scene, check)
 	BossPanelTests.run(scene, check)
 	BossPowerTests.run(check)
+	BossPanelTests.run_hidden_forecast(scene, check)
 	var presentation_demo: Dictionary = PresentationTests.run(scene, check)
 	var shop_style_demo: Dictionary = ShopStyleTests.run(scene, check)
 	var dice_art_demo: Dictionary = DiceArtTests.run(scene, check)
