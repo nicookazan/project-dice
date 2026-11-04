@@ -28,6 +28,14 @@ const CUP_RECT = Rect2(1260, 400, 145, 180)
 const HAND_RECT = Rect2(624, 31, 122, 112)
 const GOD_RECT = Rect2(612, 68, 110, 68)
 const CUP_MOUTH = Vector2(1330, 425)
+## Termo robado por Don Cebador: flota junto a la mano mientras dura el jefe (solo presentación).
+const STOLEN_THERMOS_POS := Vector2(792, 34)
+const STOLEN_THERMOS_SCALE := 0.42
+const STOLEN_THERMOS_RECT := Rect2(792, 30, 62, 152)
+const THERMOS_FLIGHT_SECONDS := 2.6
+var thermos_stolen := false
+var thermos_t := 0.0
+var thermos_configured := false
 var shop_mode := false
 const WINDOWS = [Rect2(470, 0, 47, 217), Rect2(534, 0, 378, 219), Rect2(952, 0, 92, 215), Rect2(1198, 43, 73, 177)]
 var environment_id := "dia"
@@ -38,6 +46,12 @@ var speed := 1
 var elapsed := 0.0
 
 func configure(profile: Dictionary, preferences: Dictionary) -> void:
+	var stolen: bool = profile.get("thermos_stolen", false)
+	motion = not preferences.reduced_motion and preferences.speed != 0
+	# Primera lectura (carga a mitad del jefe) o movimiento apagado: directo a la posición final.
+	if not thermos_configured or not motion: thermos_t = 1.0 if stolen else 0.0
+	thermos_stolen = stolen
+	thermos_configured = true
 	environment_id = profile.environment
 	actor = profile.actor
 	level = profile.level
@@ -46,6 +60,10 @@ func configure(profile: Dictionary, preferences: Dictionary) -> void:
 	queue_redraw()
 
 func _process(delta: float) -> void:
+	var goal := 1.0 if thermos_stolen else 0.0
+	if motion and thermos_t != goal:
+		thermos_t = move_toward(thermos_t, goal, delta * speed / THERMOS_FLIGHT_SECONDS)
+		queue_redraw()
 	if motion:
 		elapsed += delta * speed
 		queue_redraw()
@@ -109,10 +127,16 @@ func _draw() -> void:
 		# Restore the shop's leather cup without its former oversized notebook.
 		draw_recovered_figure([Vector2(184, 719), Vector2(218, 726), Vector2(254, 734), Vector2(286, 748), Vector2(310, 767), Vector2(331, 792), Vector2(347, 825), Vector2(349, 868), Vector2(337, 903), Vector2(312, 932), Vector2(278, 950), Vector2(240, 950), Vector2(205, 940), Vector2(169, 928), Vector2(130, 915), Vector2(103, 901), Vector2(83, 875), Vector2(79, 844), Vector2(84, 809), Vector2(95, 779), Vector2(112, 754), Vector2(133, 738), Vector2(154, 726)], Vector2.ZERO, CUP_SHOP_ART)
 	# Thermos with its stickers, then the mate and the dice cup in front of it.
-	draw_texture_rect(THERMOS_TABLE_V3, Rect2(THERMOS_ORIGIN, Vector2(144, 350)), false)
+	var lift := smoothstep(0.0, 1.0, thermos_t)
+	var thermos_bob := 2.0 * roundf(sin(elapsed * 1.3) * 1.5) if motion and thermos_t >= 1.0 else 0.0
+	var sway := 2.0 * roundf(sin(thermos_t * TAU * 2.0) * 3.0) if motion and thermos_t > 0.0 and thermos_t < 1.0 else 0.0
+	var thermos_origin := THERMOS_ORIGIN.lerp(STOLEN_THERMOS_POS, lift) + Vector2(sway, thermos_bob)
+	draw_set_transform(thermos_origin, 0.0, Vector2.ONE * lerpf(1.0, STOLEN_THERMOS_SCALE, lift))
+	draw_texture_rect(THERMOS_TABLE_V3, Rect2(Vector2.ZERO, Vector2(144, 350)), false)
 	# Every sticker sits on its own fixed spot of the thermos (same layout as the shop).
 	for id in StickerDefinitions.NAMES:
-		if stickers.has(id): StickerArt.draw_on_thermos(self, THERMOS_ORIGIN, id)
+		if stickers.has(id): StickerArt.draw_on_thermos(self, Vector2.ZERO, id)
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 	draw_texture_rect(MATE_V3, Rect2(1088, 310, 136, 236), false)
 	draw_texture_rect(CUP_V3, Rect2(1280, 426, 144, 188), false)
 	# God remains a provisional silhouette; ordinary hands retain existing art.

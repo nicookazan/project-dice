@@ -32,6 +32,7 @@ const RepairTests = preload("res://tests/repair_tests.gd")
 const CoinBatchTests = preload("res://tests/coin_batch_tests.gd")
 const BossPanelTests = preload("res://tests/boss_panel_tests.gd")
 const BossPowerTests = preload("res://tests/boss_power_tests.gd")
+const ThermosTheftTests = preload("res://tests/thermos_theft_tests.gd")
 const BossCatalogTests = preload("res://tests/boss_catalog_tests.gd")
 var checks := 0
 var failures: Array = []
@@ -489,6 +490,7 @@ func _initialize() -> void:
 	var campaign_demo: Dictionary = await CampaignTests.run(scene, check)
 	BossPanelTests.run(scene, check)
 	BossPowerTests.run(check)
+	ThermosTheftTests.run(scene, check)
 	BossPanelTests.run_hidden_forecast(scene, check)
 	var presentation_demo: Dictionary = PresentationTests.run(scene, check)
 	var shop_style_demo: Dictionary = ShopStyleTests.run(scene, check)

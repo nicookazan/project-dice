@@ -293,6 +293,10 @@ func target() -> int:
 func is_boss(index: int = -1) -> bool:
 	return level_encounters[rival if index < 0 else index].kind == "boss"
 
+## Don Cebador se lleva el termo mientras se juega su encuentro (presentación y botón del termo).
+func thermos_stolen() -> bool:
+	return is_boss() and BossRules.is_power(boss_rule, "thermos_theft") and phase in ["play", "hand_result", "lost"]
+
 func boss_context() -> Dictionary:
 	return BossRules.context(boss_rule, is_boss() and phase in ["play", "hand_result"], boss_state, hand)
 
