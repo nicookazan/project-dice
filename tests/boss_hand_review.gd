@@ -32,7 +32,13 @@ func _initialize() -> void:
 	scene.render()
 	scene.ui.get_node("InspectBoss").pressed.emit()
 	await capture("dios")
-	print("BOSS HAND REVIEW: 4 captures")
+	scene.detail.hide()
+	scene.background.thermos_configured = false
+	scene.game = CatalogTests.forced_boss("l2_cebador", true)
+	scene.game.cup.stickers = {"trio": 2, "full": 1}
+	scene.render()
+	await capture("termo-robado")
+	print("BOSS HAND REVIEW: 5 captures")
 	quit()
 
 func capture(caption: String) -> void:

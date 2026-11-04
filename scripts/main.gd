@@ -269,6 +269,10 @@ func inspect_cup() -> void:
 	present_detail("Vaso de cuero", "Cinco dados fijos; el vaso no modifica su cantidad.\nLos stickers están pegados al termo del mate. Tocá el termo para ver sus niveles y efectos.", true)
 
 func inspect_thermos() -> void:
+	if game.thermos_stolen():
+		present_detail("Termo robado", "Don Cebador te robó el termo: flota junto a su mano y los %d stickers pegados no aportan nada mientras dure el jefe.
+Te lo devuelve flotando cuando lo venzas." % game.cup.stickers.size(), true)
+		return
 	var lines: Array[String] = ["Termo del mate", "Stickers pegados al termo:"]
 	if game.cup.stickers.is_empty(): lines.append("Sin stickers.")
 	for id in game.cup.stickers:
@@ -428,6 +432,7 @@ func finish_throw() -> void:
 		throw_blocker.queue_free()
 
 func start_new_run(seed_value: int = -1, debug_run := false) -> void:
+	if is_instance_valid(background): background.thermos_configured = false
 	presentation.observed.clear()
 	feedback_remaining = 0
 	selected.clear()
@@ -481,6 +486,7 @@ func continue_saved() -> void:
 	if restored == null:
 		save_error = "No se pudo reanudar la partida. El archivo se conserva."
 		return
+	if is_instance_valid(background): background.thermos_configured = false
 	game = restored
 	presentation.observed.clear()
 	feedback_remaining = 0
@@ -873,9 +879,10 @@ func render() -> void:
 
 func finish_render() -> void:
 	if game.debug_mode: label(ui, "DEBUG · DAÑO ∞ · PLATA ∞", Vector2(480, 114), 16, gold, 460)
-	var thermos_button := button(ui, "", Backdrop.SHOP_THERMOS_RECT if background.shop_mode else Backdrop.THERMOS_RECT, inspect_thermos)
+	var thermos_rect: Rect2 = Backdrop.SHOP_THERMOS_RECT if background.shop_mode else (Backdrop.STOLEN_THERMOS_RECT if game.thermos_stolen() else Backdrop.THERMOS_RECT)
+	var thermos_button := button(ui, "", thermos_rect, inspect_thermos)
 	thermos_button.name = "InspectThermos"
-	thermos_button.tooltip_text = "Termo del mate · %d stickers · clic para ver niveles y efectos" % game.cup.stickers.size()
+	thermos_button.tooltip_text = ("Termo robado por Don Cebador · clic para ver qué pasa" if game.thermos_stolen() else "Termo del mate · %d stickers · clic para ver niveles y efectos" % game.cup.stickers.size())
 	for state in ["normal", "hover", "pressed"]: thermos_button.add_theme_stylebox_override(state, StyleBoxEmpty.new())
 	if not background.shop_mode: render_boss_hand()
 	if background.shop_mode: label(ui, purchase_error if not purchase_error.is_empty() else game.message, Vector2(38, 864), 17, cream, 1360)

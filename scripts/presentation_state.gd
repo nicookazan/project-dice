@@ -8,7 +8,7 @@ static func profile(game) -> Dictionary:
 	if game.is_boss(): actor = "god" if not game.campaign.is_empty() and game.level_index == 6 else game.boss_rule.kind
 	var dialogue: String = LINES.get(game.environment_id(), LINES.dia)
 	if game.is_boss() and actor != "god": dialogue = "El jefe marca la condición: " + game.boss_rule.name + "."
-	return {"environment": game.environment_id(), "actor": actor, "rule_target": game.boss_rule.target, "level": game.level_index, "dialogue": dialogue, "beverage": "mate"}
+	return {"environment": game.environment_id(), "actor": actor, "rule_target": game.boss_rule.target, "thermos_stolen": game.thermos_stolen(), "level": game.level_index, "dialogue": dialogue, "beverage": "mate"}
 
 func observe(game) -> Dictionary:
 	var now := {"seed": game.run_seed, "level": game.level_index, "rival": game.rival, "phase": game.phase, "rolls": game.rolls_made, "event": game.event_sequence, "groups": game.groups.size(), "receipts": game.purchase_receipts.size(), "repair": game.repair_resolution.get("status", ""), "broken": game.dice.filter(func(die): return die.shell_broken).size()}
