@@ -55,7 +55,7 @@ Versión 1 · 25 de octubre de 2026.
 | [J02 — Ficha del dado](J02-ficha-dado.md) | Jugabilidad | J01 | Implementado; falta prueba del autor |
 | [J03 — Jugadas posibles](J03-jugadas-posibles.md) | Jugabilidad | J01, J02 | Implementado; falta prueba del autor |
 | [J04 — Stickers al pasar el mouse](J04-stickers-hover.md) | Jugabilidad | J00 | Implementado; falta prueba del autor |
-| [J05 — Objetos del bar](J05-objetos-bar.md) | Jugabilidad | J04 | Pendiente |
+| [J05 — Objetos del bar](J05-objetos-bar.md) | Jugabilidad | J04 | Implementado; falta prueba del autor |
 | [J06 — Vaso que tira](J06-vaso-tira.md) | Jugabilidad | J01, J05 | Pendiente |
 | [J07 — Mano del jefe](J07-mano-jefe.md) | Jugabilidad | J05 | Pendiente |
 | [J08 — Vuelo del sticker](J08-sticker-vuelo.md) | Jugabilidad | J00 | Pendiente |

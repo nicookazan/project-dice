@@ -23,6 +23,10 @@ const HAND_SIZE := Vector2i(61, 53)
 const HAND_FRAME_SECONDS := 0.11
 const StickerArt = preload("res://scripts/sticker_art.gd")
 const StickerDefinitions = preload("res://scripts/stickers.gd")
+const BarProps = preload("res://scripts/bar_props.gd")
+## Sifones, bandera y termo que reaccionan al clic (animaciones de presentación).
+var props := BarProps.new()
+var pour_layer: Control
 var stickers: Dictionary = {}
 const THERMOS_ORIGIN = Vector2(1203, 168)
 const THERMOS_RECT = Rect2(1203, 170, 144, 225)
@@ -67,9 +71,18 @@ func configure(profile: Dictionary, preferences: Dictionary) -> void:
 	level = profile.level
 	motion = not preferences.reduced_motion and preferences.speed != 0
 	speed = preferences.speed
+	props.motion = motion
+	props.speed = speed
+	# Las animaciones solo existen sobre la mesa y con movimiento: cualquier otro cambio las corta.
+	if shop_mode or not motion: props.stop_all()
 	queue_redraw()
+	if is_instance_valid(pour_layer): pour_layer.queue_redraw()
 
 func _process(delta: float) -> void:
+	if props.any_busy():
+		props.step(delta)
+		queue_redraw()
+		pour_layer.queue_redraw()
 	var goal := 1.0 if thermos_stolen else 0.0
 	if motion and thermos_t != goal:
 		thermos_t = move_toward(thermos_t, goal, delta * speed / THERMOS_FLIGHT_SECONDS)
@@ -81,6 +94,22 @@ func _process(delta: float) -> void:
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	# El termo que cruza por delante del mate y su chorro se dibujan encima de los dados de la mesa.
+	pour_layer = Control.new()
+	pour_layer.name = "PourLayer"
+	pour_layer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	pour_layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	pour_layer.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	pour_layer.z_index = 5
+	pour_layer.draw.connect(_draw_pour_layer)
+	add_child(pour_layer)
+
+func _draw_pour_layer() -> void:
+	var f := props.frame("thermos")
+	if f < 0 or shop_mode: return
+	props.draw_pour_effects(pour_layer, f)
+	var pose := BarProps.thermos_pose(f)
+	if pose.over: BarProps.draw_thermos(pour_layer, pose.center, pose.rotation, stickers)
 
 func draw_recovered_figure(outline: Array, offset: Vector2, texture: Texture2D = ART) -> void:
 	var points := PackedVector2Array()
@@ -125,6 +154,10 @@ func _draw() -> void:
 			draw_texture_rect_region(EXTERIORS, window, source)
 	# Wooden mullions over the glass (not over the boarded-up "cierre" windows); hand and cloud stay in front.
 	if not shop_mode and environment_id != "cierre": draw_texture_rect(MULLIONS_V3, Rect2(0, 0, 1440, 300), false)
+	if not shop_mode:
+		props.draw_flag(self)
+		props.draw_soda(self, "soda_left")
+		props.draw_soda(self, "soda_right")
 	# Pixel-v3 table (wood, felt, front, floor) over the old plate; the room above it stays.
 	if not shop_mode: draw_texture_rect(TABLE_V3, Rect2(0, 272, 1440, 628), false)
 	# Only replace the prop strip: all dice areas, the hand and the original
@@ -137,16 +170,21 @@ func _draw() -> void:
 		# Restore the shop's leather cup without its former oversized notebook.
 		draw_recovered_figure([Vector2(184, 719), Vector2(218, 726), Vector2(254, 734), Vector2(286, 748), Vector2(310, 767), Vector2(331, 792), Vector2(347, 825), Vector2(349, 868), Vector2(337, 903), Vector2(312, 932), Vector2(278, 950), Vector2(240, 950), Vector2(205, 940), Vector2(169, 928), Vector2(130, 915), Vector2(103, 901), Vector2(83, 875), Vector2(79, 844), Vector2(84, 809), Vector2(95, 779), Vector2(112, 754), Vector2(133, 738), Vector2(154, 726)], Vector2.ZERO, CUP_SHOP_ART)
 	# Thermos with its stickers, then the mate and the dice cup in front of it.
+	# Mientras ceba el mate se dibuja aparte: debajo del mate al subir y bajar, y por delante mientras cruza y vierte.
+	var pour_frame := props.frame("thermos")
+	var pour: Dictionary = BarProps.thermos_pose(pour_frame) if pour_frame >= 0 else {}
+	if pour_frame >= 0 and not pour.over: BarProps.draw_thermos(self, pour.center, pour.rotation, stickers)
 	var lift := smoothstep(0.0, 1.0, thermos_t)
 	var thermos_bob := 2.0 * roundf(sin(elapsed * 1.3) * 1.5) if motion and thermos_t >= 1.0 else 0.0
 	var sway := 2.0 * roundf(sin(thermos_t * TAU * 2.0) * 3.0) if motion and thermos_t > 0.0 and thermos_t < 1.0 else 0.0
-	var thermos_origin := THERMOS_ORIGIN.lerp(STOLEN_THERMOS_POS, lift) + Vector2(sway, thermos_bob)
-	draw_set_transform(thermos_origin, 0.0, Vector2.ONE * lerpf(1.0, STOLEN_THERMOS_SCALE, lift))
-	draw_texture_rect(THERMOS_TABLE_V3, Rect2(Vector2.ZERO, Vector2(144, 350)), false)
-	# Every sticker sits on its own fixed spot of the thermos (same layout as the shop).
-	for id in StickerDefinitions.NAMES:
-		if stickers.has(id): StickerArt.draw_on_thermos(self, Vector2.ZERO, id)
-	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+	if pour_frame < 0:
+		var thermos_origin := THERMOS_ORIGIN.lerp(STOLEN_THERMOS_POS, lift) + Vector2(sway, thermos_bob)
+		draw_set_transform(thermos_origin, 0.0, Vector2.ONE * lerpf(1.0, STOLEN_THERMOS_SCALE, lift))
+		draw_texture_rect(THERMOS_TABLE_V3, Rect2(Vector2.ZERO, Vector2(144, 350)), false)
+		# Every sticker sits on its own fixed spot of the thermos (same layout as the shop).
+		for id in StickerDefinitions.NAMES:
+			if stickers.has(id): StickerArt.draw_on_thermos(self, Vector2.ZERO, id)
+		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 	draw_texture_rect(MATE_V3, Rect2(1088, 310, 136, 236), false)
 	draw_texture_rect(CUP_V3, Rect2(1280, 426, 144, 188), false)
 	# God remains a provisional silhouette; ordinary hands retain existing art.

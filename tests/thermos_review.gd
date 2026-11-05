@@ -22,7 +22,7 @@ func _initialize() -> void:
 	verify(UI.text_in(scene.ui, "0/5") and not UI.text_in(scene.ui, "MONEDAS"), "Match coin inventory displays only the capacity fraction")
 	var before: Dictionary = scene.game.snapshot()
 	await capture("mesa-curvatura")
-	await click(scene.ui.get_node("InspectThermos"), root)
+	scene.show_thermos_detail()
 	verify(scene.detail.visible and scene.thermos_panel.artwork.stickers.size() == 6 and not scene.detail_body.visible, "Clicking thermos opens enlarged illustration with all six owned stickers")
 	await capture("ampliado")
 	for id in Stickers.NAMES:
@@ -39,7 +39,7 @@ func _initialize() -> void:
 	scene.detail.hide()
 	scene.game.cup.stickers = {}
 	scene.render()
-	await click(scene.ui.get_node("InspectThermos"), root)
+	scene.show_thermos_detail()
 	verify(scene.thermos_panel.title.text == "Sin stickers" and scene.thermos_panel.artwork.stickers.is_empty(), "Empty thermos shows clean body and useful empty-state text")
 	await capture("vacio")
 	print("THERMOS REVIEW: ", errors, " errors")
