@@ -27,7 +27,8 @@ const RINGS := {
 	"flag": ["res://assets/art/pixel-v3/aro-bandera-v3.png", Vector2(1302, 60)],
 	"soda_left": ["res://assets/art/pixel-v3/aro-sifon-izq-v3.png", Vector2(384, 222)],
 	"soda_right": ["res://assets/art/pixel-v3/aro-sifon-der-v3.png", Vector2(816, 222)],
-	"thermos": ["res://assets/art/pixel-v3/aro-termo-v3.png", Vector2(1205, 166)]}
+	"thermos": ["res://assets/art/pixel-v3/aro-termo-v3.png", Vector2(1205, 166)],
+	"cup": ["res://assets/art/pixel-v3/aro-vaso-v3.png", Vector2(1278, 424)]}
 ## Zonas clickeables de los objetos que no tienen botón propio (el termo usa el suyo).
 const ZONES := {
 	"flag": Rect2(1298, 56, 80, 180),
@@ -43,6 +44,8 @@ const THERMOS_SIZE := Vector2(144, 350)
 var motion := true
 var speed := 1
 var elapsed: Dictionary = {}
+## Objetos ocupados por otra animación (la tirada del vaso): sin aro dorado mientras dure.
+var held: Dictionary = {}
 
 # ---------- estado ----------
 
@@ -53,7 +56,7 @@ func play(id: String) -> bool:
 	return true
 
 func busy(id: String) -> bool:
-	return elapsed.has(id)
+	return elapsed.has(id) or held.has(id)
 
 func any_busy() -> bool:
 	return not elapsed.is_empty()

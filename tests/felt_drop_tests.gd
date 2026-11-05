@@ -63,8 +63,9 @@ static func run(scene, check: Callable) -> void:
 	scene.game = Game.new(521)
 	Fixture.set_values(scene.game, [3, 3, 2, 3, 6])
 	scene.render()
+	scene.game.rolls_left = 0
 	scene.cup_zone.get_node("InspectCup").pressed.emit()
-	check.call(scene.detail.visible, "Cup drop: clicking the cup still opens its information")
+	check.call(scene.detail.visible, "Cup drop: with no rolls left clicking the cup opens its information")
 	scene.detail.hide()
 	# Dados reservados: "Reservar" y el brillo aparecen solo mientras se arrastra.
 	scene.render()

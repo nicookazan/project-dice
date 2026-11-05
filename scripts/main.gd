@@ -11,6 +11,7 @@ const PlaysPanel = preload("res://scripts/plays_panel.gd")
 const StickerTip = preload("res://scripts/sticker_tip.gd")
 const ShopThermos = preload("res://scripts/shop_thermos.gd")
 const BarProps = preload("res://scripts/bar_props.gd")
+const CupThrow = preload("res://scripts/cup_throw.gd")
 const Backdrop = preload("res://scripts/backdrop.gd")
 const CoinArt = preload("res://scripts/coin_art.gd")
 const ShopArt = preload("res://scripts/shop_art.gd")
@@ -79,6 +80,8 @@ var cream := Color("eee2c7")
 var gold := Color("edbb67")
 var throw_elapsed := 0.0
 var throw_duration := 0.85
+var throw_frame_seconds := 0.055
+var cup_throw: Control
 var throwing := false
 var flying_dice: Array = []
 var table_dice: Dictionary = {}
@@ -257,6 +260,11 @@ func point_upgrades(points: Dictionary) -> String:
 		if points.has(str(n)): entries.append("%d → +%d" % [n, points[str(n)]])
 	return "; ".join(entries) if not entries.is_empty() else "ninguna"
 
+## Clic en el vaso: tira, igual que TIRAR, mientras haya tiradas; si no, muestra su información.
+func click_cup() -> void:
+	if game.phase == "play" and game.rolls_left > 0 and not throwing: act(game.roll)
+	else: inspect_cup()
+
 func inspect_cup() -> void:
 	present_detail("Vaso de cuero", "Cinco dados fijos; el vaso no modifica su cantidad.\nLos stickers están pegados al termo del mate. Tocá el termo para ver sus niveles y efectos.", true)
 
@@ -395,16 +403,23 @@ func begin_throw(ids: Array) -> void:
 	if preferences.speed == 0 or preferences.reduced_motion: return
 	throwing = true
 	throw_elapsed = 0.0
-	throw_duration = 0.48 if preferences.speed == 2 else 0.85
+	throw_frame_seconds = CupThrow.FRAME_SECONDS / (1.6 if preferences.speed == 2 else 1.0)
+	throw_duration = CupThrow.FRAMES * throw_frame_seconds
 	feedback_text = "Tirando…"
 	if is_instance_valid(feedback_label): feedback_label.text = feedback_text
 	for index in ids:
 		if not table_dice.has(index): continue
 		var die: Control = table_dice[index]
-		var landing := die.position
-		var origin: Vector2 = Backdrop.CUP_MOUTH - die.get_parent().position - die.size / 2.0
-		flying_dice.append({"node": die, "origin": origin, "landing": landing, "angle": die.rotation_degrees, "delay": flying_dice.size() * 0.035})
+		flying_dice.append({"node": die, "landing": die.position, "angle": die.rotation_degrees, "order": flying_dice.size()})
 		die.z_index = 20
+		die.visible = false
+	# El vaso se dibuja aparte mientras tira (el quieto es parte del fondo) y por delante de los dados.
+	cup_throw = CupThrow.new()
+	add_child(cup_throw)
+	cup_throw.setup(game.dice, game.boss_context())
+	background.cup_hidden = true
+	background.props.held["cup"] = true
+	background.queue_redraw()
 	throw_blocker = Control.new()
 	throw_blocker.name = "ThrowInputBlocker"
 	throw_blocker.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -416,16 +431,15 @@ func begin_throw(ids: Array) -> void:
 func step_throw(delta: float) -> void:
 	if not throwing: return
 	throw_elapsed += delta
+	var f := mini(int(throw_elapsed / throw_frame_seconds), CupThrow.FRAMES - 1)
+	if is_instance_valid(cup_throw): cup_throw.set_frame(f)
 	for flight in flying_dice:
 		var die: Control = flight.node
-		var t := clampf((throw_elapsed / throw_duration - flight.delay) / 0.82, 0.0, 1.0)
-		var travel := 1.0 - pow(1.0 - t, 2.0)
-		var height := sin(PI * minf(t / 0.72, 1.0)) * 115.0
-		if t > 0.72: height = absf(sin((t - 0.72) / 0.28 * TAU)) * 16.0 * (1.0 - t) / 0.28
-		die.position = flight.origin.lerp(flight.landing, travel) - Vector2(0, height)
-		die.rotation_degrees = flight.angle + (1.0 - travel) * (540 if die.die_index % 2 == 0 else -540)
-		die.scale = Vector2.ONE * (0.65 + 0.35 * minf(t * 4.0, 1.0))
-		die.modulate.a = minf(t * 12.0, 1.0)
+		var landing_center: Vector2 = die.get_parent().position + flight.landing + die.size / 2.0
+		var state := CupThrow.die_state(flight.order, f, landing_center)
+		die.visible = state.visible
+		die.position = state.center - die.get_parent().position - die.size / 2.0
+		die.rotation_degrees = flight.angle + state.spin
 	if throw_elapsed >= throw_duration:
 		finish_throw()
 		feedback_text = "Tirada resuelta · elegí tus grupos"
@@ -438,9 +452,17 @@ func finish_throw() -> void:
 		flight.node.rotation_degrees = flight.angle
 		flight.node.scale = Vector2.ONE
 		flight.node.modulate.a = 1.0
+		flight.node.visible = true
 		flight.node.z_index = 0
 	flying_dice.clear()
 	throwing = false
+	if is_instance_valid(cup_throw):
+		cup_throw.queue_free()
+		cup_throw = null
+	if is_instance_valid(background):
+		background.cup_hidden = false
+		background.props.held.erase("cup")
+		background.queue_redraw()
 	if is_instance_valid(throw_blocker):
 		throw_blocker.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		throw_blocker.queue_free()
@@ -1219,8 +1241,9 @@ func render_table() -> void:
 			add_die(reserve, index, pose.position, false, pose.angle)
 	var cup := make_zone(Rect2(1082, 324, 358, 330), "cup")
 	cup_zone = cup
-	var cup_button := button(cup, "", Rect2(Backdrop.CUP_RECT.position - cup.position, Backdrop.CUP_RECT.size), inspect_cup)
+	var cup_button := button(cup, "", Rect2(Backdrop.CUP_RECT.position - cup.position, Backdrop.CUP_RECT.size), click_cup)
 	cup_button.name = "InspectCup"
+	BarProps.attach_ring(cup_button, "cup", background.props)
 	cup_button.tooltip_text = "Ver vaso"
 	for state in ["normal", "hover", "pressed"]: cup_button.add_theme_stylebox_override(state, StyleBoxEmpty.new())
 	cup.accept_through(cup_button)
