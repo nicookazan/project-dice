@@ -24,6 +24,8 @@
 
 # Estado actual — 27 de octubre de 2026
 
+**Etapa de monedas (5 de noviembre de 2026): MON0 completado.** Fichas [MON0–MON9](docs/pasos/README.md) y decisiones D15, confirmadas por el autor. Suite base: 3452 comprobaciones, cero fallos. Sin cambios de comportamiento. Siguiente: MON1 (bocetos, a aprobar antes de integrar).
+
 **Etapa de jugabilidad e interactividad (4 de noviembre de 2026): J00 completado.** Fichas [J00–J08](docs/pasos/README.md), decisiones D14, generadores de los bocetos aprobados en `tools/art/bocetos-jugabilidad/` (reproducen byte a byte los GIF/PNG aprobados) y sprites del vaso (`vaso-brillo-v3.png`, `vaso-frente-v3.png`, de `tools/art/make_vaso_jugabilidad.py`). Sin cambios de comportamiento. Siguiente: J01.
 
 **J01 (vaso, arrastre y Reservar) implementado, a la espera de tu prueba en el juego:** soltar un dado sobre el vaso, el termo o la tela libre lo manda al vaso; la zona izquierda sigue el borde dorado (incluida la esquina inferior izquierda); "Reservar" y el brillo del vaso aparecen solo al arrastrar un dado; el dado cae por la boca y queda detrás de la pared del vaso (solo presentación); corregido el texto que pisaba "Armar grupos arrastrando" en Opciones. Nuevos: `felt_layout.gd`, `table_drag_overlay.gd`, `cup_entry.gd`, `tests/felt_drop_tests.gd`. Limitación de las pruebas: el soltado sobre el vaso/termo se prueba llamando a las funciones reenviadas, porque el mouse sintético no actualiza la posición real. Siguiente: J02.

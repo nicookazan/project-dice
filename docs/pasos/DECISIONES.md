@@ -197,3 +197,26 @@ Versión 1 · 25 de octubre de 2026. Este registro evita bloquear todo el proyec
 **Fuente:** plan de implementación de jugabilidad en Notion (4 de noviembre de 2026) y bocetos aprobados. T4 (vendedor enojado) quedó afuera por pedido del autor.
 
 **Estado:** Aplicada por defecto; confirmación pendiente.
+
+## D15 — Monedas: catálogo ampliado y paquete de la tienda
+
+**Estado:** Confirmada por el autor el 5 de noviembre de 2026, al aceptar las propuestas del plan. Reglas confirmadas; precios, pesos y probabilidades siguen provisionales hasta el ítem 7 (D01/D02/D04 no se cierran con esto).
+
+**Pasos afectados:** MON1–MON9.
+
+**Decisiones:**
+
+1. **Reemplazo en el paquete de 5:** se pide moneda por moneda. Una moneda elegida del paquete no puede ocupar el lugar de la otra.
+2. **Paquete de 5 sin salida:** trae siempre al menos 2 pasivas, para que siempre exista una elección legal.
+3. **Escudo de jefe, una vez por partida:** cuenta al generarse la oferta, aunque no se compre o no se vea.
+4. **Uso de Escudo de jefe:** solo contra un jefe, incluido Dios. Si está suspendido, no se puede usar.
+5. **Plata rápida:** se usa durante el encuentro, no en la tienda, para evitar generar plata sin límite.
+6. **Descuento de visita + Descuento (C45):** se multiplican (precio × 0,8 × 0,5). Aplica a renovaciones y paquetes, no a reparaciones.
+7. **Relanzo total:** requiere haber tirado. Deshace los grupos, incluso los bloqueados, y cuenta como tirada hecha, sin gastar presupuesto. Moneda gastada pierde 1 por dado. El dado abducido queda afuera.
+8. **Voltear dado:** va a la cara física opuesta, sea cual sea su número. Solo dados sueltos, ya tirados. No afecta dados fijados por un jefe.
+9. **Mult +2:** se acumula y se suma antes de Doble mult.
+10. **Mano extra y premio:** cada mano sobrante sigue pagando $2; ganar en la primera de tres paga $4.
+11. **Mano extra y jefes:** la tercera mano repite la ruleta de la segunda. La memoria de Chamuyero y del bloqueo de categoría sigue siendo de la mano 1.
+12. **Monedas suspendidas:** no dan manos, tiradas ni plata. Corrige a Tirada permanente (C20), que hoy sigue dando la tirada.
+
+**Fuente:** [plan de implementación del ítem 5](https://app.notion.com/p/40fc28142b5580f78431fc36d9e1f587) y [tarea con las monedas aprobadas](https://app.notion.com/p/40fc28142b55803db5fec97224f065e0). La subpágina "Decisiones de monedas" es una versión anterior.
