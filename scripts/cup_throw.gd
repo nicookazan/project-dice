@@ -63,6 +63,10 @@ static func mouth() -> Vector2:
 	var angle := deg_to_rad(-TILT)
 	return LIFT + Vector2(MOUTH_UP * sin(angle), -MOUTH_UP * cos(angle))
 
+## Cuadro en el que el dado `order` toca su lugar y queda quieto: desde ahí se puede usar.
+static func landed_frame(order: int) -> int:
+	return SHAKE + LIFTING + DELAYS[order % DELAYS.size()] + 12
+
 ## Estado de un dado en el cuadro `f`: {visible, center, rotation_offset}. `order` es su lugar en la tirada y
 ## `landing` el centro donde termina. Antes de salir está oculto; al final queda exactamente en `landing`.
 static func die_state(order: int, f: int, landing: Vector2) -> Dictionary:
@@ -78,9 +82,8 @@ static func die_state(order: int, f: int, landing: Vector2) -> Dictionary:
 	var travel := 1.0 - pow(1.0 - t, 2.0)
 	var center := out.lerp(landing, travel)
 	center.y = lerpf(out.y, landing.y, t) + sin(t * PI) * 28.0 * (1.0 - t)
-	if t >= 1.0:
-		var rolling := g - delay - 12
-		center.y -= absf(sin(rolling * 0.9)) * 7.0 * maxf(0.0, 1.0 - rolling / 5.0)
+	# El rebote es parte del vuelo: el dado llega a su lugar y ya queda quieto (listo para usarse).
+	if t > 0.75: center.y -= sin((t - 0.75) / 0.25 * PI) * 5.0
 	return {"visible": true, "center": center, "spin": SPIN[order % SPIN.size()] * (1.0 - t)}
 
 func _init() -> void:
@@ -101,6 +104,7 @@ func setup(dice: Array, context: Dictionary) -> void:
 		die.pivot_offset = DICE_SIZE / 2.0
 		die.scale = Vector2.ONE * 0.78
 		die.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		for state in ["normal", "hover", "pressed", "disabled", "focus"]: die.add_theme_stylebox_override(state, StyleBoxEmpty.new())
 		add_child(die)
 		inner_dice.append(die)
 	front_wall = TextureRect.new()

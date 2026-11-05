@@ -45,8 +45,8 @@ const ZONES := {
 	"soda_right": Rect2(812, 218, 26, 46)}
 const THERMOS_REST := Vector2(1275, 343)
 const THERMOS_KEYS := [
-	[0, Vector2(1275, 343), 0.0], [7, Vector2(1275, 232), 0.0], [16, Vector2(1000, 232), 0.0], [24, Vector2(966, 426), 68.0],
-	[48, Vector2(966, 426), 68.0], [56, Vector2(1000, 232), 0.0], [65, Vector2(1275, 232), 0.0], [72, Vector2(1275, 343), 0.0], [78, Vector2(1275, 343), 0.0]]
+	[0, Vector2(1275, 343), 0.0], [7, Vector2(1275, 232), 0.0], [16, Vector2(1000, 232), 0.0], [24, Vector2(950, 402), 68.0],
+	[48, Vector2(950, 402), 68.0], [56, Vector2(1000, 232), 0.0], [65, Vector2(1275, 232), 0.0], [72, Vector2(1275, 343), 0.0], [78, Vector2(1275, 343), 0.0]]
 const MATE_MOUTH := Vector2(1156, 432)
 const THERMOS_SIZE := Vector2(144, 350)
 
@@ -121,12 +121,18 @@ static func draw_thermos(canvas: CanvasItem, center: Vector2, degrees: float, st
 static func snap(value: float) -> float:
 	return floorf(value / 2.0) * 2.0
 
+## Por dónde sale el agua: el borde de la tapa que queda más bajo al inclinarse (el pico), no el eje del termo.
+const SPOUT_LIP := Vector2(44, -165)
+
+static func spout_point(pose: Dictionary) -> Vector2:
+	var lip: Vector2 = SPOUT_LIP.rotated(deg_to_rad(pose.rotation))
+	return Vector2(snappedf(pose.center.x + lip.x, 2.0), snappedf(pose.center.y + lip.y, 2.0))
+
 ## Chorro de agua, yerba y vapor del termo que ceba (cuadros 26 a 47 el chorro; el vapor sigue subiendo).
 func draw_pour_effects(canvas: CanvasItem, f: int) -> void:
 	var pose := thermos_pose(f)
 	if f >= 26 and f <= 47:
-		var angle := deg_to_rad(-pose.rotation)
-		var spout := Vector2(snappedf(pose.center.x - sin(angle) * 175.0, 2.0), snappedf(pose.center.y - cos(angle) * 175.0, 2.0))
+		var spout := spout_point(pose)
 		var y := spout.y
 		while y < MATE_MOUTH.y:
 			var t := (y - spout.y) / maxf(1.0, MATE_MOUTH.y - spout.y)

@@ -20,7 +20,7 @@ static func run(scene, check: Callable) -> void:
 	check.call(not scene.coin_sale_overlay.visible and scene.game.snapshot() == before, "Coin drag: canceling or returning to inventory neither removes coin nor credits money")
 	scene.show_coin_sale_overlay(boost)
 	check.call(scene.coin_sale_caption.text == "Vender: $1", "Coin drag: consumable overlay uses its own resale price")
-	scene.coin_sale_overlay._drop_data(Vector2.ZERO, boost)
+	scene.coin_sale_overlay._drop_data(Vector2(400, 190), boost)
 	check.call(scene.game.cash == 13 and scene.game.consumable == "" and scene.game.passives == ["even", "odd"], "Coin drag: consumable sale removes only its instance and credits one")
 	before = scene.game.snapshot()
 	scene.sell_dragged_coin(boost)
