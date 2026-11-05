@@ -14,6 +14,7 @@ const BarProps = preload("res://scripts/bar_props.gd")
 const CupThrow = preload("res://scripts/cup_throw.gd")
 const StickerFlight = preload("res://scripts/sticker_flight.gd")
 const OfferRing = preload("res://scripts/offer_ring.gd")
+const StickerBook = preload("res://scripts/sticker_book.gd")
 const Backdrop = preload("res://scripts/backdrop.gd")
 const CoinArt = preload("res://scripts/coin_art.gd")
 const ShopArt = preload("res://scripts/shop_art.gd")
@@ -69,6 +70,7 @@ var hover_description: PanelContainer
 var die_card: DieCard
 var plays_panel: PlaysPanel
 var sticker_tip: StickerTip
+var sticker_book: Control
 var hover_description_body: Label
 var detail: AcceptDialog
 var detail_body: RichTextLabel
@@ -191,7 +193,7 @@ func _unhandled_key_input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 		return
 	if throwing: return
-	if not event is InputEventKey or not event.pressed or event.echo or detail.visible or confirmation.visible: return
+	if not event is InputEventKey or not event.pressed or event.echo or detail.visible or confirmation.visible or is_instance_valid(sticker_book): return
 	if event.keycode == KEY_F1:
 		show_help()
 	elif event.keycode == KEY_M and game.phase not in ["menu", "level_intro"]:
@@ -282,10 +284,25 @@ func add_sticker_zones(host: Control, origin: Vector2) -> void:
 		zone.name = "StickerZone_" + id
 		zone.position = origin + rect.position - host.position
 		zone.size = rect.size
-		zone.mouse_filter = Control.MOUSE_FILTER_PASS
+		# El clic en un sticker abre su panel y no llega al termo (que sirve el mate); los dados sí se pueden soltar encima.
+		zone.mouse_filter = Control.MOUSE_FILTER_STOP
+		zone.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+		var sticker_id: String = id
+		zone.gui_input.connect(func(event: InputEvent):
+			if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+				zone.accept_event()
+				open_sticker_book(sticker_id))
 		zone.set_meta("sticker_id", id)
 		zone.set_meta("thermos_origin", origin)
 		host.add_child(zone)
+
+## Panel de los stickers del termo, con el elegido en grande (nivel, mejoras y qué hace).
+func open_sticker_book(sticker_id: String) -> void:
+	if throwing or detail.visible or confirmation.visible or sticker_animation_active() or is_instance_valid(sticker_book): return
+	sticker_book = StickerBook.new()
+	sticker_book.setup(game.cup.stickers, game.sticker_catalog, sticker_id)
+	ui.add_child(sticker_book)
+	if is_instance_valid(sticker_tip): sticker_tip.hide()
 
 func inspect_thermos() -> void:
 	# En la mesa el termo ceba el mate (los stickers se leen al pasar el mouse); robado y en la tienda abre su detalle.
@@ -837,7 +854,7 @@ func _process(delta: float) -> void:
 func update_hover_description() -> void:
 	if not is_instance_valid(hover_description): return
 	var hovered := get_viewport().gui_get_hovered_control()
-	var blocked: bool = get_viewport().gui_is_dragging() or detail.visible or confirmation.visible or game.phase in ["purchase_target", "sticker_choice"]
+	var blocked: bool = get_viewport().gui_is_dragging() or detail.visible or confirmation.visible or is_instance_valid(sticker_book) or game.phase in ["purchase_target", "sticker_choice"]
 	var hovered_die: Die = hovered if hovered != null and hovered.get_script() == Die and hovered.die_index >= 0 and hovered.die_index < game.dice.size() and not blocked else null
 	var text := ""
 	if hovered != null and hovered is Control and hovered_die == null and not blocked:
@@ -858,7 +875,7 @@ func update_hover_description() -> void:
 			die.queue_redraw()
 	if is_instance_valid(sticker_tip):
 		var sticker_id: String = hovered.get_meta("sticker_id", "") if hovered != null and not blocked else ""
-		if sticker_id == "" or game.thermos_stolen() or game.cup.stickers.get(sticker_id, 0) <= 0: sticker_tip.hide()
+		if sticker_id == "" or game.thermos_stolen() or game.cup.stickers.get(sticker_id, 0) <= 0 or background.props.busy("thermos"): sticker_tip.hide()
 		else: sticker_tip.show_for(sticker_id, game.cup.stickers[sticker_id], game.sticker_catalog, hovered.get_global_rect(), background.shop_mode, hovered.get_meta("thermos_origin", Vector2.ZERO))
 	if is_instance_valid(die_card):
 		if hovered_die == null:
@@ -981,7 +998,11 @@ func finish_render() -> void:
 	thermos_button.tooltip_text = ("Termo robado por Don Cebador · clic para ver qué pasa" if game.thermos_stolen() else "Termo del mate · %d stickers · clic para ver niveles y efectos" % game.cup.stickers.size())
 	for state in ["normal", "hover", "pressed"]: thermos_button.add_theme_stylebox_override(state, StyleBoxEmpty.new())
 	if not background.shop_mode and is_instance_valid(cup_zone) and cup_zone.is_inside_tree(): cup_zone.accept_through(thermos_button)
-	if not game.thermos_stolen(): add_sticker_zones(thermos_button, Backdrop.SHOP_THERMOS_RECT.position if background.shop_mode else Backdrop.THERMOS_ORIGIN)
+	if not game.thermos_stolen():
+		add_sticker_zones(thermos_button, Backdrop.SHOP_THERMOS_RECT.position if background.shop_mode else Backdrop.THERMOS_ORIGIN)
+		if not background.shop_mode and is_instance_valid(cup_zone):
+			for child in thermos_button.get_children():
+				if child.has_meta("sticker_id"): cup_zone.accept_through(child)
 	if not background.shop_mode: render_boss_hand()
 	if background.shop_mode: label(ui, purchase_error if not purchase_error.is_empty() else game.message, Vector2(38, 864), 17, cream, 1360)
 	if game.phase != "repair": repair_selection.clear()
