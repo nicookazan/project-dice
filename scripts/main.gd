@@ -12,6 +12,7 @@ const StickerTip = preload("res://scripts/sticker_tip.gd")
 const ShopThermos = preload("res://scripts/shop_thermos.gd")
 const BarProps = preload("res://scripts/bar_props.gd")
 const CupThrow = preload("res://scripts/cup_throw.gd")
+const StickerFlight = preload("res://scripts/sticker_flight.gd")
 const Backdrop = preload("res://scripts/backdrop.gd")
 const CoinArt = preload("res://scripts/coin_art.gd")
 const ShopArt = preload("res://scripts/shop_art.gd")
@@ -1471,9 +1472,13 @@ func shop_card(parent: Node, section: String, index: int, rect: Rect2) -> void:
 	var id: String = offer.offer_id
 	var purchase := button(card, "$%d" % game.offer_price(offer.price), Rect2((rect.size.x - minf(102, rect.size.x - 8)) / 2, 109, minf(102, rect.size.x - 8), 30), func():
 		var previous_stickers: Dictionary = game.cup.stickers.duplicate(true)
+		var icon_center: Vector2 = card.get_global_rect().position + Vector2(rect.size.x / 2.0, 55.0)
 		var result: Dictionary = game.begin_purchase(section, id)
 		purchase_error = "" if result.ok else result.message
 		render()
+		# La compra ya está hecha y guardada; el vuelo del sticker suelto es solo presentación.
+		if result.ok and offer.kind == "sticker" and preferences.speed != 0 and not preferences.reduced_motion:
+			show_sticker_flight(offer.effect.id, previous_stickers.get(offer.effect.id, 0), icon_center)
 		if result.ok and offer.kind == "pack" and offer.effect.pack_kind == "receive_two":
 			show_sticker_reveal(offer.effect.items, previous_stickers), unavailable, true)
 	purchase.name = "Price"
@@ -1730,6 +1735,14 @@ func render_pack_choice() -> void:
 	button(modal, "Cerrar panel", Rect2(64, 506, 732, 42), func():
 		pack_panel_open = false
 		render())
+
+## Vuelo (o aviso de nivel) de un sticker suelto recién comprado. No bloquea la tienda: se corta solo si cambia la pantalla.
+func show_sticker_flight(sticker_id: String, level_before: int, from: Vector2) -> void:
+	var thermos_node = ui.get_node_or_null("Shop_cup/ThermosArtwork")
+	if thermos_node == null or game.cup.stickers.get(sticker_id, 0) <= 0: return
+	var flight := StickerFlight.new()
+	flight.setup(sticker_id, level_before, game.cup.stickers[sticker_id], from, thermos_node, preferences.speed == 2)
+	ui.add_child(flight)
 
 func sticker_animation_active() -> bool:
 	return is_instance_valid(sticker_animation) and not sticker_animation.finished and not sticker_animation.is_queued_for_deletion()
