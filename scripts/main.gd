@@ -1831,12 +1831,19 @@ func render_repairs() -> void:
 
 
 ## La mano (o el triángulo de Dios) del fondo abre el poder del jefe. Mismo patrón que el termo: botón transparente.
+## Clic en la mano del fondo: juega piedra, papel o tijera (solo un gesto); los guardianes de Dios no juegan y
+## muestran su información. El poder del jefe se lee en la libreta y al pasar el mouse.
+func click_hand() -> void:
+	if BossInfo.is_god(game) and game.is_boss(): inspect_boss_hand()
+	else: background.props.play_hand()
+
 func render_boss_hand() -> void:
 	var info := BossInfo.panel(game)
-	if info.is_empty(): return
-	var hand_button := button(ui, "", Backdrop.GOD_RECT if BossInfo.is_god(game) and game.is_boss() else Backdrop.HAND_RECT, inspect_boss_hand)
+	var guardian_hand: bool = BossInfo.is_god(game) and game.is_boss()
+	var hand_button := button(ui, "", Backdrop.GOD_RECT if guardian_hand else Backdrop.HAND_RECT, click_hand)
 	hand_button.name = "InspectBoss"
-	hand_button.tooltip_text = info.alt
+	hand_button.tooltip_text = "" if info.is_empty() else info.alt
+	if not guardian_hand: BarProps.attach_ring(hand_button, "hand", background.props)
 	hand_button.focus_mode = Control.FOCUS_ALL
 	for state in ["normal", "pressed"]: hand_button.add_theme_stylebox_override(state, StyleBoxEmpty.new())
 	# Resalte mínimo al pasar el mouse; el foco de teclado conserva el contorno del tema.
