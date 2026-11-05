@@ -25,7 +25,7 @@ func _initialize() -> void:
 	for i in range(5): scene.game.dice[i].shell = ["", "ruby", "sapphire", "emerald", "diamond"][i]
 	scene.render()
 	await capture("mesa")
-	scene.ui.get_node("InspectThermos").pressed.emit()
+	scene.show_thermos_detail()
 	await capture("termo-stickers")
 	scene.detail.hide()
 	scene.game.dice[1].shell_broken = true

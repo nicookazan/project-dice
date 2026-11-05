@@ -57,3 +57,5 @@ El cuerpo del dado ahora usa el sprite transparente `assets/art/ivory-die-v3.png
 `tools/art/maletin.py` (03/11/2026): maletín con la perspectiva corregida (tapa con marco parejo, base en bandeja honda con frente vertical) e interior de capitoné bordó oscuro, opción B1 elegida por el autor entre bocetos; `terciopelo-v3.png` pasa al mismo bordó oscuro, liso. Sin IA de imagen.
 
 `assets/art/pixel-v3/vaso-brillo-v3.png` y `vaso-frente-v3.png` (04/11/2026): `py tools/art/make_vaso_jugabilidad.py` (sin IA de imagen), derivados de `vaso-v3.png` sin modificarlo: contorno dorado en tres anillos y pared delantera del vaso. Los bocetos de jugabilidad (M1–M7, T1–T3) se reproducen con `tools/art/bocetos-jugabilidad/`.
+
+`assets/art/pixel-v3/bandera-v3.png`, `bandera-fondo-v3.png` y `aro-*.png` (04/11/2026): `py tools/art/make_bar_props.py` (sin IA de imagen). La bandera es el dibujo exacto de `texturas.bandera` (el juego la ondula por filas), la pared sin bandera cubre su lugar mientras ondula y los aros son un borde dorado de 2 px que sigue la silueta de cada objeto interactivo (bandera, sifones, termo), sin pisar al mate ni al vaso.

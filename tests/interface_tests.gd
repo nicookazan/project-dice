@@ -40,9 +40,16 @@ static func run(scene, check: Callable) -> Dictionary:
 	check.call(not text_in(scene.ui, "DIOS NO JUEGA") and find_button(scene.ui, "Ver termo") == null, "UI: gameplay has no title banner or visible thermos button")
 	var thermos = scene.ui.get_node("InspectThermos")
 	check.call(thermos.position.x > 1100 and notebook.rotation == 0 and notebook.size.x >= 300, "UI: thermos hit area is on the right and notebook is a readable frontal panel")
-	thermos.pressed.emit()
-	check.call("Termo del mate" in scene.detail_text, "UI: the relocated thermos still opens its sticker inspection")
-	scene.detail.hide()
+	var motion_before: Array = [scene.preferences.speed, scene.preferences.reduced_motion]
+	scene.preferences.speed = 1
+	scene.preferences.reduced_motion = false
+	scene.render()
+	scene.ui.get_node("InspectThermos").pressed.emit()
+	check.call(scene.background.props.busy("thermos") and not scene.detail.visible, "UI: clicking the thermos on the table pours the mate instead of opening a window")
+	scene.background.props.stop_all()
+	scene.preferences.speed = motion_before[0]
+	scene.preferences.reduced_motion = motion_before[1]
+	scene.render()
 	scene.game.roll()
 	var rolled_state: Dictionary = scene.game.snapshot()
 	scene.render()
@@ -166,7 +173,7 @@ static func run(scene, check: Callable) -> Dictionary:
 	scene.game.cup.stickers = {"trio": 2}
 	scene.game.sticker_catalog = preload("res://tests/sticker_tests.gd").definitions()
 	before = scene.game.snapshot()
-	scene.inspect_thermos()
+	scene.show_thermos_detail()
 	check.call("Termo del mate" in scene.detail_text and "Trío · nivel 2" in scene.detail_text and "+6 puntos" in scene.detail_text, "UI: thermos inspection shows owned sticker level and actual effect")
 	check.call(not scene.detail_body.visible and scene.thermos_panel.artwork.stickers == {"trio": 2}, "UI: thermos inspection presents actual owned artwork instead of the text list")
 	scene.thermos_panel.get_node("Sticker_trio").mouse_entered.emit()

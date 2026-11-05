@@ -2,7 +2,7 @@
 
 Etapa de jugabilidad e interactividad · 4 de noviembre de 2026.
 
-**Rama:** `feature/objetos-bar`. **Depende de:** J04. **Estado actual:** Pendiente. **Decisiones vinculadas:** D14.
+**Rama:** `feature/objetos-bar`. **Depende de:** J04. **Estado actual:** Implementado; a la espera de la prueba del autor en el juego. **Decisiones vinculadas:** D14.
 
 ## Objetivo
 Objetos del fondo que reaccionan al clic con una animación, y señal de borde dorado en lo interactuable.

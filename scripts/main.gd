@@ -10,6 +10,7 @@ const DieCard = preload("res://scripts/die_card.gd")
 const PlaysPanel = preload("res://scripts/plays_panel.gd")
 const StickerTip = preload("res://scripts/sticker_tip.gd")
 const ShopThermos = preload("res://scripts/shop_thermos.gd")
+const BarProps = preload("res://scripts/bar_props.gd")
 const Backdrop = preload("res://scripts/backdrop.gd")
 const CoinArt = preload("res://scripts/coin_art.gd")
 const ShopArt = preload("res://scripts/shop_art.gd")
@@ -274,6 +275,14 @@ func add_sticker_zones(host: Control, origin: Vector2) -> void:
 		host.add_child(zone)
 
 func inspect_thermos() -> void:
+	# En la mesa el termo ceba el mate (los stickers se leen al pasar el mouse); robado y en la tienda abre su detalle.
+	if not game.thermos_stolen() and not background.shop_mode:
+		background.props.play("thermos")
+		return
+	show_thermos_detail()
+
+## Detalle del termo: robado (explica el robo) y en la tienda (niveles y efectos). En la mesa, los stickers se leen al pasar el mouse.
+func show_thermos_detail() -> void:
 	if game.thermos_stolen():
 		present_detail("Termo robado", "Don Cebador te robó el termo: flota junto a su mano y los %d stickers pegados no aportan nada mientras dure el jefe.
 Te lo devuelve flotando cuando lo venzas." % game.cup.stickers.size(), true)
@@ -913,6 +922,13 @@ func finish_render() -> void:
 	var thermos_rect: Rect2 = Backdrop.SHOP_THERMOS_RECT if background.shop_mode else (Backdrop.STOLEN_THERMOS_RECT if game.thermos_stolen() else Backdrop.THERMOS_RECT)
 	var thermos_button := button(ui, "", thermos_rect, inspect_thermos)
 	thermos_button.name = "InspectThermos"
+	if not background.shop_mode:
+		for prop in ["flag", "soda_left", "soda_right"]:
+			var zone := BarProps.make_zone(prop, background.props)
+			zone.clicked.connect(func(): background.props.play(prop))
+			ui.add_child(zone)
+			ui.move_child(zone, thermos_button.get_index())
+		if not game.thermos_stolen(): BarProps.attach_ring(thermos_button, "thermos", background.props)
 	thermos_button.tooltip_text = ("Termo robado por Don Cebador · clic para ver qué pasa" if game.thermos_stolen() else "Termo del mate · %d stickers · clic para ver niveles y efectos" % game.cup.stickers.size())
 	for state in ["normal", "hover", "pressed"]: thermos_button.add_theme_stylebox_override(state, StyleBoxEmpty.new())
 	if not background.shop_mode and is_instance_valid(cup_zone) and cup_zone.is_inside_tree(): cup_zone.accept_through(thermos_button)

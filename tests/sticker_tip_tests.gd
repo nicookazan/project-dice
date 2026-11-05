@@ -68,10 +68,12 @@ static func run(scene, check: Callable) -> void:
 	await Drop.motion(scene, Vector2(100, 120))
 	await Drop.press(scene, Vector2(100, 120), false)
 	# El clic sigue funcionando y la zona no tapa nada del termo.
+	scene.preferences.speed = 1
 	scene.render()
 	scene.ui.get_node("InspectThermos").pressed.emit()
-	check.call(scene.detail.visible and scene.detail.title == "Termo y stickers", "Sticker tip: the thermos click still opens its detail")
-	scene.detail.hide()
+	check.call(scene.background.props.busy("thermos"), "Sticker tip: the thermos click still reaches the thermos (it pours the mate)")
+	scene.background.props.stop_all()
+	scene.preferences.speed = 0
 	# Termo robado: sin zonas ni ventanitas.
 	var thief = CatalogTests.forced_boss("l2_cebador", true)
 	thief.cup.stickers = levels.duplicate()
