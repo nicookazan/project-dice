@@ -11,6 +11,8 @@ const SALON = preload("res://assets/art/pixel-v3/salon-v3.png")
 const FLAG = preload("res://assets/art/pixel-v3/bandera-v3.png")
 const FLAG_PATCH = preload("res://assets/art/pixel-v3/bandera-fondo-v3.png")
 const THERMOS = preload("res://assets/art/pixel-v3/termo-mesa-v3.png")
+const HAND_POSES = preload("res://assets/art/pixel-v3/manos-poses-v3.png")
+const Tip = preload("res://scripts/item_tooltip.gd")
 const StickerArt = preload("res://scripts/sticker_art.gd")
 const StickerDefinitions = preload("res://scripts/stickers.gd")
 
@@ -19,7 +21,8 @@ const SPECS := {
 	"thermos": {"frames": 78, "seconds": 0.07},
 	"soda_left": {"frames": 52, "seconds": 0.06},
 	"soda_right": {"frames": 52, "seconds": 0.06},
-	"flag": {"frames": 34, "seconds": 0.07}}
+	"flag": {"frames": 34, "seconds": 0.07},
+	"hand": {"frames": 28, "seconds": 0.075}}
 ## Desplazamiento de cada sifón respecto del primero (el salón repite el motivo a 432 px).
 const SODA_SHIFT := {"soda_left": 0.0, "soda_right": 432.0}
 ## Aros dorados: textura y lugar en pantalla (los calcula tools/art/make_bar_props.py).
@@ -28,7 +31,8 @@ const RINGS := {
 	"soda_left": ["res://assets/art/pixel-v3/aro-sifon-izq-v3.png", Vector2(384, 222)],
 	"soda_right": ["res://assets/art/pixel-v3/aro-sifon-der-v3.png", Vector2(816, 222)],
 	"thermos": ["res://assets/art/pixel-v3/aro-termo-v3.png", Vector2(1205, 166)],
-	"cup": ["res://assets/art/pixel-v3/aro-vaso-v3.png", Vector2(1278, 424)]}
+	"cup": ["res://assets/art/pixel-v3/aro-vaso-v3.png", Vector2(1278, 424)],
+	"hand": ["res://assets/art/pixel-v3/aro-mano-v3.png", Vector2(622, 32)]}
 ## Zonas clickeables de los objetos que no tienen botón propio (el termo usa el suyo).
 const ZONES := {
 	"flag": Rect2(1298, 56, 80, 180),
@@ -46,6 +50,16 @@ var speed := 1
 var elapsed: Dictionary = {}
 ## Objetos ocupados por otra animación (la tirada del vaso): sin aro dorado mientras dure.
 var held: Dictionary = {}
+## Piedra, papel o tijera de la mano del fondo: solo un gesto, sin ganador ni efecto. Azar propio, aparte del de la partida.
+const POSES := ["piedra", "papel", "tijera"]
+const POSE_WORDS := ["PIEDRA", "PAPEL", "TIJERA"]
+const HAND_BEAT_OFFSETS := [-4, -14, -18, -8, 4, 10]
+const HAND_CELL := Vector2(61, 53)
+## Fila de la hoja de poses de la mano común (después de las 18 de jefe).
+const COMMON_HAND_ROW := 18
+var hand_result := "papel"
+var hand_rng := RandomNumberGenerator.new()
+var hand_font: Font
 
 # ---------- estado ----------
 
@@ -203,6 +217,38 @@ func draw_soda(canvas: CanvasItem, id: String) -> void:
 				var bx := left + 2.0 * rng.randi_range(0, 2)
 				var by := snap(rng.randf_range(top, 254.0))
 				if f <= 44: canvas.draw_rect(Rect2(bx, by, 2, 2), Color8(236, 186, 92))
+
+# ---------- mano ----------
+
+func _init() -> void:
+	hand_rng.randomize()
+
+## La mano golpea tres veces con el puño y juega piedra, papel o tijera al azar (azar cosmético propio).
+func play_hand() -> bool:
+	if not play("hand"): return false
+	hand_result = POSES[hand_rng.randi_range(0, POSES.size() - 1)]
+	return true
+
+## Qué muestra la mano en el cuadro `f` de su gesto: pose (0 piedra, 1 papel, 2 tijera), desplazamiento vertical y texto.
+static func hand_beat(f: int, result: String) -> Dictionary:
+	if f < 18:
+		return {"pose": 0, "dy": HAND_BEAT_OFFSETS[f % 6], "text": POSE_WORDS[f / 6] + "...", "final": false}
+	return {"pose": maxi(0, POSES.find(result)), "dy": 10 if f < 20 else 2, "text": result.to_upper() + "!", "final": true}
+
+## Dibuja la mano del gesto en lugar de la que tamborilea. `row` es la fila de la mano (-1: la común).
+func draw_hand_gesture(canvas: CanvasItem, row: int) -> void:
+	var f := frame("hand")
+	if f < 0: return
+	var beat := hand_beat(f, hand_result)
+	var sheet_row := row if row >= 0 else COMMON_HAND_ROW
+	canvas.draw_texture_rect_region(HAND_POSES, Rect2(624, 34 + beat.dy, 122, 106), Rect2(beat.pose * HAND_CELL.x, sheet_row * HAND_CELL.y, HAND_CELL.x, HAND_CELL.y))
+	if hand_font == null: hand_font = Tip.pixel_font()
+	var font := hand_font
+	var size := 24 if beat.final else 18
+	var width := font.get_string_size(beat.text, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x
+	var origin := Vector2(685.0 - width / 2.0, 176.0 + size)
+	canvas.draw_string(font, origin + Vector2(1, 1), beat.text, HORIZONTAL_ALIGNMENT_LEFT, -1, size, Color8(25, 10, 16))
+	canvas.draw_string(font, origin, beat.text, HORIZONTAL_ALIGNMENT_LEFT, -1, size, Color8(240, 200, 80) if beat.final else Color8(255, 240, 199))
 
 # ---------- zonas y aro dorado ----------
 

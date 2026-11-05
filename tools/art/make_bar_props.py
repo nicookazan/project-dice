@@ -105,6 +105,13 @@ def main():
     # Vaso: el borde del cuero (el vaso va por delante de todo).
     save_ring("aro-vaso-v3.png", ring_of(cup))
 
+    # Mano del fondo: la silueta de la mano común (todas las manos comparten forma), en (624, 34).
+    hand = np.array(Image.open(ART / "mano-v3.png").convert("RGBA"))[:53, :61, 3] > 0
+    hand_mask = np.zeros((900, 1440), bool)
+    big = x2(hand)
+    hand_mask[34:34 + big.shape[0], 624:624 + big.shape[1]] = big
+    save_ring("aro-mano-v3.png", ring_of(hand_mask))
+
 
 if __name__ == "__main__":
     main()

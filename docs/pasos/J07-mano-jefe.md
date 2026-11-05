@@ -2,7 +2,7 @@
 
 Etapa de jugabilidad e interactividad · 4 de noviembre de 2026.
 
-**Rama:** `feature/mano-jefe`. **Depende de:** J05. **Estado actual:** Pendiente. **Decisiones vinculadas:** D14.
+**Rama:** `feature/mano-jefe`. **Depende de:** J05. **Estado actual:** Implementado; a la espera de la prueba del autor y de la aprobación de la hoja de poses (el puño). **Decisiones vinculadas:** D14.
 
 ## Objetivo
 Que la mano del fondo juegue piedra, papel o tijera al clic, y que cada encuentro muestre la mano que corresponde.

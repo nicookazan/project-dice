@@ -69,7 +69,8 @@ func configure(profile: Dictionary, preferences: Dictionary) -> void:
 	environment_id = profile.environment
 	actor = profile.actor
 	guardian = BossCatalog.guardian(profile.get("boss_id", "")) if actor == "god" else -1
-	hand_row = BossCatalog.hand_row(profile.get("boss_id", "")) if actor != "common" and actor != "god" else -1
+	# Todos los encuentros de un nivel (rivales y jefe) muestran la mano del jefe del nivel; Dios y los niveles sin jefe, la común.
+	hand_row = BossCatalog.hand_row(profile.get("boss_id", "")) if actor != "god" else -1
 	level = profile.level
 	motion = not preferences.reduced_motion and preferences.speed != 0
 	speed = preferences.speed
@@ -206,6 +207,7 @@ func _draw() -> void:
 	var bob := 2.0 * roundf(sin(elapsed * 1.1) * 1.5) if motion else 0.0
 	var frame := int(elapsed / HAND_FRAME_SECONDS) % HAND_FRAMES if motion else 0
 	draw_texture_rect(CLOUD_V3, Rect2(552, 0, 262, 40), false)
-	if hand_row >= 0: draw_texture_rect_region(BOSS_HANDS, Rect2(624, 34 + bob, 122, 106), Rect2(frame * HAND_SIZE.x, hand_row * HAND_SIZE.y, HAND_SIZE.x, HAND_SIZE.y))
+	if props.busy("hand"): props.draw_hand_gesture(self, hand_row)
+	elif hand_row >= 0: draw_texture_rect_region(BOSS_HANDS, Rect2(624, 34 + bob, 122, 106), Rect2(frame * HAND_SIZE.x, hand_row * HAND_SIZE.y, HAND_SIZE.x, HAND_SIZE.y))
 	else: draw_texture_rect_region(HAND_V3, Rect2(624, 34 + bob, 122, 106), Rect2(frame * 61, 0, 61, 53))
 
