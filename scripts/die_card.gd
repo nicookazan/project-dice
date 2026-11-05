@@ -64,16 +64,16 @@ func _ready() -> void:
 	hide()
 
 ## Muestra la ficha de `die`. En la tienda, `anchor` es el rectángulo del dado y la ficha va arriba.
-func show_for(die: Dictionary, global_points: Dictionary, boss_context: Dictionary, style: Style, anchor := Rect2()) -> void:
+func show_for(die: Dictionary, global_points: Dictionary, boss_context: Dictionary, style: Style, anchor := Rect2(), felt_top := FELT_TOP) -> void:
 	label.text = bbcode(die, global_points, boss_context)
 	if style == Style.FELT:
-		var points := FeltLayout.band(FELT_TOP, FELT_TOP + FELT_HEIGHT)
+		var points := FeltLayout.band(felt_top, felt_top + FELT_HEIGHT)
 		felt_panel.polygon = points
 		felt_border.points = points
 		felt_panel.show()
 		felt_border.show()
 		shop_panel.hide()
-		label.position = Vector2(FeltLayout.left(FELT_TOP + FELT_HEIGHT) + 26.0, FELT_TOP + 8.0)
+		label.position = Vector2(FeltLayout.left(felt_top + FELT_HEIGHT) + 26.0, felt_top + 8.0)
 		label.size = Vector2(FeltLayout.RIGHT - label.position.x - 14.0, 76.0)
 	else:
 		felt_panel.hide()

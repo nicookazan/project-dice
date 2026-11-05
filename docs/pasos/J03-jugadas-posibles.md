@@ -2,7 +2,7 @@
 
 Etapa de jugabilidad e interactividad · 4 de noviembre de 2026.
 
-**Rama:** `feature/jugadas-posibles`. **Depende de:** J01, J02. **Estado actual:** Pendiente. **Decisiones vinculadas:** D14.
+**Rama:** `feature/jugadas-posibles`. **Depende de:** J01, J02. **Estado actual:** Implementado; a la espera de la prueba del autor en el juego. **Decisiones vinculadas:** D14.
 
 ## Objetivo
 Lista de jugadas posibles con su puntaje máximo, interactiva, sobre la tela izquierda.

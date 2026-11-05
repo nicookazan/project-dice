@@ -7,6 +7,7 @@ const FeltLayout = preload("res://scripts/felt_layout.gd")
 const TableDragOverlay = preload("res://scripts/table_drag_overlay.gd")
 const CupEntry = preload("res://scripts/cup_entry.gd")
 const DieCard = preload("res://scripts/die_card.gd")
+const PlaysPanel = preload("res://scripts/plays_panel.gd")
 const Backdrop = preload("res://scripts/backdrop.gd")
 const CoinArt = preload("res://scripts/coin_art.gd")
 const ShopArt = preload("res://scripts/shop_art.gd")
@@ -60,6 +61,7 @@ var coin_sale_overlay
 var coin_sale_caption: Label
 var hover_description: PanelContainer
 var die_card: DieCard
+var plays_panel: PlaysPanel
 var hover_description_body: Label
 var detail: AcceptDialog
 var detail_body: RichTextLabel
@@ -603,7 +605,7 @@ func show_options() -> void:
 		detail.remove_child(settings_panel)
 		settings_panel.queue_free()
 	settings_panel = Control.new()
-	settings_panel.custom_minimum_size = Vector2(760, 575)
+	settings_panel.custom_minimum_size = Vector2(760, 615)
 	detail.add_child(settings_panel)
 	var mute := CheckButton.new()
 	mute.name = "Mute"
@@ -640,9 +642,9 @@ func show_options() -> void:
 	speed_control.select(preferences.speed)
 	speed_control.item_selected.connect(func(index): set_preference("speed", index))
 	settings_panel.add_child(speed_control)
-	var keys := ["reduced_motion", "reduced_flashes", "high_contrast", "drag_groups"]
-	var captions := ["Reducir movimiento", "Reducir destellos", "Mayor contraste en controles", "Armar grupos arrastrando"]
-	for i in range(4):
+	var keys := ["reduced_motion", "reduced_flashes", "high_contrast", "drag_groups", "plays_list"]
+	var captions := ["Reducir movimiento", "Reducir destellos", "Mayor contraste en controles", "Armar grupos arrastrando", "Mostrar jugadas posibles"]
+	for i in range(keys.size()):
 		var toggle := CheckButton.new()
 		toggle.name = keys[i]
 		toggle.text = captions[i]
@@ -663,10 +665,10 @@ func show_options() -> void:
 	faces_button.size = Vector2(230, 40)
 	faces_button.pressed.connect(show_dice_gallery)
 	settings_panel.add_child(faces_button)
-	label(settings_panel, "Las señales siempre incluyen texto. Ninguna opción cambia la partida.\n" + detail_text, Vector2(12, 458), 17, cream, 725)
-	var status := label(settings_panel, preference_store.last_error if preference_store.last_error != "" else "Opciones guardadas aparte de la partida.", Vector2(12, 545), 16, gold, 725)
+	label(settings_panel, "Las señales siempre incluyen texto. Ninguna opción cambia la partida.\n" + detail_text, Vector2(12, 498), 17, cream, 725)
+	var status := label(settings_panel, preference_store.last_error if preference_store.last_error != "" else "Opciones guardadas aparte de la partida.", Vector2(12, 585), 16, gold, 725)
 	status.name = "PreferenceStatus"
-	detail.popup_centered(Vector2i(820, 670))
+	detail.popup_centered(Vector2i(820, 710))
 
 func show_dice_gallery() -> void:
 	present_detail("Dados · seis caras y gemas brillantes", "Cuerpo marfil, puntos negros o gemas de colores intensos con facetas y reflejos. Esta galería no equipa piezas ni modifica la partida.")
@@ -775,6 +777,9 @@ func update_hover_description() -> void:
 		for combination in possible_combinations(hovered_die.die_index):
 			for id in combination.ids:
 				if id not in hinted_ids: hinted_ids.append(id)
+	if is_instance_valid(plays_panel) and plays_panel.is_inside_tree() and not blocked:
+		for id in plays_panel.hovered_ids:
+			if id not in hinted_ids: hinted_ids.append(id)
 	for id in table_dice:
 		var die = table_dice[id]
 		var hinted: bool = id in hinted_ids
@@ -786,7 +791,7 @@ func update_hover_description() -> void:
 			die_card.hide()
 		else:
 			var rect := Rect2(hovered_die.global_position, hovered_die.size * hovered_die.scale)
-			die_card.show_for(game.dice[hovered_die.die_index], game.global_points, game.boss_context(), DieCard.Style.SHOP if background.shop_mode else DieCard.Style.FELT, rect)
+			die_card.show_for(game.dice[hovered_die.die_index], game.global_points, game.boss_context(), DieCard.Style.SHOP if background.shop_mode else DieCard.Style.FELT, rect, PlaysPanel.CARD_TOP if is_instance_valid(plays_panel) and not plays_panel.rows.is_empty() else DieCard.FELT_TOP)
 	hover_description.visible = not text.is_empty()
 	if text.is_empty(): return
 	if hover_description_body.text != text:
@@ -1144,22 +1149,29 @@ func render_table() -> void:
 	drag_toggle.button_pressed = preferences.drag_groups
 	drag_toggle.toggled.connect(func(value): set_preference("drag_groups", value))
 	ui.add_child(drag_toggle)
+	var plays: Array = PlaysPanel.best_plays(game) if preferences.plays_list else []
 	if preferences.drag_groups:
-		label(content, "Arrastrá los dados acá", Vector2(16, 12), 16, cream, 290)
+		if plays.is_empty(): label(content, "Arrastrá los dados acá", Vector2(16, 12), 16, cream, 290)
 		for slot in range(selected.size()):
 			add_die(content, selected[slot], Vector2(8 + slot * 61, 255))
 	var y := 58.0
 	for group_index in range(game.groups.size()):
 		var group: Dictionary = game.groups[group_index]
 		var current_index := group_index
-		label(content, group.category + (" · FIJO" if group.locked else " · EDITABLE"), Vector2(14, y), 15, cream)
-		var x := 8.0
+		label(content, group.category + (" · FIJO" if group.locked else " · EDITABLE"), Vector2(26, y), 15, cream)
+		var x := 20.0
 		for index in group.ids:
 			add_die(content, index, Vector2(x, y + 27), true)
 			x += 60
 		if not group.locked and game.phase == "play":
-			button(content, "Desarmar", Rect2(199, y - 4, 112, 29), func(): act(func(): game.ungroup(current_index)))
+			button(content, "Desarmar", Rect2(211, y - 4, 112, 29), func(): act(func(): game.ungroup(current_index)))
 		y += 103
+	plays_panel = null
+	if not plays.is_empty():
+		plays_panel = PlaysPanel.new()
+		plays_panel.play_chosen.connect(func(ids: Array): act(func(): game.form_group(ids)))
+		ui.add_child(plays_panel)
+		plays_panel.setup(plays, game.groups.size(), BossRules.forecast_hidden(game.boss_context()), number, group_area if preferences.drag_groups else null)
 	var reserve := make_zone(Rect2(712, 324, 350, 330), "reserve")
 	for index in range(game.dice.size()):
 		if game.dice[index].zone == "reserve" and not game.is_grouped(index) and not (preferences.drag_groups and index in selected):
