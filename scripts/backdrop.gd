@@ -29,6 +29,7 @@ var props := BarProps.new()
 var pour_layer: Control
 ## Mientras el vaso tira se dibuja aparte (CupThrow): el del fondo se oculta.
 var cup_hidden := false
+var last_shop_mode := false
 var stickers: Dictionary = {}
 const THERMOS_ORIGIN = Vector2(1203, 168)
 const THERMOS_RECT = Rect2(1203, 170, 144, 225)
@@ -77,7 +78,8 @@ func configure(profile: Dictionary, preferences: Dictionary) -> void:
 	props.motion = motion
 	props.speed = speed
 	# Las animaciones solo existen sobre la mesa y con movimiento: cualquier otro cambio las corta.
-	if shop_mode or not motion: props.stop_all()
+	if shop_mode != last_shop_mode or not motion: props.stop_all()
+	last_shop_mode = shop_mode
 	queue_redraw()
 	if is_instance_valid(pour_layer): pour_layer.queue_redraw()
 
@@ -127,6 +129,7 @@ func _draw() -> void:
 	if shop_mode:
 		# The salesman and his case replace the entire playing table and props.
 		draw_texture_rect(SELLER_ART, Rect2(0, 0, 1440, 900), false)
+		props.draw_flag(self, "shop_flag")
 		return
 	draw_texture_rect(ART if shop_mode else CLEAN_TABLE, Rect2(0, 0, 1440, 900), false)
 	if shop_mode:

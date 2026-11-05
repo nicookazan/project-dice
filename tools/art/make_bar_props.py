@@ -23,6 +23,7 @@ sys.dont_write_bytecode = True
 sys.path.insert(0, str(ROOT / "tools" / "art"))
 os.chdir(ROOT)
 import make_salon  # noqa: E402
+import make_tienda  # noqa: E402
 import texturas  # noqa: E402
 from pixel_lib import Canvas  # noqa: E402
 
@@ -104,6 +105,27 @@ def main():
 
     # Vaso: el borde del cuero (el vaso va por delante de todo).
     save_ring("aro-vaso-v3.png", ring_of(cup))
+
+    # Bandera de la tienda: la misma banderita, en (683, 102) del arte de la tienda (720x450), con su pared de atrás.
+    shop_x, shop_top = 683, 102
+    flag_canvas = Canvas(720, 450)
+    original(flag_canvas, shop_x, shop_top)
+    shop_flag = flag_canvas.a.copy()
+    make_tienda.pennant = lambda *a, **k: None
+    shop_wall = np.array(Image.fromarray(make_tienda.scene().a).convert("RGB"))
+    final = np.array(Image.open(ART / "tienda-v3.png").convert("RGB"))
+    r0, r1 = shop_top + 1, shop_top + 89
+    c0, c1 = shop_x - 12, 720
+    solid = shop_flag[r0:r1, c0:c1, 3] > 0
+    covered = int((final[r0:r1, c0:c1][solid] != shop_flag[r0:r1, c0:c1, :3][solid]).any(axis=1).sum())
+    print("bandera de la tienda: píxeles de la bandera tapados por otra capa:", covered)
+    Image.fromarray(shop_flag[r0:r1, c0:c1]).save(ART / "bandera-tienda-v3.png")
+    Image.fromarray(shop_wall[r0:r1, shop_x - 6:720]).save(ART / "bandera-tienda-fondo-v3.png")
+    shop_mask = np.zeros((900, 1440), bool)
+    fm = shop_flag[..., 3] > 0
+    fm[:r0] = False
+    shop_mask[:900, :1440] = x2(fm)[:900, :1440]
+    save_ring("aro-bandera-tienda-v3.png", ring_of(shop_mask))
 
     # Mano del fondo: la silueta de la mano común (todas las manos comparten forma), en (624, 34).
     hand = np.array(Image.open(ART / "mano-v3.png").convert("RGBA"))[:53, :61, 3] > 0

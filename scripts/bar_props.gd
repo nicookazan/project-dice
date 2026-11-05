@@ -8,8 +8,10 @@ extends RefCounted
 ## La animación se mide en cuadros como los bocetos aprobados (tools/art/bocetos-jugabilidad/anim.py).
 
 const SALON = preload("res://assets/art/pixel-v3/salon-v3.png")
-const FLAG = preload("res://assets/art/pixel-v3/bandera-v3.png")
-const FLAG_PATCH = preload("res://assets/art/pixel-v3/bandera-fondo-v3.png")
+## Banderas que ondulan: su dibujo, la pared sin ella, dónde están (grilla lógica) y desde qué fila se mueven.
+const FLAGS := {
+	"flag": {"sprite": preload("res://assets/art/pixel-v3/bandera-v3.png"), "patch": preload("res://assets/art/pixel-v3/bandera-fondo-v3.png"), "sprite_x": 640, "patch_x": 646, "top": 30, "row0": 31},
+	"shop_flag": {"sprite": preload("res://assets/art/pixel-v3/bandera-tienda-v3.png"), "patch": preload("res://assets/art/pixel-v3/bandera-tienda-fondo-v3.png"), "sprite_x": 671, "patch_x": 677, "top": 102, "row0": 103}}
 const THERMOS = preload("res://assets/art/pixel-v3/termo-mesa-v3.png")
 const HAND_POSES = preload("res://assets/art/pixel-v3/manos-poses-v3.png")
 const Tip = preload("res://scripts/item_tooltip.gd")
@@ -22,12 +24,14 @@ const SPECS := {
 	"soda_left": {"frames": 52, "seconds": 0.06},
 	"soda_right": {"frames": 52, "seconds": 0.06},
 	"flag": {"frames": 34, "seconds": 0.07},
+	"shop_flag": {"frames": 34, "seconds": 0.07},
 	"hand": {"frames": 28, "seconds": 0.075}}
 ## Desplazamiento de cada sifón respecto del primero (el salón repite el motivo a 432 px).
 const SODA_SHIFT := {"soda_left": 0.0, "soda_right": 432.0}
 ## Aros dorados: textura y lugar en pantalla (los calcula tools/art/make_bar_props.py).
 const RINGS := {
 	"flag": ["res://assets/art/pixel-v3/aro-bandera-v3.png", Vector2(1302, 60)],
+	"shop_flag": ["res://assets/art/pixel-v3/aro-bandera-tienda-v3.png", Vector2(1364, 204)],
 	"soda_left": ["res://assets/art/pixel-v3/aro-sifon-izq-v3.png", Vector2(384, 222)],
 	"soda_right": ["res://assets/art/pixel-v3/aro-sifon-der-v3.png", Vector2(816, 222)],
 	"thermos": ["res://assets/art/pixel-v3/aro-termo-v3.png", Vector2(1205, 166)],
@@ -36,6 +40,7 @@ const RINGS := {
 ## Zonas clickeables de los objetos que no tienen botón propio (el termo usa el suyo).
 const ZONES := {
 	"flag": Rect2(1298, 56, 80, 180),
+	"shop_flag": Rect2(1360, 200, 80, 180),
 	"soda_left": Rect2(380, 218, 26, 46),
 	"soda_right": Rect2(812, 218, 26, 46)}
 const THERMOS_REST := Vector2(1275, 343)
@@ -158,22 +163,31 @@ func draw_pour_effects(canvas: CanvasItem, f: int) -> void:
 
 # ---------- bandera ----------
 
-## La bandera ondula por filas sobre su dibujo exacto; la onda se amortigua en 34 cuadros.
-func draw_flag(canvas: CanvasItem) -> void:
-	var f := frame("flag")
+## La bandera ondula por filas sobre su dibujo exacto; la onda se amortigua en 34 cuadros. `id` elige la de la mesa
+## ("flag") o la de la tienda ("shop_flag"): el dibujo es el mismo, cambia dónde está.
+func draw_flag(canvas: CanvasItem, id := "flag") -> void:
+	var f := frame(id)
 	if f < 0: return
-	canvas.draw_texture_rect(FLAG_PATCH, Rect2(646 * 2, 31 * 2, 48 * 2, 87 * 2), false)
+	var spec: Dictionary = FLAGS[id]
+	var top: int = spec.top
+	var row0: int = spec.row0
+	var sprite_x: int = spec.sprite_x
+	var patch_x: int = spec.patch_x
+	var sprite: Texture2D = spec.sprite
+	var patch: Texture2D = spec.patch
+	var rows := sprite.get_height()
+	canvas.draw_texture_rect(patch, Rect2(patch_x * 2, row0 * 2, patch.get_width() * 2, rows * 2), false)
 	var amp := 3.2 * exp(-f / 16.0) * (1.0 if f >= 2 else 0.0)
-	for y in range(31, 118):
-		var k := pow(maxf(0.0, y - 30.0) / 82.0, 1.3)
-		var wave := (y - 30) * 0.13 - f * 0.8
+	for y in range(row0, row0 + rows):
+		var k := pow(maxf(0.0, y - top) / 82.0, 1.3)
+		var wave := (y - top) * 0.13 - f * 0.8
 		var dx := int(roundf(amp * k * sin(wave)))
 		var shade := 1.0 + 0.09 * cos(wave) * minf(1.0, amp / 2.5) * k
-		# Fila `y` del dibujo (columnas 640..700) desplazada `dx`, recortada a la zona tapada (646..694).
-		var left := maxi(640 + dx, 646)
-		var right := mini(700 + dx, 694)
+		# Fila `y` del dibujo desplazada `dx`, recortada a la zona de pared que se tapó.
+		var left := maxi(sprite_x + dx, patch_x)
+		var right := mini(sprite_x + sprite.get_width() + dx, patch_x + patch.get_width())
 		if right <= left: continue
-		canvas.draw_texture_rect_region(FLAG, Rect2(left * 2, y * 2, (right - left) * 2, 2), Rect2(left - dx - 640, y - 31, right - left, 1), Color(shade, shade, shade))
+		canvas.draw_texture_rect_region(sprite, Rect2(left * 2, y * 2, (right - left) * 2, 2), Rect2(left - dx - sprite_x, y - row0, right - left, 1), Color(shade, shade, shade))
 
 # ---------- sifón ----------
 
