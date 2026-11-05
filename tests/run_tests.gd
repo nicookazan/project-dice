@@ -23,6 +23,7 @@ const DiceArtTests = preload("res://tests/dice_art_tests.gd")
 const DebugModeTests = preload("res://tests/debug_mode_tests.gd")
 const DragGroupTests = preload("res://tests/drag_group_tests.gd")
 const FeltDropTests = preload("res://tests/felt_drop_tests.gd")
+const DieCardTests = preload("res://tests/die_card_tests.gd")
 const CoinDragTests = preload("res://tests/coin_drag_tests.gd")
 const GlobalNumbersTests = preload("res://tests/global_numbers_tests.gd")
 const EncounterChoiceTests = preload("res://tests/encounter_choice_tests.gd")
@@ -292,14 +293,13 @@ func _initialize() -> void:
 		metal_pair.pressed.emit()
 		check("Acero · dado 1" in scene.detail_text and "Cobre · dado 2" in scene.detail_text and "×1.5" in scene.detail_text, "UI names each material source without truncating the multiplier")
 		scene.detail.hide()
-	var material_dice: Array = []
-	collect_dice(scene.ui, material_dice)
-	var has_steel_tooltip := false
-	var has_copper_tooltip := false
-	for material_die in material_dice:
-		if material_die.die_index == 0: has_steel_tooltip = "Acero" in material_die.tooltip_text and "+3" in material_die.tooltip_text
-		if material_die.die_index == 1: has_copper_tooltip = "Cobre" in material_die.tooltip_text and "+0.5" in material_die.tooltip_text
-	check(has_steel_tooltip and has_copper_tooltip, "UI dice expose material gains and duration for inspection")
+	scene.inspect_die(0)
+	var has_steel_tooltip: bool = "Acero" in scene.detail_text and "+3" in scene.detail_text and "duran el encuentro" in scene.detail_text
+	scene.detail.hide()
+	scene.inspect_die(1)
+	var has_copper_tooltip: bool = "Cobre" in scene.detail_text and "+0.5" in scene.detail_text
+	scene.detail.hide()
+	check(has_steel_tooltip and has_copper_tooltip, "UI inspecting a die explains material gains and duration")
 	scene.game.restart(42)
 	scene.game.dice[0].element = "fire"
 	scene.game.dice[1].element = "water"
@@ -318,12 +318,10 @@ func _initialize() -> void:
 	find_button(scene, "Sin combinación  ·  14").pressed.emit()
 	check("Requiere una combinación desde par." in scene.detail_text, "UI explains why loose fire/water do not activate")
 	scene.detail.hide()
-	var element_dice: Array = []
-	collect_dice(scene.ui, element_dice)
-	var fire_tooltip := false
-	for element_die in element_dice:
-		if element_die.die_index == 0: fire_tooltip = "Fuego" in element_die.tooltip_text and "no se gasta" in element_die.tooltip_text
-	check(fire_tooltip, "UI element tooltip states condition, permanence and no consumption")
+	scene.inspect_die(0)
+	var fire_tooltip: bool = "Fuego" in scene.detail_text and "no se gasta" in scene.detail_text
+	scene.detail.hide()
+	check(fire_tooltip, "UI inspecting a die states element condition, permanence and no consumption")
 	scene.game.restart(42)
 	scene.game.dice[0].material = "steel"
 	scene.game.dice[0].element = "earth"
@@ -343,14 +341,13 @@ func _initialize() -> void:
 	scene.show_detail(scene.game.preview().rows[1])
 	check("Viento · dado 3" in scene.detail_text and "Cobre · dado 3" in scene.detail_text and "Total: 27" in scene.detail_text, "UI separates wind and copper multiplier sources")
 	scene.detail.hide()
-	var hand_dice: Array = []
-	collect_dice(scene.ui, hand_dice)
-	var earth_tip := false
-	var wind_tip := false
-	for die in hand_dice:
-		if die.die_index == 0: earth_tip = "Tierra" in die.tooltip_text and "+12 puntos" in die.tooltip_text and "cada mano y al relanzarlo" in die.tooltip_text
-		if die.die_index == 2: wind_tip = "Viento" in die.tooltip_text and "+1 al multiplicador" in die.tooltip_text and "cada mano" in die.tooltip_text
-	check(earth_tip and wind_tip, "UI hand-element tooltips display accumulation and reset scope")
+	scene.inspect_die(0)
+	var earth_tip: bool = "Tierra" in scene.detail_text and "tierra +12 puntos" in scene.detail_text and "se reinician cada mano" in scene.detail_text
+	scene.detail.hide()
+	scene.inspect_die(2)
+	var wind_tip: bool = "Viento" in scene.detail_text and "viento +1 al multiplicador" in scene.detail_text and "se reinician cada mano" in scene.detail_text
+	scene.detail.hide()
+	check(earth_tip and wind_tip, "UI inspecting a die displays accumulation and reset scope")
 	scene.game.restart(73)
 	for id in range(5): scene.game.dice[id].shell = ["emerald", "sapphire", "ruby", "diamond", "diamond"][id]
 	Fixture.set_values(scene.game, [4, 4, 2, 2, 2])
@@ -365,12 +362,10 @@ func _initialize() -> void:
 	scene.show_detail(scene.game.preview().rows[0])
 	check("Esmeralda · inactivo: Carcasa resquebrajada" in scene.detail_text, "UI explains suspended broken shell")
 	scene.detail.hide()
-	var shell_dice: Array = []
-	collect_dice(scene.ui, shell_dice)
-	var shell_tip := false
-	for die in shell_dice:
-		if die.die_index == 0: shell_tip = "Esmeralda" in die.tooltip_text and "Resquebrajada" in die.tooltip_text and "combinación desde par" in die.tooltip_text
-	check(shell_tip, "UI shell tooltip identifies power, condition and broken state")
+	scene.inspect_die(0)
+	var shell_tip: bool = "Esmeralda" in scene.detail_text and "RESQUEBRAJADA" in scene.detail_text and "combinación" in scene.detail_text
+	scene.detail.hide()
+	check(shell_tip, "UI inspecting a die identifies gem power, condition and broken state")
 	scene.game.restart(86)
 	for id in range(4):
 		scene.game.dice[id].shell = ["emerald", "ruby", "sapphire", "diamond"][id]
@@ -501,6 +496,7 @@ func _initialize() -> void:
 	DebugModeTests.run(scene, check)
 	DragGroupTests.run(scene, check)
 	await FeltDropTests.run(scene, check)
+	await DieCardTests.run(scene, check)
 	CoinDragTests.run(scene, check)
 	GlobalNumbersTests.run(scene, check)
 	EncounterChoiceTests.run(scene, check)

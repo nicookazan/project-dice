@@ -18,6 +18,12 @@ static func polygon(inset := 0.0) -> PackedVector2Array:
 		Vector2(left(TOP) + inset, TOP + inset), Vector2(RIGHT - inset, TOP + inset),
 		Vector2(RIGHT - inset, BOTTOM - inset), Vector2(left(BOTTOM) + inset, BOTTOM - inset)])
 
+## Franja horizontal de la tela entre y=`top` y y=`bottom`, a `inset` px del borde dorado (sigue su inclinación).
+static func band(top: float, bottom: float, inset := 6.0) -> PackedVector2Array:
+	return PackedVector2Array([
+		Vector2(left(top) + inset, top), Vector2(RIGHT - inset, top),
+		Vector2(RIGHT - inset, bottom), Vector2(left(bottom) + inset, bottom)])
+
 ## Rectángulo que contiene toda la tela (lo que ocupa el Control de la zona).
 static func bounds() -> Rect2:
 	var x := left(BOTTOM)

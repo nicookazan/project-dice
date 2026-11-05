@@ -6,6 +6,7 @@ const Zone = preload("res://scripts/drop_zone.gd")
 const FeltLayout = preload("res://scripts/felt_layout.gd")
 const TableDragOverlay = preload("res://scripts/table_drag_overlay.gd")
 const CupEntry = preload("res://scripts/cup_entry.gd")
+const DieCard = preload("res://scripts/die_card.gd")
 const Backdrop = preload("res://scripts/backdrop.gd")
 const CoinArt = preload("res://scripts/coin_art.gd")
 const ShopArt = preload("res://scripts/shop_art.gd")
@@ -58,6 +59,7 @@ var cup_zone: Zone
 var coin_sale_overlay
 var coin_sale_caption: Label
 var hover_description: PanelContainer
+var die_card: DieCard
 var hover_description_body: Label
 var detail: AcceptDialog
 var detail_body: RichTextLabel
@@ -229,39 +231,19 @@ func inspect_die(id: int) -> void:
 	if die.value > 0: lines.append("Puntos numéricos del resultado: %s (antes de material, elemento, monedas y gema)" % number(die.value + game.global_points.get(str(die.value), 0)))
 	var material := Materials.inspect(die)
 	lines.append("\nMaterial: " + material.name)
+	if die.material in ["steel", "copper"]:
+		var material_text := shop_offer_text({"kind": "material", "effect": {"id": die.material}})
+		lines.append(material_text[1])
 	var shell := Gems.definition(die.shell)
 	lines.append("Material de los puntos: " + shell.get("name", "Negro base") + (" · gema RESQUEBRAJADA (R), poder suspendido" if die.shell_broken else " · intacta" if not shell.is_empty() else ""))
 	if not shell.is_empty(): lines.append("%s Riesgo: %d%% al puntuar en combinación; reparación $%d." % [shell.description, int(shell.break_risk * 100), shell.repair_cost])
 	var element := Elements.definition(die.element)
 	lines.append("Elemento: " + element.get("name", "Sin elemento"))
-	if not element.is_empty(): lines.append(element.condition)
+	if not element.is_empty(): lines.append(element.condition + " Permanece durante la partida; no se gasta.")
 	lines.append("\nAcumulación de encuentro: acero +%s puntos; cobre +%s al multiplicador." % [number(Materials.steel_points(die)), number(Materials.copper_multiplier(die))])
 	lines.append("Acumulación de mano: tierra +%s puntos; viento +%s al multiplicador." % [number(Elements.earth_points(die)), number(Elements.wind_multiplier(die))])
 	lines.append("Acero/cobre duran el encuentro; tierra/viento se reinician cada mano.")
 	present_detail("Dado %d · ficha" % [id + 1], "\n".join(lines))
-
-func die_hover_text(id: int) -> String:
-	var die: Dictionary = game.dice[id]
-	var lines: Array[String] = ["Caras: " + " · ".join(die.faces.map(func(face): return str(face)))]
-	if die.value > 0:
-		lines.append("Número: %d · Puntos: %s" % [die.value, number(die.value + game.global_points.get(str(die.value), 0))])
-	if not game.global_points.is_empty(): lines.append("Todos tus dados: " + point_upgrades(game.global_points))
-	if die.material in ["steel", "copper"]:
-		var material_text := shop_offer_text({"kind": "material", "effect": {"id": die.material}})
-		lines.append(material_text[0] + ": " + material_text[1])
-		lines.append("Acumulado: +%s %s." % [number(Materials.steel_points(die) if die.material == "steel" else Materials.copper_multiplier(die)), "puntos" if die.material == "steel" else "al multiplicador"])
-	var gem := Gems.definition(die.shell)
-	if not gem.is_empty():
-		lines.append(gem.name + ": " + ("Resquebrajada: poder suspendido." if die.shell_broken else gem.description) + " Requiere combinación desde par.")
-		lines.append("Rotura: %d%% · Reparación: $%d" % [int(gem.break_risk * 100), gem.repair_cost])
-	var element := Elements.definition(die.element)
-	if not element.is_empty():
-		lines.append(element.name + ": " + element.condition + " Permanece durante la partida; no se gasta.")
-		if die.element == "earth": lines.append("Esta mano: +%s puntos. Se reinicia cada mano y al relanzarlo." % number(Elements.earth_points(die)))
-		elif die.element == "wind": lines.append("Esta mano: +%s al multiplicador. Se reinicia cada mano." % number(Elements.wind_multiplier(die)))
-	for family in ["material", "shell", "element"]:
-		if BossRules.suspended(game.boss_context(), family, die[family]): lines.append("%s: suspendido por el jefe." % family)
-	return "\n\n".join(lines)
 
 func point_upgrades(points: Dictionary) -> String:
 	var entries: Array[String] = []
@@ -783,12 +765,14 @@ func _process(delta: float) -> void:
 func update_hover_description() -> void:
 	if not is_instance_valid(hover_description): return
 	var hovered := get_viewport().gui_get_hovered_control()
+	var blocked: bool = get_viewport().gui_is_dragging() or detail.visible or confirmation.visible or game.phase in ["purchase_target", "sticker_choice"]
+	var hovered_die: Die = hovered if hovered != null and hovered.get_script() == Die and hovered.die_index >= 0 and hovered.die_index < game.dice.size() and not blocked else null
 	var text := ""
-	if hovered != null and hovered is Control and not get_viewport().gui_is_dragging() and not detail.visible and not confirmation.visible and game.phase not in ["purchase_target", "sticker_choice"]:
+	if hovered != null and hovered is Control and hovered_die == null and not blocked:
 		text = hovered.tooltip_text.strip_edges()
 	var hinted_ids: Array = []
-	if hovered != null and hovered.get_script() == Die and not text.is_empty() and game.phase == "play":
-		for combination in possible_combinations(hovered.die_index):
+	if hovered_die != null and game.phase == "play" and not background.shop_mode:
+		for combination in possible_combinations(hovered_die.die_index):
 			for id in combination.ids:
 				if id not in hinted_ids: hinted_ids.append(id)
 	for id in table_dice:
@@ -797,6 +781,12 @@ func update_hover_description() -> void:
 		if is_instance_valid(die) and die.combo_hint != hinted:
 			die.combo_hint = hinted
 			die.queue_redraw()
+	if is_instance_valid(die_card):
+		if hovered_die == null:
+			die_card.hide()
+		else:
+			var rect := Rect2(hovered_die.global_position, hovered_die.size * hovered_die.scale)
+			die_card.show_for(game.dice[hovered_die.die_index], game.global_points, game.boss_context(), DieCard.Style.SHOP if background.shop_mode else DieCard.Style.FELT, rect)
 	hover_description.visible = not text.is_empty()
 	if text.is_empty(): return
 	if hover_description_body.text != text:
@@ -870,6 +860,8 @@ func render() -> void:
 	# Draw above ordinary UI without becoming a mouse target.
 	hover_description.z_index = 90
 	ui.add_child(hover_description)
+	die_card = DieCard.new()
+	ui.add_child(die_card)
 	if game.phase in ["menu", "level_intro"]:
 		render_entry()
 		checkpoint()
@@ -1116,12 +1108,6 @@ func possible_combinations(index: int) -> Array:
 		if not best.has(category): best[category] = {"category": category, "ids": ids, "values": values}
 	return best.values()
 
-func combination_hint_text(index: int) -> String:
-	var lines: Array[String] = []
-	for combination in possible_combinations(index):
-		lines.append("%s: %s" % [combination.category, " + ".join(combination.values.map(func(value): return str(value)))])
-	return "COMBINACIONES POSIBLES\n" + ("\n".join(lines) if not lines.is_empty() else "Sin combinación disponible con este dado.")
-
 func loose_die_pose(index: int) -> Dictionary:
 	# Separate landing areas prevent overlap; small offsets and rotations break the grid.
 	const LANDINGS = [Vector2(48, 35), Vector2(238, 61), Vector2(146, 133), Vector2(79, 234), Vector2(255, 239)]
@@ -1212,7 +1198,6 @@ func add_die(parent: Node, index: int, pos: Vector2, grouped := false, angle := 
 	die.inspect_requested.connect(inspect_die)
 	die.pressed.connect(func(): toggle_die(index))
 	parent.add_child(die)
-	die.tooltip_text = combination_hint_text(index) + "\n\n" + die_hover_text(index) if not grouped and game.phase == "play" else die_hover_text(index)
 	table_dice[index] = die
 
 func render_actions() -> void:
@@ -1458,7 +1443,6 @@ func render_shop() -> void:
 		die.inspect_requested.connect(inspect_die)
 		for state in ["normal", "hover", "pressed"]: die.add_theme_stylebox_override(state, StyleBoxEmpty.new())
 		ui.add_child(die)
-		die.tooltip_text = die_hover_text(id)
 	var cup_zone := panel(ui, Backdrop.SHOP_THERMOS_RECT, Color.TRANSPARENT)
 	cup_zone.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
 	cup_zone.name = "Shop_cup"

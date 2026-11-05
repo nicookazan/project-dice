@@ -2,7 +2,7 @@
 
 Etapa de jugabilidad e interactividad · 4 de noviembre de 2026.
 
-**Rama:** `feature/ficha-dado`. **Depende de:** J01. **Estado actual:** Pendiente. **Decisiones vinculadas:** D14.
+**Rama:** `feature/ficha-dado`. **Depende de:** J01. **Estado actual:** Implementado; a la espera de la prueba del autor en el juego. **Decisiones vinculadas:** D14.
 
 ## Objetivo
 Mostrar al pasar el mouse sobre un dado una ficha con material, gema, elemento, caras y "Vale N puntos".
