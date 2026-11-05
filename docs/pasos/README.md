@@ -51,7 +51,7 @@ Versión 1 · 25 de octubre de 2026.
 | [F03 — Vasos, colección y progreso permanente](F03-vasos-progreso.md) | Posterior | F02 | Diferido |
 | [F04 — Otros materiales y sinergias futuras](F04-materiales-sinergias-futuras.md) | Posterior | 20 | Diferido |
 | [J00 — Preparación de la etapa de jugabilidad](J00-preparacion-jugabilidad.md) | Jugabilidad | 20 | Completado |
-| [J01 — Vaso, arrastre y Reservar](J01-mesa-arrastre.md) | Jugabilidad | J00 | Pendiente |
+| [J01 — Vaso, arrastre y Reservar](J01-mesa-arrastre.md) | Jugabilidad | J00 | Implementado; falta prueba del autor |
 | [J02 — Ficha del dado](J02-ficha-dado.md) | Jugabilidad | J01 | Pendiente |
 | [J03 — Jugadas posibles](J03-jugadas-posibles.md) | Jugabilidad | J01, J02 | Pendiente |
 | [J04 — Stickers al pasar el mouse](J04-stickers-hover.md) | Jugabilidad | J00 | Pendiente |
