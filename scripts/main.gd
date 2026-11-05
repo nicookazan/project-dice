@@ -1052,7 +1052,7 @@ func render_notebook() -> void:
 	label(note, "LIBRETA", Vector2(28, 14), 22, ink)
 	label(note, "PUNTOS / OBJETIVO", Vector2(28, 49), 14, ink)
 	label(note, "%d / %d" % [game.points, game.target()], Vector2(28, 69), 32, ink)
-	label(note, "Mano %d / 2" % game.hand, Vector2(28, 115), 18, ink)
+	label(note, "Mano %d / %d" % [game.hand, game.hand_limit()], Vector2(28, 115), 18, ink)
 	label(note, money_text(game.cash), Vector2(211, 115), 22, ink)
 	label(note, "Tiradas restantes: %d" % game.rolls_left, Vector2(28, 143), 18, ink)
 	label(note, "Nivel %d · Rival %d / %d" % [game.level_index + 1, game.rival + 1, game.level_encounters.size()], Vector2(28, 177), 15, ink)
@@ -1386,8 +1386,9 @@ func render_actions() -> void:
 	if game.phase == "hand_result":
 		if game.points >= game.target():
 			button(ui, "Cerrar y cobrar", Rect2(375, 626, 236, 42), func(): act(game.close_encounter), false, true)
-		if game.hand < 2:
-			button(ui, "Jugar segunda mano", Rect2(725, 626, 262, 42), func(): act(game.next_hand))
+		if game.hand < game.hand_limit():
+			var next_name: String = ["", "primera", "segunda", "tercera", "cuarta"][mini(game.hand + 1, 4)]
+			button(ui, "Jugar %s mano" % next_name, Rect2(725, 626, 262, 42), func(): act(game.next_hand))
 			if game.points >= game.target():
 				label(ui, "Otra mano consume el premio de $2 por mano sobrante.", Vector2(375, 593), 16, cream, 690)
 

@@ -11,7 +11,7 @@ const PASSIVES = [
 	"first_roll", "unused_rolls", "last_roll", "second_hand", "thermos", "collection", "interest",
 	"pocket", "pocket_small", "discount", "tempered_gem", "jeweler",
 	"veteran", "accumulated", "streak", "bosshunter",
-	"reserve_roll", "collector", "level_veteran", "served", "leftovers"]
+	"reserve_roll", "collector", "level_veteran", "served", "leftovers", "extra_hand"]
 const CONSUMABLES = ["boost", "roll", "boost_25", "boost_36", "double_mult", "free_renewal_use", "repair_gem", "free_reroll_use"]
 const RARITIES = ["common", "rare", "epic", "legendary"]
 const RARITY_NAMES = {"common": "Común", "rare": "Rara", "epic": "Épica", "legendary": "Legendaria"}
@@ -30,7 +30,7 @@ const SHORT = {
 	"first_roll": "1T", "unused_rolls": "TS", "last_roll": "UT", "second_hand": "M2", "thermos": "Te", "collection": "Co", "interest": "In",
 	"pocket": "B+", "pocket_small": "b+", "discount": "-%", "tempered_gem": "GT", "jeweler": "Jo",
 	"veteran": "Ve", "accumulated": "Ac", "streak": "Ra", "bosshunter": "Cz",
-	"reserve_roll": "TR", "collector": "Cb", "level_veteran": "VN", "served": "Sv", "leftovers": "So",
+	"reserve_roll": "TR", "collector": "Cb", "level_veteran": "VN", "served": "Sv", "leftovers": "So", "extra_hand": "M3",
 	"boost_25": "25", "boost_36": "36", "double_mult": "x2", "free_renewal_use": "R0", "repair_gem": "Rp", "free_reroll_use": "R1"}
 
 ## Per coin: code, name, description, rarity, family, effects (+ optional overrides).
@@ -152,6 +152,8 @@ const DATA = {
 		"effects": [{"kind": "cond_mult", "when": "first_roll", "amount": 2}]},
 	"leftovers": {"code": "C57", "name": "Sobrantes", "description": "+2 puntos de mano por cada dado que quede fuera de una combinación.", "rarity": "rare", "family": "general",
 		"effects": [{"kind": "hand_points", "per": "leftover_dice", "amount": 2}]},
+	"extra_hand": {"code": "C52", "name": "Mano extra", "description": "3 manos por encuentro en vez de 2.", "rarity": "legendary", "family": "general",
+		"effects": [{"kind": "extra_hands", "amount": 1}]},
 	"boost": {"code": "U01", "name": "Impulso 1 y 4", "description": "+3 puntos por cada 1 y 4 hasta terminar este encuentro. Se consume.", "rarity": "common", "family": "use", "scope": "own_points", "effect": "boost", "amount": 3, "duration": "encounter", "contexts": ["play"],
 		"effects": [{"kind": "impulse", "numbers": [1, 4], "amount": 3}]},
 	"roll": {"code": "U02", "name": "Una tirada más", "description": "+1 tirada disponible en la mano actual. Se consume.", "rarity": "common", "family": "use", "scope": "roll_budget", "effect": "extra_roll", "amount": 1, "duration": "hand", "contexts": ["play"],

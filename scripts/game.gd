@@ -19,6 +19,7 @@ const HAND_SCORED := "hand_scored"
 const ENCOUNTER_CLOSED := "encounter_closed"
 const COIN_BROKEN := "coin_broken"
 const BASE_ROLLS := 3
+const BASE_HANDS := 2
 var rng := RandomNumberGenerator.new()
 var run_seed: int
 var phase := "play"
@@ -250,6 +251,16 @@ func _active_passives() -> Array:
 
 func active_rules() -> Dictionary:
 	return CoinEffects.rules(_active_passives())
+
+## Manos del encuentro: 2 más las de Mano extra (C52) si el jefe no la suspende. No depende de la fase,
+## así que vale también al perder y al validar un guardado.
+static func hand_limit_of(passive_ids: Array, rule: Dictionary, boss_active: bool, state: Dictionary, current_hand: int) -> int:
+	var context := BossRules.context(rule, boss_active, state, current_hand)
+	var active: Array = passive_ids.filter(func(id): return not BossRules.suspended(context, "coin", id))
+	return BASE_HANDS + int(CoinEffects.sum_of(active, "extra_hands"))
+
+func hand_limit() -> int:
+	return hand_limit_of(passives, boss_rule, is_boss(), boss_state, hand)
 
 ## One builder for preview and scoring, so both always agree. It only reads state.
 func coin_context() -> Dictionary:
@@ -640,7 +651,7 @@ func score_hand() -> bool:
 	Coins.advance(coin_inventory.equipped, "hand_combo" if combined else "hand_plain")
 	double_mult = false
 	_collect_kiosk_tax()
-	if points < target() and hand >= 2:
+	if points < target() and hand >= hand_limit():
 		phase = "lost"
 		impulses = []
 		message = "Se terminaron las manos. El azar se queda con esta."
@@ -655,7 +666,7 @@ func _collect_kiosk_tax() -> void:
 	message = "Mano anotada en azul. Impuesto al kiosco: −$%d." % charge
 
 func next_hand() -> bool:
-	if phase != "hand_result" or hand >= 2: return false
+	if phase != "hand_result" or hand >= hand_limit(): return false
 	hand += 1
 	phase = "play"
 	start_hand()
@@ -666,7 +677,7 @@ func close_encounter() -> bool:
 	var cash_before := cash
 	var base_reward: int = Campaign.NORMAL_REWARD
 	if not campaign.is_empty() and is_boss(): base_reward = Campaign.candidate(campaign[level_index], selected_bosses[str(level_index)]).base_reward
-	payout = Rules.reward(cash, points, target(), 2 - hand, base_reward)
+	payout = Rules.reward(cash, points, target(), hand_limit() - hand, base_reward)
 	# Cobrador (C54): suma aparte del cobro base, solo si el jefe no la suspende (el cierre ocurre en hand_result).
 	var collected := int(CoinEffects.sum_of(_active_passives(), "encounter_cash"))
 	if collected > 0:

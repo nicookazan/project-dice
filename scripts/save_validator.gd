@@ -72,7 +72,7 @@ static func validate(data: Variant) -> String:
 	for key in template:
 		if not g.has(key) or typeof(g[key]) != typeof(template[key]): return "tipo inválido: " + key
 	if not BossRules.valid_encounters(g.level_encounters) or not BossRules.valid_rule(g.boss_rule): return "definición de jefe o recorrido inválida"
-	if g.phase not in PHASES or g.rival < 0 or g.rival >= g.level_encounters.size() or g.hand not in [1, 2] or g.points < 0 or g.rolls_left < 0 or g.rolls_left > 100 or g.rolls_made < 0 or g.rolls_made > 100: return "fase o contadores fuera de rango"
+	if g.phase not in PHASES or g.rival < 0 or g.rival >= g.level_encounters.size() or g.hand not in [1, 2, 3] or g.points < 0 or g.rolls_left < 0 or g.rolls_left > 100 or g.rolls_made < 0 or g.rolls_made > 100: return "fase o contadores fuera de rango"
 	if not Campaign.valid_progress(g): return "progreso de campaña inconsistente"
 	if g.hand_mult_bonus < 0 or g.hand_mult_bonus > 1000 or g.hand_points_bonus < 0 or g.hand_points_bonus > 1000000 or g.visit_discount < 0.0 or g.visit_discount > 0.9: return "bonos de moneda fuera de rango"
 	if g.once_coins_seen.size() > 100 or not g.once_coins_seen.all(func(id): return id is String and Coins.DATA.has(id)): return "monedas de una vez inválidas"
@@ -137,11 +137,14 @@ static func validate(data: Variant) -> String:
 		seen_impulses.append(id)
 	if g.free_reroll_tokens < 0 or g.free_reroll_tokens > 20 or g.free_renewals < 0 or g.free_renewals > 20: return "contadores de moneda inválidos"
 	if g.passives != equipped or g.consumable != (inventory.consumables[0].coin_id if not inventory.consumables.is_empty() else ""): return "vistas de inventario inconsistentes"
+	# Mano extra (C52): el límite sale de las monedas y del jefe; fuera de la partida en curso la mano es solo un recuerdo.
+	var hand_limit: int = Game.hand_limit_of(g.passives, g.boss_rule, g.level_encounters[g.rival].kind == "boss", g.boss_state, g.hand)
+	if g.phase in ["play", "hand_result", "lost"] and g.hand > hand_limit: return "mano fuera del límite"
 	if not g.last_score.is_empty() and not score(g.last_score): return "resultado incompleto"
 	if g.phase in ["hand_result", "reward", "repair", "won", "lost"] and g.last_score.is_empty(): return "falta resultado anotado"
 	if g.phase in ["reward", "repair", "won", "shop", "purchase_target", "sticker_choice"] and g.points < g.level_encounters[g.rival].target: return "cobro sin objetivo cumplido"
 	var has_next: bool = g.rival + 1 < g.level_encounters.size() or (not g.campaign.is_empty() and g.level_index + 1 < g.campaign.size())
-	if (g.phase == "won" and has_next) or (g.phase == "reward" and not has_next) or (g.phase == "lost" and (g.hand != 2 or g.points >= g.level_encounters[g.rival].target)): return "final inconsistente"
+	if (g.phase == "won" and has_next) or (g.phase == "reward" and not has_next) or (g.phase == "lost" and (g.hand != hand_limit or g.points >= g.level_encounters[g.rival].target)): return "final inconsistente"
 	if g.phase in ["reward", "repair", "won", "shop", "purchase_target", "sticker_choice"]:
 		for key in ["base", "hands", "excess", "interest", "total"]:
 			if not g.payout.get(key) is int: return "cobro incompleto"

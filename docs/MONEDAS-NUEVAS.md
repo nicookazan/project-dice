@@ -228,3 +228,18 @@ Cinco pasivas Raras ($6 / reventa $3), todas como filas de `scripts/coins.gd`. M
 - **Arte:** los cinco ids ya tienen arte en `coins-nuevas-v3.png` (MON1).
 
 Evidencia: `tests/coin_batch2_tests.gd` (catálogo, cada moneda, previsión igual a anotación en primera tirada y relanzada, suspensión por el jefe con Tarjeta roja, validación de guardados y pantalla del cobro con la escena real).
+
+## Actualización: Mano extra (MON4, 5 de noviembre de 2026)
+
+| Código | Moneda | Rareza | Efecto |
+|---|---|---|---|
+| C52 | Mano extra | Legendaria ($14 / reventa $7) | 3 manos por encuentro en vez de 2 |
+
+- **Un solo lugar:** `Game.hand_limit()` (y su versión estática `Game.hand_limit_of`, que usa el validador de guardados) es 2 más las manos de las monedas que el jefe no suspende. No depende de la fase, así que vale al perder y al validar.
+- **Dónde se usa:** derrota (`score_hand`), pasar de mano (`next_hand`), manos sobrantes del cobro (`close_encounter`), la libreta ("Mano N / 3"), el botón de la mano siguiente ("Jugar segunda mano" / "Jugar tercera mano") y el validador.
+- **Premio:** cada mano sobrante sigue pagando $2. Ganar en la primera de tres paga $4; en la segunda, $2; en la tercera, $0.
+- **Jefes (D15, puntos 10 y 11):** la tercera mano repite la ruleta de la segunda (Relojero); la memoria de Chamuyero y del bloqueo de categoría sigue siendo la de la mano 1; el impuesto al kiosco admite hasta $6 en el guardado (antes $4). Si Tarjeta roja expulsa a Mano extra, el encuentro tiene 2 manos.
+- **Segunda mano (C39)** sigue pagando solo en la mano 2.
+- **Guardado:** la mano 3 solo es válida durante el encuentro si el límite es 3. Una vez cerrado el encuentro (cobro, reparación, tienda) la mano es solo un recuerdo, así que vender la moneda en la tienda no invalida el guardado.
+
+Evidencia: `tests/coin_hands_tests.gd`.

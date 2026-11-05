@@ -30,7 +30,7 @@ El nivel 8/CMD, otros vasos, logros, rescates, activas con cooldown, ferromagnet
 
 ## Mano, grupos y puntuación
 
-- Dos manos base por encuentro, tres tiradas base por mano.
+- Dos manos base por encuentro, tres tiradas base por mano. Excepción: Mano extra (C52, Legendaria) suma una mano: tres por encuentro (ver [monedas nuevas](MONEDAS-NUEVAS.md)).
 - La primera tirada lanza los cinco dados. Los relanzamientos solo afectan a los dados enviados al vaso.
 - Selección manual exacta: un dado no puede pertenecer a dos grupos. Los sueltos se pueden conservar sin agrupar.
 - Enviar un dado al vaso bloquea los grupos ya armados. Retirarlo no los desbloquea.

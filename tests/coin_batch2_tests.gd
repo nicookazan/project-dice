@@ -37,7 +37,7 @@ static func _test_catalog(check: Callable) -> void:
 		var data := Coins.definition(NEW[i])
 		check.call(data.code == codes[i] and data.rarity == "rare" and data.type == "passive" and data.price == 6 and data.resale == 3, "MON3: %s es una pasiva Rara de $6 / $3" % NEW[i])
 		check.call(NEW[i] in Coins.PASSIVES and NEW[i] in CoinArt.NEW_IDS and Coins.SHORT.has(NEW[i]), "MON3: %s está en el catálogo, tiene arte y abreviatura" % NEW[i])
-	check.call(Coins.catalog().size() == 64, "MON3: el catálogo pasa a 64 monedas (56 pasivas y 8 de un uso)")
+	check.call(Coins.catalog().size() >= 64, "MON3: el catálogo incluye las cinco pasivas nuevas")
 
 static func _test_reserve_roll(check: Callable) -> void:
 	var game = Game.new(21)

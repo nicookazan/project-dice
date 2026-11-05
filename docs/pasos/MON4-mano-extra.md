@@ -2,7 +2,7 @@
 
 Etapa de monedas · 5 de noviembre de 2026.
 
-**Rama:** `feature/moneda-mano-extra`. **Depende de:** MON3. **Estado actual:** Sin empezar. **Decisiones vinculadas:** D15 (puntos 10 y 11).
+**Rama:** `feature/moneda-mano-extra`. **Depende de:** MON3. **Estado actual:** Completado (suite: 3685 comprobaciones, cero fallos). **Decisiones vinculadas:** D15 (puntos 10 y 11).
 
 ## Objetivo
 Agregar C52 Mano extra (Legendaria): 3 manos por encuentro en vez de 2. Va aparte porque "2 manos" está escrito en todo el juego.
