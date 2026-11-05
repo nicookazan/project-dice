@@ -1,6 +1,6 @@
 extends RefCounted
 ## Preferences are independent of the run/save format and never use gameplay RNG.
-const DEFAULTS = {"muted": false, "dice_volume": 0.65, "club_volume": 0.20, "ambient_volume": 0.25, "effects_volume": 0.50, "speed": 1, "reduced_motion": false, "reduced_flashes": true, "high_contrast": false, "drag_groups": false}
+const DEFAULTS = {"muted": false, "dice_volume": 0.65, "club_volume": 0.20, "ambient_volume": 0.25, "effects_volume": 0.50, "speed": 1, "reduced_motion": false, "reduced_flashes": true, "high_contrast": false, "drag_groups": false, "plays_list": true}
 var path: String
 var last_error := ""
 
@@ -24,6 +24,7 @@ func load_values() -> Dictionary:
 		return DEFAULTS.duplicate()
 	var data = config.get_value("presentation", "values", {})
 	if data is Dictionary and not data.has("drag_groups"): data["drag_groups"] = false
+	if data is Dictionary and not data.has("plays_list"): data["plays_list"] = true
 	if not valid(data):
 		last_error = "Preferencias inválidas; se conserva el archivo hasta elegir opciones nuevas."
 		return DEFAULTS.duplicate()
