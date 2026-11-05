@@ -42,7 +42,8 @@ static func run(scene, check: Callable) -> void:
 	names.sort()
 	check.call(names == ["BarProp_flag", "BarProp_soda_left", "BarProp_soda_right"], "Bar props: the table has a zone over the flag and each siphon")
 	var clear_of_felt := true
-	for id in BarProps.ZONES: clear_of_felt = clear_of_felt and BarProps.ZONES[id].end.y < FeltLayout.TOP
+	for id in BarProps.ZONES:
+		if id != "shop_flag": clear_of_felt = clear_of_felt and BarProps.ZONES[id].end.y < FeltLayout.TOP
 	check.call(clear_of_felt, "Bar props: the zones are above the felt, so they never block dropping dice")
 	scene.background.props.stop_all()
 	for id in ["flag", "soda_left", "soda_right"]:
@@ -95,14 +96,25 @@ static func run(scene, check: Callable) -> void:
 	check.call(not ring.visible, "Bar props: the border is gone when the mouse leaves")
 	var thermos_ring = scene.ui.get_node("InspectThermos").get_node("Ring_thermos")
 	check.call(thermos_ring != null and thermos_ring.texture != null, "Bar props: the thermos has its gold border too")
-	# Al cambiar de pantalla (tienda) las animaciones se cortan y no hay zonas del bar.
+	# Al cambiar de pantalla las animaciones se cortan; la tienda solo tiene la bandera.
 	scene.background.props.play("flag")
+	scene.preferences.speed = 1
 	scene.game.phase = "shop"
 	scene.render()
-	var shop_zones := 0
+	var shop_zones: Array = []
 	for child in scene.ui.get_children():
-		if child.name.begins_with("BarProp_"): shop_zones += 1
-	check.call(not scene.background.props.any_busy() and shop_zones == 0, "Bar props: changing screen cuts the animations and the shop has no bar zones")
+		if child.name.begins_with("BarProp_"): shop_zones.append(str(child.name))
+	check.call(not scene.background.props.any_busy() and shop_zones == ["BarProp_shop_flag"], "Bar props: changing screen cuts the animations and the shop only has its flag")
+	var shop_before: Dictionary = scene.game.snapshot()
+	scene.ui.get_node("BarProp_shop_flag").clicked.emit()
+	check.call(scene.background.props.busy("shop_flag"), "Bar props: clicking the shop's flag makes it wave")
+	for f in range(34):
+		scene.background.props.elapsed["shop_flag"] = (f + 0.5) * BarProps.SPECS.shop_flag.seconds
+		scene.background.queue_redraw()
+		await scene.get_tree().process_frame
+	check.call(scene.game.snapshot() == shop_before, "Bar props: drawing the shop flag wave every frame leaves the game untouched")
+	scene.background.props.step(10.0)
+	check.call(not scene.background.props.busy("shop_flag"), "Bar props: the shop flag stops by itself")
 	scene.game = Game.new(521)
 	scene.preferences.speed = 0
 	scene.render()

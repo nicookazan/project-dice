@@ -1,5 +1,5 @@
 extends Control
-## Ventanita de un sticker del termo: "Jugada · Nivel N" y, debajo, lo que aporta en ese nivel. Se ve al pasar el
+## Ventanita de un sticker del termo (sin recuadro sobre el sticker): "Jugada · Nivel N" y, debajo, lo que aporta en ese nivel. Se ve al pasar el
 ## mouse sobre el sticker: a la izquierda del termo en la mesa, a la derecha en la tienda. Solo presentación.
 
 const Stickers = preload("res://scripts/stickers.gd")
@@ -9,7 +9,6 @@ const SIZE := Vector2(314, 72)
 const MARGIN := 16
 const GAP := 16.0
 
-var ring: ReferenceRect
 var panel: PanelContainer
 var label: RichTextLabel
 
@@ -17,12 +16,6 @@ func _ready() -> void:
 	name = "StickerTip"
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	z_index = 90
-	ring = ReferenceRect.new()
-	ring.border_color = Color(GOLD)
-	ring.border_width = 2.0
-	ring.editor_only = false
-	ring.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(ring)
 	panel = PanelContainer.new()
 	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var skin := Tip.skin()
@@ -45,8 +38,6 @@ func _ready() -> void:
 ## `rect` es el sticker en pantalla. `to_right`: la ventanita va a la derecha (tienda) en vez de a la izquierda (mesa).
 func show_for(id: String, level: int, catalog: Dictionary, rect: Rect2, to_right: bool) -> void:
 	label.text = bbcode(id, level, catalog)
-	ring.position = rect.position - Vector2(4, 4)
-	ring.size = rect.size + Vector2(8, 8)
 	if to_right: panel.position = Vector2(rect.end.x + GAP, rect.position.y - 20.0)
 	else: panel.position = Vector2(rect.position.x - SIZE.x - GAP - 2.0, rect.position.y - 28.0)
 	show()

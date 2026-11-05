@@ -952,6 +952,11 @@ func finish_render() -> void:
 			ui.add_child(zone)
 			ui.move_child(zone, thermos_button.get_index())
 		if not game.thermos_stolen(): BarProps.attach_ring(thermos_button, "thermos", background.props)
+	else:
+		# La bandera de la tienda también ondula al hacer clic.
+		var shop_flag := BarProps.make_zone("shop_flag", background.props)
+		shop_flag.clicked.connect(func(): background.props.play("shop_flag"))
+		ui.add_child(shop_flag)
 	thermos_button.tooltip_text = ("Termo robado por Don Cebador · clic para ver qué pasa" if game.thermos_stolen() else "Termo del mate · %d stickers · clic para ver niveles y efectos" % game.cup.stickers.size())
 	for state in ["normal", "hover", "pressed"]: thermos_button.add_theme_stylebox_override(state, StyleBoxEmpty.new())
 	if not background.shop_mode and is_instance_valid(cup_zone) and cup_zone.is_inside_tree(): cup_zone.accept_through(thermos_button)
