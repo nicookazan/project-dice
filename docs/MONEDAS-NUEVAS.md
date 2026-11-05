@@ -207,3 +207,24 @@ Cambios de rareza aprobados por el autor. Precio y reventa salen de la rareza (C
 | Interés | C42 | Común | Rara |
 
 Las tablas de más arriba conservan la rareza original de cada moneda; esta tabla manda. Plan completo: [fichas MON0–MON9](pasos/README.md) y decisiones D15.
+
+## Actualización: pasivas nuevas de la etapa de monedas (MON3, 5 de noviembre de 2026)
+
+Cinco pasivas Raras ($6 / reventa $3), todas como filas de `scripts/coins.gd`. Mano extra (C52) va aparte, en MON4.
+
+| Código | Moneda | Efecto | Cómo se calcula |
+|---|---|---|---|
+| C53 | Tirada de reserva | +1 tirada en la primera mano de cada encuentro | `extra_rolls_first`, aplicado en `start_hand()` si es la mano 1 |
+| C54 | Cobrador | +$1 al ganar cada encuentro | `encounter_cash`, fila propia `payout.coins` en el cobro, incluida en `payout.total` |
+| C55 | Veterano de nivel | +0,25 mult por cada nivel de campaña alcanzado | `scaled_mult` con `level` (nivel 1 = 0,25; nivel 7 = 1,75) |
+| C56 | Servida | +2 mult si anotás en la primera tirada de la mano | `cond_mult` con `first_roll`; se acumula con Primera tirada (+3) |
+| C57 | Sobrantes | +2 puntos de mano por cada dado fuera de una combinación | `hand_points` por `leftover_dice`, calculado en `Rules.score` |
+
+- **Suspensión (D15, punto 12):** una moneda suspendida por el jefe no da tiradas ni plata. Esto corrige a Tirada permanente (C20), que antes seguía dando la tirada aunque estuviera suspendida. `start_hand()` usa ahora `_active_passives()`.
+- **Sobrantes:** cuenta los dados que no están en ningún grupo; el dado abducido no cuenta. Con Escaleras de 4, el quinto dado sí. Sin ningún grupo, los cinco sobran (+10).
+- **Cobrador:** se acredita junto con el cobro, solo si el jefe no la suspende, y se muestra en la pantalla del cobro (fila "Cobrador" y total desplazado). Un guardado sin `payout.coins` sigue siendo válido.
+- **Tirada de reserva:** la tirada extra también cuenta para Tiradas sin usar (C37).
+- **Contexto:** `Game.coin_context()` suma `level` (`level_index + 1`); `Rules.score` lo trae por defecto en 1 y calcula `leftover_dice` antes de las filas de puntos de mano. Previsión y anotación usan el mismo cálculo.
+- **Arte:** los cinco ids ya tienen arte en `coins-nuevas-v3.png` (MON1).
+
+Evidencia: `tests/coin_batch2_tests.gd` (catálogo, cada moneda, previsión igual a anotación en primera tirada y relanzada, suspensión por el jefe con Tarjeta roja, validación de guardados y pantalla del cobro con la escena real).

@@ -52,6 +52,7 @@ static func scale(per: String, context: Dictionary) -> float:
 	match per:
 		"sticker_levels": return float(context.get("sticker_total", 0))
 		"equipped": return float(context.get("equipped_count", 0))
+		"campaign_level": return float(context.get("level", 1))
 	return 0.0
 
 static func group_mult(equipped: Array, category: String, rules: Dictionary, context: Dictionary) -> Array:
@@ -84,6 +85,7 @@ static func hand_rows(equipped: Array, context: Dictionary) -> Array:
 		match effect.per:
 			"unused_rolls": points = float(context.get("rolls_left", 0)) * effect.amount
 			"last_roll": points = float(effect.amount) if context.get("rolls_left", 1) == 0 and context.get("rolls_made", 0) > 0 else 0.0
+			"leftover_dice": points = float(context.get("leftover_dice", 0)) * effect.amount
 			"cash_fifth": points = float(int(maxi(context.get("cash", 0), 0) / 5)) * effect.amount
 			"state": points = float(context.get("states", {}).get(item.id, {}).get(effect.key, 0)) * effect.amount
 		if points > 0: result.append({"source": "coin:" + item.id, "points": points})

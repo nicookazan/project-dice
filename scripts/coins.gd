@@ -10,7 +10,8 @@ const PASSIVES = [
 	"num_1", "num_2", "num_3", "num_4", "num_5", "num_6", "sixes",
 	"first_roll", "unused_rolls", "last_roll", "second_hand", "thermos", "collection", "interest",
 	"pocket", "pocket_small", "discount", "tempered_gem", "jeweler",
-	"veteran", "accumulated", "streak", "bosshunter"]
+	"veteran", "accumulated", "streak", "bosshunter",
+	"reserve_roll", "collector", "level_veteran", "served", "leftovers"]
 const CONSUMABLES = ["boost", "roll", "boost_25", "boost_36", "double_mult", "free_renewal_use", "repair_gem", "free_reroll_use"]
 const RARITIES = ["common", "rare", "epic", "legendary"]
 const RARITY_NAMES = {"common": "Común", "rare": "Rara", "epic": "Épica", "legendary": "Legendaria"}
@@ -29,6 +30,7 @@ const SHORT = {
 	"first_roll": "1T", "unused_rolls": "TS", "last_roll": "UT", "second_hand": "M2", "thermos": "Te", "collection": "Co", "interest": "In",
 	"pocket": "B+", "pocket_small": "b+", "discount": "-%", "tempered_gem": "GT", "jeweler": "Jo",
 	"veteran": "Ve", "accumulated": "Ac", "streak": "Ra", "bosshunter": "Cz",
+	"reserve_roll": "TR", "collector": "Cb", "level_veteran": "VN", "served": "Sv", "leftovers": "So",
 	"boost_25": "25", "boost_36": "36", "double_mult": "x2", "free_renewal_use": "R0", "repair_gem": "Rp", "free_reroll_use": "R1"}
 
 ## Per coin: code, name, description, rarity, family, effects (+ optional overrides).
@@ -140,6 +142,16 @@ const DATA = {
 	"bosshunter": {"code": "C51", "name": "Cazajefes", "description": "+1 mult permanente por cada jefe vencido con ella equipada.", "rarity": "epic", "family": "growth",
 		"state": {"bosses": 0},
 		"effects": [{"kind": "state_mult", "key": "bosses", "amount": 1}, {"kind": "grow", "key": "bosses", "on": "boss_won", "amount": 1}]},
+	"reserve_roll": {"code": "C53", "name": "Tirada de reserva", "description": "+1 tirada en la primera mano de cada encuentro.", "rarity": "rare", "family": "general",
+		"effects": [{"kind": "extra_rolls_first", "amount": 1}]},
+	"collector": {"code": "C54", "name": "Cobrador", "description": "+$1 al ganar cada encuentro.", "rarity": "rare", "family": "general",
+		"effects": [{"kind": "encounter_cash", "amount": 1}]},
+	"level_veteran": {"code": "C55", "name": "Veterano de nivel", "description": "+0,25 mult por cada nivel de campaña alcanzado.", "rarity": "rare", "family": "general",
+		"effects": [{"kind": "scaled_mult", "per": "campaign_level", "amount": 0.25}]},
+	"served": {"code": "C56", "name": "Servida", "description": "+2 mult si anotás en la primera tirada de la mano.", "rarity": "rare", "family": "general",
+		"effects": [{"kind": "cond_mult", "when": "first_roll", "amount": 2}]},
+	"leftovers": {"code": "C57", "name": "Sobrantes", "description": "+2 puntos de mano por cada dado que quede fuera de una combinación.", "rarity": "rare", "family": "general",
+		"effects": [{"kind": "hand_points", "per": "leftover_dice", "amount": 2}]},
 	"boost": {"code": "U01", "name": "Impulso 1 y 4", "description": "+3 puntos por cada 1 y 4 hasta terminar este encuentro. Se consume.", "rarity": "common", "family": "use", "scope": "own_points", "effect": "boost", "amount": 3, "duration": "encounter", "contexts": ["play"],
 		"effects": [{"kind": "impulse", "numbers": [1, 4], "amount": 3}]},
 	"roll": {"code": "U02", "name": "Una tirada más", "description": "+1 tirada disponible en la mano actual. Se consume.", "rarity": "common", "family": "use", "scope": "roll_budget", "effect": "extra_roll", "amount": 1, "duration": "hand", "contexts": ["play"],

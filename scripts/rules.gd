@@ -190,7 +190,7 @@ static func score(dice: Array, groups: Array, passives: Array, boost: Variant, s
 	var rolls_made: int = coin_context.get("rolls_made", 1 if served else 2)
 	var sticker_total := 0
 	for level in sticker_levels.values(): sticker_total += int(level)
-	var context := {"hand": 1, "rolls_made": rolls_made, "rolls_left": maxi(3 - rolls_made, 0), "cash": 0,
+	var context := {"hand": 1, "level": 1, "rolls_made": rolls_made, "rolls_left": maxi(3 - rolls_made, 0), "cash": 0,
 		"equipped_count": passives.size(), "sticker_total": sticker_total, "states": {}, "double_mult": false}
 	context.merge(coin_context, true)
 	var double_mult: bool = context.double_mult and not BossRules.suspended(boss_context, "coin", "double_mult")
@@ -293,6 +293,8 @@ static func score(dice: Array, groups: Array, passives: Array, boost: Variant, s
 		rows.append(row)
 		if cat not in ["Par", "Doble par", "Sin combinación"]:
 			counts[cat] = counts.get(cat, 0) + 1
+	# Dados fuera de toda combinación (el abducido no cuenta); lo usa Sobrantes (C57).
+	context["leftover_dice"] = leftovers.size()
 	for item in CoinEffects.hand_rows(effective_passives, context):
 		var flat := resolve_group(0, 0.0, item.points)
 		flat.merge({"category": "Moneda · " + COINS[item.source.trim_prefix("coin:")].name, "category_base": 0,

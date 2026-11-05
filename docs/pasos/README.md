@@ -62,7 +62,7 @@ Versión 1 · 25 de octubre de 2026.
 | [MON0 — Preparación de la etapa de monedas](MON0-preparacion-monedas.md) | Monedas | 20 | Completado |
 | [MON1 — Bocetos y arte de monedas](MON1-arte-monedas.md) | Monedas | MON0 | Completado |
 | [MON2 — Rarezas y guardado v9](MON2-rarezas-guardado.md) | Monedas | MON0 | Completado |
-| [MON3 — Pasivas nuevas](MON3-pasivas-nuevas.md) | Monedas | MON1, MON2 | Sin empezar |
+| [MON3 — Pasivas nuevas](MON3-pasivas-nuevas.md) | Monedas | MON1, MON2 | Completado |
 | [MON4 — Mano extra](MON4-mano-extra.md) | Monedas | MON3 | Sin empezar |
 | [MON5 — Monedas de un uso simples](MON5-uso-simples.md) | Monedas | MON1, MON2 | Sin empezar |
 | [MON6 — Relanzo total, Voltear dado y Escudo de jefe](MON6-uso-complejas.md) | Monedas | MON5 | Sin empezar |

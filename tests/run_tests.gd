@@ -42,6 +42,7 @@ const RepairTests = preload("res://tests/repair_tests.gd")
 const CoinBatchTests = preload("res://tests/coin_batch_tests.gd")
 const CoinRarityTests = preload("res://tests/coin_rarity_tests.gd")
 const CoinArtTests = preload("res://tests/coin_art_tests.gd")
+const CoinBatch2Tests = preload("res://tests/coin_batch2_tests.gd")
 const BossPanelTests = preload("res://tests/boss_panel_tests.gd")
 const BossPowerTests = preload("res://tests/boss_power_tests.gd")
 const BossRunTests = preload("res://tests/boss_run_tests.gd")
@@ -82,6 +83,7 @@ func _initialize() -> void:
 	CoinBatchTests.run(check)
 	CoinRarityTests.run(check)
 	CoinArtTests.run(check)
+	CoinBatch2Tests.run(check)
 	var shop_demo: Dictionary = ShopTests.run(check)
 	var purchases_demo: Dictionary = PurchaseTests.run(check)
 	check(Rules.category([1, 1]) == "Par", "exact pair")
@@ -491,10 +493,15 @@ func _initialize() -> void:
 	scene.ui.get_node("StickerChoice/Sticker_trio").pressed.emit()
 	check(scene.game.cash == 93 and scene.game.cup.stickers == {"trio": 3} and scene.game.phase == "shop", "UI pack selection grants only chosen upgrade and returns to shop")
 	var interface_demo: Dictionary = await InterfaceTests.run(scene, check)
+	CoinBatch2Tests.run_ui(scene, check, InterfaceTests.text_in)
 	var level_flow_demo: Dictionary = LevelFlowTests.run(scene, check)
+	await process_frame
 	var save_demo: Dictionary = SaveTests.run(scene, check)
+	await process_frame
 	var level_validation_demo: Dictionary = LevelValidationTests.run(scene, check)
+	await process_frame
 	var boss_demo: Dictionary = BossTests.run(scene, check)
+	await process_frame
 	var boss_catalog_demo: Dictionary = BossCatalogTests.run(check)
 	var campaign_demo: Dictionary = await CampaignTests.run(scene, check)
 	BossPanelTests.run(scene, check)

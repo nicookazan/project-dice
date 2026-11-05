@@ -181,7 +181,10 @@ func _refresh_boss_state() -> void:
 	boss_state = BossRules.draw_state(boss_rule, run_seed, level_index, rival, passives) if is_boss() else {}
 
 func start_hand() -> void:
-	rolls_left = BASE_ROLLS + int(CoinEffects.sum_of(passives, "extra_rolls"))
+	# Solo cuentan las monedas que el jefe no suspende (C20 también: una suspendida no da tiradas).
+	var active := _active_passives()
+	rolls_left = BASE_ROLLS + int(CoinEffects.sum_of(active, "extra_rolls"))
+	if hand == 1: rolls_left += int(CoinEffects.sum_of(active, "extra_rolls_first"))
 	rolls_made = 0
 	double_mult = false
 	hand_mult_bonus = 0
@@ -252,7 +255,7 @@ func active_rules() -> Dictionary:
 func coin_context() -> Dictionary:
 	var sticker_total := 0
 	for level in cup.stickers.values(): sticker_total += int(level)
-	return {"hand": hand, "rolls_made": rolls_made, "rolls_left": rolls_left, "cash": cash,
+	return {"hand": hand, "level": level_index + 1, "rolls_made": rolls_made, "rolls_left": rolls_left, "cash": cash,
 		"equipped_count": coin_inventory.equipped.size(), "sticker_total": sticker_total,
 		"states": Coins.state_of(coin_inventory.equipped), "double_mult": double_mult}
 
@@ -664,6 +667,11 @@ func close_encounter() -> bool:
 	var base_reward: int = Campaign.NORMAL_REWARD
 	if not campaign.is_empty() and is_boss(): base_reward = Campaign.candidate(campaign[level_index], selected_bosses[str(level_index)]).base_reward
 	payout = Rules.reward(cash, points, target(), 2 - hand, base_reward)
+	# Cobrador (C54): suma aparte del cobro base, solo si el jefe no la suspende (el cierre ocurre en hand_result).
+	var collected := int(CoinEffects.sum_of(_active_passives(), "encounter_cash"))
+	if collected > 0:
+		payout["coins"] = collected
+		payout.total += collected
 	cash += payout.total
 	impulses = []
 	Coins.advance(coin_inventory.equipped, "encounter_won")

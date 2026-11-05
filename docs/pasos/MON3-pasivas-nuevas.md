@@ -2,7 +2,7 @@
 
 Etapa de monedas · 5 de noviembre de 2026.
 
-**Rama:** `feature/monedas-pasivas`. **Depende de:** MON1, MON2. **Estado actual:** Sin empezar. **Decisiones vinculadas:** D15 (punto 12).
+**Rama:** `feature/monedas-pasivas`. **Depende de:** MON1, MON2. **Estado actual:** Completado (suite: 3645 comprobaciones, cero fallos). **Decisiones vinculadas:** D15 (punto 12).
 
 ## Objetivo
 Agregar cinco pasivas nuevas, todas Raras.

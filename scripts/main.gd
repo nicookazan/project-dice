@@ -1902,6 +1902,7 @@ func render_result() -> void:
 		if game.phase == "won": label(modal, "VICTORIA · 21 ENCUENTROS COMPLETADOS" if not game.campaign.is_empty() else "VICTORIA · NIVEL DE PRUEBA COMPLETADO", Vector2(36, 69), 16, cream)
 		var p: Dictionary = game.payout
 		label(modal, "%d / %d puntos\n\nVictoria                              $%d\nManos sobrantes                  $%d\nExceso de puntos                 $%d\nIntereses                             $%d\n\nTOTAL COBRADO                  $%d" % [game.points, game.target(), p.base, p.hands, p.excess, p.interest, p.total], Vector2(36, 90), 21, cream)
+		if p.get("coins", 0) > 0: label(modal, "Incluye $%d de Cobrador." % p.coins, Vector2(36, 330), 16, gold)
 		button(modal, "Prototipo completado · volver a jugar", Rect2(36, 371, 566, 49), start_new_run, false, true)
 	button(modal, "Volver al menú", Rect2(36, 437, 566, 36), func(): request_navigation("menu"))
 
@@ -1921,7 +1922,13 @@ func render_encounter_choice() -> void:
 		label(modal, names[i], Vector2(200, 133 + i * 32), 18, cream, 360)
 		var amount := label(modal, "$%d" % values[i], Vector2(580, 133 + i * 32), 18, cream, 80)
 		amount.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	shop_caption(modal, "TOTAL COBRADO: $%d   ·   SALDO: %s" % [p.total, money_text(game.cash)], Rect2(32, 272, 796, 34), 20, gold)
+	var total_y := 272.0
+	if p.get("coins", 0) > 0:
+		label(modal, "Cobrador", Vector2(200, 261), 18, cream, 360)
+		var coin_amount := label(modal, "$%d" % p.coins, Vector2(580, 261), 18, cream, 80)
+		coin_amount.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		total_y = 298.0
+	shop_caption(modal, "TOTAL COBRADO: $%d   ·   SALDO: %s" % [p.total, money_text(game.cash)], Rect2(32, total_y, 796, 34), 20, gold)
 	shop_caption(modal, "¿CÓMO QUERÉS SEGUIR?", Rect2(32, 335, 796, 32), 22, gold)
 	var next_text := "Próximo: %s" % ("jefe" if game.is_boss(game.rival + 1) else "rival %d" % [game.rival + 2]) if game.rival + 1 < game.level_encounters.size() else "Entrar al nivel %d" % [game.level_index + 2]
 	shop_caption(modal, "Comprá mejoras para tus dados.", Rect2(42, 390, 374, 28), 16)

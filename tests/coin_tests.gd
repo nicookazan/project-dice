@@ -9,7 +9,7 @@ static func run(check: Callable) -> Dictionary:
 	return _test_effects_and_contexts(check)
 
 static func _test_catalog_and_instances(check: Callable) -> void:
-	check.call(Coins.catalog().size() == 59 and Coins.PASSIVES.size() == 51 and Coins.CONSUMABLES.size() == 8, "coins: first batch is 51 passives (C01-C51) and 8 single-use coins")
+	check.call(Coins.catalog().size() == 64 and Coins.PASSIVES.size() == 56 and Coins.CONSUMABLES.size() == 8, "coins: 56 passives (C01-C51 and C53-C57) and 8 single-use coins")
 	for id in Coins.catalog():
 		var data := Coins.definition(id)
 		var complete := true
