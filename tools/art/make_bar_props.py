@@ -102,6 +102,9 @@ def main():
     # Termo: por delante de la bandera, por detrás del mate y del vaso.
     save_ring("aro-termo-v3.png", ring_of(thermos, mate | cup))
 
+    # Vaso: el borde del cuero (el vaso va por delante de todo).
+    save_ring("aro-vaso-v3.png", ring_of(cup))
+
 
 if __name__ == "__main__":
     main()

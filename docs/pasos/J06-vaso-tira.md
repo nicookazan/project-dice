@@ -2,7 +2,7 @@
 
 Etapa de jugabilidad e interactividad · 4 de noviembre de 2026.
 
-**Rama:** `feature/vaso-tira`. **Depende de:** J01, J05. **Estado actual:** Pendiente. **Decisiones vinculadas:** D14.
+**Rama:** `feature/vaso-tira`. **Depende de:** J01, J05. **Estado actual:** Implementado; a la espera de la prueba del autor en el juego (confirmar que ~3 s por tirada no se haga pesado). **Decisiones vinculadas:** D14.
 
 ## Objetivo
 Que clic en el vaso o el botón TIRAR hagan la tirada con la animación aprobada (versión A).

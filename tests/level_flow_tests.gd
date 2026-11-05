@@ -15,7 +15,7 @@ static func click(scene, caption: String) -> bool:
 	if control == null or control.disabled: return false
 	control.pressed.emit()
 	# Advance presentation time before issuing the next synchronous UI action.
-	if scene.throwing: scene.step_throw(2.0)
+	if scene.throwing: scene.step_throw(5.0)
 	return true
 
 static func best_groups(game) -> Dictionary:

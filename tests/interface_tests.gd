@@ -87,13 +87,13 @@ static func run(scene, check: Callable) -> Dictionary:
 	check.call(scene.throwing and scene.flying_dice.size() == 5 and scene.throw_blocker.mouse_filter == Control.MOUSE_FILTER_STOP, "UI: throw starts five flights from the cup and blocks pointer actions")
 	var flight: Dictionary = scene.flying_dice[0]
 	var start: Vector2 = flight.node.position
-	scene.step_throw(0.3)
+	scene.step_throw(1.4)
 	check.call(flight.node.position != start and flight.node.position != flight.landing and flight.node.rotation_degrees != flight.angle, "UI: dice travel and rotate before landing")
 	scene.act(scene.game.roll)
 	scene.toggle_die(0)
 	key(scene, KEY_SPACE)
 	check.call(scene.game.snapshot() == animated_state and scene.selected.is_empty(), "UI: clicks and keyboard cannot consume another roll or select dice in flight")
-	scene.step_throw(1.0)
+	scene.step_throw(5.0)
 	check.call(not scene.throwing and flight.node.position.is_equal_approx(flight.landing) and is_equal_approx(flight.node.rotation_degrees, flight.angle) and flight.node.scale.is_equal_approx(Vector2.ONE), "UI: throw ends at exact scattered landing with interaction restored")
 	check.call(scene.game.snapshot() == animated_state, "UI: flight and bounce preserve results and gameplay RNG")
 	scene.game.move_die(2, "cup")
@@ -108,7 +108,7 @@ static func run(scene, check: Callable) -> Dictionary:
 		scene.render()
 		scene.act(scene.game.roll)
 		check.call(scene.throwing == (mode == 2), "UI: animation respects instant and fast modes " + str(mode))
-		scene.step_throw(0.5)
+		scene.step_throw(5.0)
 		check.call(not scene.throwing and scene.game.snapshot() == animated_state, "UI: presentation speed preserves exact rolled state " + str(mode))
 	scene.preferences.speed = 1
 	scene.preferences.reduced_motion = true

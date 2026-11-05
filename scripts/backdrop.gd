@@ -27,6 +27,8 @@ const BarProps = preload("res://scripts/bar_props.gd")
 ## Sifones, bandera y termo que reaccionan al clic (animaciones de presentación).
 var props := BarProps.new()
 var pour_layer: Control
+## Mientras el vaso tira se dibuja aparte (CupThrow): el del fondo se oculta.
+var cup_hidden := false
 var stickers: Dictionary = {}
 const THERMOS_ORIGIN = Vector2(1203, 168)
 const THERMOS_RECT = Rect2(1203, 170, 144, 225)
@@ -186,7 +188,7 @@ func _draw() -> void:
 			if stickers.has(id): StickerArt.draw_on_thermos(self, Vector2.ZERO, id)
 		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 	draw_texture_rect(MATE_V3, Rect2(1088, 310, 136, 236), false)
-	draw_texture_rect(CUP_V3, Rect2(1280, 426, 144, 188), false)
+	if not cup_hidden: draw_texture_rect(CUP_V3, Rect2(1280, 426, 144, 188), false)
 	# God remains a provisional silhouette; ordinary hands retain existing art.
 	var center := Vector2(667, 105 + (sin(elapsed * 1.1) * 3 if motion else 0))
 	if actor == "god" and guardian >= 0:
