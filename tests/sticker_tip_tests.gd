@@ -46,7 +46,7 @@ static func run(scene, check: Callable) -> void:
 	check.call(names == ["full", "pair_loose", "trio"], "Sticker tip: there is a hover zone only over the stickers the thermos has")
 	var trio_zone: Control = button.get_node("StickerZone_trio")
 	var expected := ShopThermos.badge_hit_rect("trio", levels)
-	check.call(trio_zone.mouse_filter == Control.MOUSE_FILTER_PASS and trio_zone.get_global_rect().position.is_equal_approx(Backdrop.THERMOS_ORIGIN + expected.position), "Sticker tip: the zone sits on the sticker and lets clicks and drops through to the thermos")
+	check.call(trio_zone.mouse_filter == Control.MOUSE_FILTER_STOP and trio_zone.has_meta("drop_forward") and trio_zone.get_global_rect().position.is_equal_approx(Backdrop.THERMOS_ORIGIN + expected.position), "Sticker tip: the zone sits on the sticker, takes the click and forwards dropped dice")
 	# Mouse sobre el sticker: aparece la ventanita a la izquierda del termo, con su borde dorado.
 	var snapshot: Dictionary = scene.game.snapshot()
 	check.call(not scene.sticker_tip.visible, "Sticker tip: nothing shows before hovering a sticker")

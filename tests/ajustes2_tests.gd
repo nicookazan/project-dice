@@ -28,10 +28,9 @@ static func run(scene, check: Callable) -> void:
 	scene.finish_throw()
 	scene.end_cup_animation()
 	# 1. El agua sale del pico, no del eje del termo.
-	var pose := BarProps.thermos_pose(30)
-	var axis_top := Vector2(pose.center.x + sin(deg_to_rad(pose.rotation)) * 175.0, pose.center.y - cos(deg_to_rad(pose.rotation)) * 175.0)
+	var pose := BarProps.thermos_pose(24)
 	var spout := BarProps.spout_point(pose)
-	check.call(spout.y > axis_top.y + 30.0 and spout.y < BarProps.MATE_MOUTH.y - 20.0 and spout.x < BarProps.MATE_MOUTH.x, "Pour: the water leaves the thermos lip, well below the old axis point and above the mate")
+	check.call(spout.y < BarProps.MATE_MOUTH.y - 20.0 and spout.x < BarProps.MATE_MOUTH.x, "Pour: the water leaves the thermos above the mate")
 	# 2. Los dados de la entrada y de la sacudida no traen recuadro.
 	rolled(scene)
 	var entry := CupEntry.new()

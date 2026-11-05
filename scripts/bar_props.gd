@@ -20,7 +20,7 @@ const StickerDefinitions = preload("res://scripts/stickers.gd")
 
 ## Cuadros y segundos por cuadro de cada animación (termo 5,5 s, sifón 3,1 s, bandera 2,4 s).
 const SPECS := {
-	"thermos": {"frames": 78, "seconds": 0.07},
+	"thermos": {"frames": 44, "seconds": 0.065},
 	"soda_left": {"frames": 52, "seconds": 0.06},
 	"soda_right": {"frames": 52, "seconds": 0.06},
 	"flag": {"frames": 34, "seconds": 0.07},
@@ -48,6 +48,8 @@ const THERMOS_KEYS := [
 	[0, Vector2(1275, 343), 0.0], [7, Vector2(1275, 232), 0.0], [16, Vector2(1000, 232), 0.0], [24, Vector2(950, 402), 68.0],
 	[48, Vector2(950, 402), 68.0], [56, Vector2(1000, 232), 0.0], [65, Vector2(1275, 232), 0.0], [72, Vector2(1275, 343), 0.0], [78, Vector2(1275, 343), 0.0]]
 const MATE_MOUTH := Vector2(1156, 432)
+## Adonde cae el chorro: a la izquierda de la bombilla, para no taparla.
+const POUR_TARGET := Vector2(1136, 436)
 const THERMOS_SIZE := Vector2(144, 350)
 
 var motion := true
@@ -100,15 +102,36 @@ static func ease_value(t: float) -> float:
 
 # ---------- termo ----------
 
+## Recorrido curvo del termo: sube describiendo un arco, se inclina de a poco (con un pasito de más al final),
+## vierte y vuelve por el mismo arco. Cuadros: 0-13 ida, 14-31 vertido, 32-43 vuelta.
+const POUR_CENTER := Vector2(950, 402)
+const ARC_CONTROL := Vector2(1120, 150)
+const GO_FRAMES := 14
+const POUR_END := 32
+
+static func bezier(p0: Vector2, p1: Vector2, p2: Vector2, t: float) -> Vector2:
+	return p0.lerp(p1, t).lerp(p1.lerp(p2, t), t)
+
+static func ease_out_back(t: float) -> float:
+	var c := 1.4
+	t = clampf(t, 0.0, 1.0) - 1.0
+	return 1.0 + (c + 1.0) * t * t * t + c * t * t
+
 ## Posición y giro (grados, horario) del termo en el cuadro `f`, y si pasa por delante del mate.
 static func thermos_pose(f: int) -> Dictionary:
-	for i in range(THERMOS_KEYS.size() - 1):
-		var a: Array = THERMOS_KEYS[i]
-		var b: Array = THERMOS_KEYS[i + 1]
-		if f >= a[0] and f <= b[0]:
-			var t := ease_value(float(f - a[0]) / maxf(1.0, float(b[0] - a[0])))
-			return {"center": a[1].lerp(b[1], t), "rotation": lerpf(a[2], b[2], t), "over": f >= 7 and f <= 65}
-	return {"center": THERMOS_REST, "rotation": 0.0, "over": false}
+	var over := f >= 2 and f <= 41
+	if f < GO_FRAMES:
+		var t := f / float(GO_FRAMES - 1)
+		var s := 0.5 - 0.5 * cos(t * PI)
+		return {"center": bezier(THERMOS_REST, ARC_CONTROL, POUR_CENTER, s), "rotation": 68.0 * ease_out_back(clampf((s - 0.12) / 0.88, 0.0, 1.0)), "over": over}
+	if f < POUR_END:
+		var g := (f - GO_FRAMES) / float(POUR_END - GO_FRAMES - 1)
+		return {"center": POUR_CENTER + Vector2(0, -3.0 * sin(g * PI)), "rotation": 68.0 + 3.0 * sin(g * PI * 1.5), "over": over}
+	var t2 := minf(1.0, (f - POUR_END) / float(FRAMES_BACK - 1))
+	var s2 := t2 * t2 * (3.0 - 2.0 * t2)
+	return {"center": bezier(POUR_CENTER, ARC_CONTROL, THERMOS_REST, s2), "rotation": 68.0 * (1.0 - clampf(s2 * 1.5, 0.0, 1.0)), "over": over}
+
+const FRAMES_BACK := 12
 
 ## Dibuja el termo (con sus stickers) con su centro en `center`, girado `degrees` en sentido horario.
 static func draw_thermos(canvas: CanvasItem, center: Vector2, degrees: float, stickers: Dictionary) -> void:
@@ -121,8 +144,8 @@ static func draw_thermos(canvas: CanvasItem, center: Vector2, degrees: float, st
 static func snap(value: float) -> float:
 	return floorf(value / 2.0) * 2.0
 
-## Por dónde sale el agua: el borde de la tapa que queda más bajo al inclinarse (el pico), no el eje del termo.
-const SPOUT_LIP := Vector2(44, -165)
+## Por dónde sale el agua: la punta de la lengüeta roja de la tapa (el pico), a (91, 3) del dibujo del termo.
+const SPOUT_LIP := Vector2(19, -172)
 
 static func spout_point(pose: Dictionary) -> Vector2:
 	var lip: Vector2 = SPOUT_LIP.rotated(deg_to_rad(pose.rotation))
@@ -131,30 +154,33 @@ static func spout_point(pose: Dictionary) -> Vector2:
 ## Chorro de agua, yerba y vapor del termo que ceba (cuadros 26 a 47 el chorro; el vapor sigue subiendo).
 func draw_pour_effects(canvas: CanvasItem, f: int) -> void:
 	var pose := thermos_pose(f)
-	if f >= 26 and f <= 47:
+	if f >= 16 and f <= 30:
 		var spout := spout_point(pose)
+		var power := minf(1.0, (f - 15) / 3.0) * minf(1.0, (31 - f) / 3.0)
 		var y := spout.y
-		while y < MATE_MOUTH.y:
-			var t := (y - spout.y) / maxf(1.0, MATE_MOUTH.y - spout.y)
-			var x := snap(lerpf(spout.x, MATE_MOUTH.x, pow(t, 0.6)))
+		while y < POUR_TARGET.y:
+			var t := (y - spout.y) / maxf(1.0, POUR_TARGET.y - spout.y)
+			# sale casi horizontal y se curva hacia abajo; el hilo se ondula apenas
+			var x := snap(lerpf(spout.x, POUR_TARGET.x, 1.0 - pow(1.0 - t, 1.8)) + sin(t * 11.0 - f * 1.3) * 2.0 * t)
+			var width := 6.0 if t < 0.6 else 4.0
 			var water := Color8(214, 238, 248) if (int(y / 2.0) + f) % 3 != 0 else Color8(150, 200, 226)
-			canvas.draw_rect(Rect2(x, y, 4, 2), water)
-			if (int(y / 2.0) + f) % 5 == 0: canvas.draw_rect(Rect2(x + 4, y, 2, 2), Color8(240, 250, 255))
+			canvas.draw_rect(Rect2(x, y, width * power, 2), water)
+			if (int(y / 2.0) + f) % 4 == 0: canvas.draw_rect(Rect2(x + width * power, y, 2, 2), Color8(240, 250, 255))
 			y += 2.0
 		var rng := RandomNumberGenerator.new()
 		rng.seed = 5000 + f
-		for k in range(8):
-			var px := MATE_MOUTH.x + rng.randi_range(-22, 22)
-			var py := MATE_MOUTH.y + rng.randi_range(-4, 6)
+		for k in range(10):
+			var px := MATE_MOUTH.x + rng.randi_range(-24, 24)
+			var py := MATE_MOUTH.y + rng.randi_range(-10, 6)
 			var yerba: Array = [Color8(190, 220, 120), Color8(230, 245, 180), Color8(120, 170, 70)]
 			canvas.draw_rect(Rect2(snap(px), snap(py), 2, 2), yerba[rng.randi_range(0, 2)])
 	# Vapor: nace cada dos cuadros durante el chorro y sube hasta apagarse.
-	for spawn in range(26, 48, 2):
+	for spawn in range(17, 32, 2):
 		if spawn > f: break
 		var rng := RandomNumberGenerator.new()
 		rng.seed = 9000 + spawn
 		var x0 := MATE_MOUTH.x + rng.randi_range(-18, 18)
-		var life := rng.randi_range(14, 24)
+		var life := rng.randi_range(10, 16)
 		var x := x0
 		var size := life
 		var age := f - spawn
@@ -164,7 +190,7 @@ func draw_pour_effects(canvas: CanvasItem, f: int) -> void:
 			y_now -= 4.0
 			size -= 1
 		if size <= 0: continue
-		var gray := 230 - (24 - size) * 4
+		var gray := 230 - (16 - size) * 5
 		canvas.draw_rect(Rect2(snap(x), snap(y_now), 4, 4), Color8(clampi(gray, 0, 255), clampi(gray, 0, 255), clampi(gray, 0, 255)))
 
 # ---------- bandera ----------
