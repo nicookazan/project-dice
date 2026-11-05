@@ -291,7 +291,7 @@ func add_sticker_zones(host: Control, origin: Vector2) -> void:
 		zone.gui_input.connect(func(event: InputEvent):
 			if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 				zone.accept_event()
-				open_sticker_book(sticker_id))
+				if not background.props.busy("thermos"): open_sticker_book(sticker_id))
 		zone.set_meta("sticker_id", id)
 		zone.set_meta("thermos_origin", origin)
 		host.add_child(zone)
@@ -851,8 +851,19 @@ func _process(delta: float) -> void:
 		# Reduced motion/instant mode retains static, readable text without a fade.
 		feedback_label.modulate.a = 1.0 if preferences.reduced_motion or preferences.reduced_flashes or preferences.speed == 0 else minf(1, feedback_remaining)
 
+## Mientras el termo sirve sus stickers no están donde estaban: sus zonas dejan de recibir el mouse.
+func sync_sticker_zones() -> void:
+	var pouring: bool = is_instance_valid(background) and background.props.busy("thermos")
+	var thermos_button := ui.get_node_or_null("InspectThermos")
+	if thermos_button == null: return
+	for zone in thermos_button.get_children():
+		if not zone.has_meta("sticker_id"): continue
+		zone.mouse_filter = Control.MOUSE_FILTER_IGNORE if pouring else Control.MOUSE_FILTER_STOP
+		zone.mouse_default_cursor_shape = Control.CURSOR_ARROW if pouring else Control.CURSOR_POINTING_HAND
+
 func update_hover_description() -> void:
 	if not is_instance_valid(hover_description): return
+	sync_sticker_zones()
 	var hovered := get_viewport().gui_get_hovered_control()
 	var blocked: bool = get_viewport().gui_is_dragging() or detail.visible or confirmation.visible or is_instance_valid(sticker_book) or game.phase in ["purchase_target", "sticker_choice"]
 	var hovered_die: Die = hovered if hovered != null and hovered.get_script() == Die and hovered.die_index >= 0 and hovered.die_index < game.dice.size() and not blocked else null

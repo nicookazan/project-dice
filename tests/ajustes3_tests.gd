@@ -112,7 +112,12 @@ static func run(scene, check: Callable) -> void:
 	await Drop.motion(scene, zone.get_global_rect().get_center())
 	scene.update_hover_description()
 	check.call(not scene.sticker_tip.visible, "Sticker book: the hover window does not stay behind while the thermos is pouring")
+	check.call(zone.mouse_filter == Control.MOUSE_FILTER_IGNORE and zone.mouse_default_cursor_shape == Control.CURSOR_ARROW, "Sticker book: while the thermos pours the sticker zones stop taking the mouse")
+	zone.gui_input.emit(click_event())
+	check.call(not is_instance_valid(scene.sticker_book), "Sticker book: clicking where a sticker was while the thermos is away opens nothing")
 	scene.background.props.stop_all()
+	scene.update_hover_description()
+	check.call(zone.mouse_filter == Control.MOUSE_FILTER_STOP and zone.mouse_default_cursor_shape == Control.CURSOR_POINTING_HAND, "Sticker book: once the thermos is back the zones work again")
 	# También en la tienda.
 	var shop = stickered(levels)
 	shop.phase = "shop"
