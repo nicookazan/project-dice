@@ -58,7 +58,7 @@ Versión 1 · 25 de octubre de 2026.
 | [J05 — Objetos del bar](J05-objetos-bar.md) | Jugabilidad | J04 | Implementado; falta prueba del autor |
 | [J06 — Vaso que tira](J06-vaso-tira.md) | Jugabilidad | J01, J05 | Implementado; falta prueba del autor |
 | [J07 — Mano del jefe](J07-mano-jefe.md) | Jugabilidad | J05 | Implementado; falta prueba del autor y aprobar la hoja de poses |
-| [J08 — Vuelo del sticker](J08-sticker-vuelo.md) | Jugabilidad | J00 | Pendiente |
+| [J08 — Vuelo del sticker](J08-sticker-vuelo.md) | Jugabilidad | J00 | Implementado; falta prueba del autor |
 
 Las fichas J00–J08 son la etapa de jugabilidad e interactividad posterior al paso 20 (plan en Notion; decisiones en D14). Orden no significa fecha ni duración. Se recomienda ejecutar una ficha por vez, comprobar su entrega y entonces habilitar la siguiente. Algunas dependencias permiten trabajo independiente, pero no se propone desarrollar todo simultáneamente.
 

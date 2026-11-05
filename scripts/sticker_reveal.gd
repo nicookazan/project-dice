@@ -94,6 +94,19 @@ func step(delta: float) -> void:
 		captions[i].visible = revealed and progress == 0
 		var flight := clampf((elapsed - 2.0 - i * 0.16) / 0.85, 0, 1)
 		var ease := flight * flight * (3 - 2 * flight)
+		# Lo que ya estaba en el termo no vuela: se desvanece en su lugar y sube de nivel.
+		var repeated: bool = before.get(items[i], 0) > 0
+		if repeated:
+			badge.position = origins[i]
+			badge.scale = Vector2.ONE
+			badge.rotation = 0.0
+			badge.modulate.a = 1.0 - ease
+			if flight >= 1:
+				if is_instance_valid(thermos):
+					thermos.stickers[items[i]] = after[items[i]]
+					thermos.queue_redraw()
+				badge.hide()
+			continue
 		var destination := origins[i]
 		if is_instance_valid(thermos):
 			destination = thermos.position + thermos.get_parent().position + Thermos.badge_hit_rect(items[i], after).position + Vector2(2, 2)

@@ -2,7 +2,7 @@
 
 Etapa de jugabilidad e interactividad · 4 de noviembre de 2026.
 
-**Rama:** `feature/sticker-vuelo`. **Depende de:** J00. **Estado actual:** Pendiente. **Decisiones vinculadas:** D14.
+**Rama:** `feature/sticker-vuelo`. **Depende de:** J00. **Estado actual:** Implementado; a la espera de la prueba del autor en el juego. **Decisiones vinculadas:** D14.
 
 ## Objetivo
 Animar la compra de stickers: vuelo hasta el termo y aviso cuando es repetido.
