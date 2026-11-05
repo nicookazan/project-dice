@@ -13,6 +13,7 @@ const ShopThermos = preload("res://scripts/shop_thermos.gd")
 const BarProps = preload("res://scripts/bar_props.gd")
 const CupThrow = preload("res://scripts/cup_throw.gd")
 const StickerFlight = preload("res://scripts/sticker_flight.gd")
+const OfferRing = preload("res://scripts/offer_ring.gd")
 const Backdrop = preload("res://scripts/backdrop.gd")
 const CoinArt = preload("res://scripts/coin_art.gd")
 const ShopArt = preload("res://scripts/shop_art.gd")
@@ -83,6 +84,8 @@ var throw_elapsed := 0.0
 var throw_duration := 0.85
 var throw_frame_seconds := 0.055
 var cup_throw: Control
+## Dados que viajan juntos mientras se arrastra una selección (la pone el dado arrastrado; ver Die.drag_group).
+var dragged_group: Array = []
 var throwing := false
 var flying_dice: Array = []
 var table_dice: Dictionary = {}
@@ -281,6 +284,7 @@ func add_sticker_zones(host: Control, origin: Vector2) -> void:
 		zone.size = rect.size
 		zone.mouse_filter = Control.MOUSE_FILTER_PASS
 		zone.set_meta("sticker_id", id)
+		zone.set_meta("thermos_origin", origin)
 		host.add_child(zone)
 
 func inspect_thermos() -> void:
@@ -402,6 +406,7 @@ func act(action: Callable) -> void:
 
 func begin_throw(ids: Array) -> void:
 	if preferences.speed == 0 or preferences.reduced_motion: return
+	end_cup_animation()
 	throwing = true
 	throw_elapsed = 0.0
 	throw_frame_seconds = CupThrow.FRAME_SECONDS / (1.6 if preferences.speed == 2 else 1.0)
@@ -430,23 +435,29 @@ func begin_throw(ids: Array) -> void:
 	step_throw(0.0)
 
 func step_throw(delta: float) -> void:
-	if not throwing: return
+	if not throwing and not is_instance_valid(cup_throw): return
 	throw_elapsed += delta
 	var f := mini(int(throw_elapsed / throw_frame_seconds), CupThrow.FRAMES - 1)
 	if is_instance_valid(cup_throw): cup_throw.set_frame(f)
-	for flight in flying_dice:
-		var die: Control = flight.node
-		var landing_center: Vector2 = die.get_parent().position + flight.landing + die.size / 2.0
-		var state := CupThrow.die_state(flight.order, f, landing_center)
-		die.visible = state.visible
-		die.position = state.center - die.get_parent().position - die.size / 2.0
-		die.rotation_degrees = flight.angle + state.spin
-	if throw_elapsed >= throw_duration:
-		finish_throw()
-		feedback_text = "Tirada resuelta · elegí tus grupos"
-		if is_instance_valid(feedback_label): feedback_label.text = feedback_text
+	if throwing:
+		var last_landing := CupThrow.SHAKE + CupThrow.LIFTING
+		for flight in flying_dice:
+			var die: Control = flight.node
+			var landing_center: Vector2 = die.get_parent().position + flight.landing + die.size / 2.0
+			var state := CupThrow.die_state(flight.order, f, landing_center)
+			die.visible = state.visible
+			die.position = state.center - die.get_parent().position - die.size / 2.0
+			die.rotation_degrees = flight.angle + state.spin
+			last_landing = maxi(last_landing, CupThrow.landed_frame(flight.order))
+		# Los dados se pueden usar apenas cae el último; el vaso termina de bajar por su cuenta.
+		if f >= last_landing:
+			release_dice()
+			feedback_text = "Tirada resuelta · elegí tus grupos"
+			if is_instance_valid(feedback_label): feedback_label.text = feedback_text
+	if throw_elapsed >= throw_duration: end_cup_animation()
 
-func finish_throw() -> void:
+## Deja los dados en su lugar y de nuevo usables; el vaso puede seguir animándose.
+func release_dice() -> void:
 	for flight in flying_dice:
 		if not is_instance_valid(flight.node): continue
 		flight.node.position = flight.landing
@@ -457,6 +468,12 @@ func finish_throw() -> void:
 		flight.node.z_index = 0
 	flying_dice.clear()
 	throwing = false
+	if is_instance_valid(throw_blocker):
+		throw_blocker.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		throw_blocker.queue_free()
+
+## El vaso vuelve al fondo y la animación termina.
+func end_cup_animation() -> void:
 	if is_instance_valid(cup_throw):
 		cup_throw.queue_free()
 		cup_throw = null
@@ -464,9 +481,12 @@ func finish_throw() -> void:
 		background.cup_hidden = false
 		background.props.held.erase("cup")
 		background.queue_redraw()
-	if is_instance_valid(throw_blocker):
-		throw_blocker.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		throw_blocker.queue_free()
+
+## Al redibujar la pantalla: si los dados todavía vuelan se corta todo; si solo falta que el vaso baje, sigue.
+func finish_throw() -> void:
+	if throwing:
+		release_dice()
+		end_cup_animation()
 
 ## Modo de desarrollo: --boss=l3_conde,l5_visitante fuerza esos jefes al entrar a su nivel.
 func forced_boss_arguments() -> Array:
@@ -624,6 +644,7 @@ func cancel_navigation() -> void:
 	confirmation.hide()
 
 func _notification(what: int) -> void:
+	if what == NOTIFICATION_DRAG_END: dragged_group = []
 	if what == NOTIFICATION_WM_CLOSE_REQUEST and is_instance_valid(confirmation):
 		if detail.visible: detail.hide()
 		request_navigation("quit")
@@ -838,7 +859,7 @@ func update_hover_description() -> void:
 	if is_instance_valid(sticker_tip):
 		var sticker_id: String = hovered.get_meta("sticker_id", "") if hovered != null and not blocked else ""
 		if sticker_id == "" or game.thermos_stolen() or game.cup.stickers.get(sticker_id, 0) <= 0: sticker_tip.hide()
-		else: sticker_tip.show_for(sticker_id, game.cup.stickers[sticker_id], game.sticker_catalog, hovered.get_global_rect(), background.shop_mode)
+		else: sticker_tip.show_for(sticker_id, game.cup.stickers[sticker_id], game.sticker_catalog, hovered.get_global_rect(), background.shop_mode, hovered.get_meta("thermos_origin", Vector2.ZERO))
 	if is_instance_valid(die_card):
 		if hovered_die == null:
 			die_card.hide()
@@ -1142,22 +1163,61 @@ func make_zone(rect: Rect2, destination: String) -> Panel:
 	ui.add_child(zone)
 	return zone
 
+## Dados que viajan con `index` al arrastrarlo: toda la selección si él está seleccionado, si no solo él.
+func group_for_drag(index: int) -> Array:
+	dragged_group = []
+	if preferences.drag_groups or game.phase != "play" or index not in selected or selected.size() < 2: return []
+	var members: Array = []
+	for id in selected:
+		if table_dice.has(id) and is_instance_valid(table_dice[id]) and not table_dice[id].locked: members.append(table_dice[id])
+	if members.size() < 2: return []
+	for member in members: dragged_group.append(member.die_index)
+	return members
+
 func handle_die_drop(index: int, destination: String) -> void:
 	if throwing or detail.visible or confirmation.visible or game.phase != "play" or index < 0 or index >= game.dice.size() or game.is_grouped(index) or game.dice[index].value == 0: return
+	var group: Array = dragged_group.duplicate() if index in dragged_group else [index]
+	group = group.filter(func(id): return id is int and id >= 0 and id < game.dice.size() and not game.is_grouped(id) and game.dice[id].value != 0)
 	if destination == "draft":
 		if not preferences.drag_groups or game.dice[index].zone != "reserve": return
-		if index not in selected: selected.append(index)
+		for id in group:
+			if game.dice[id].zone == "reserve" and id not in selected: selected.append(id)
 		render()
 		return
 	if destination not in ["reserve", "cup"]: return
 	var from := ui.get_local_mouse_position()
-	if game.move_die(index, destination):
-		selected.erase(index)
-		if destination == "cup" and preferences.speed != 0 and not preferences.reduced_motion:
+	var moved: Array = []
+	for id in group:
+		if game.move_die(id, destination):
+			selected.erase(id)
+			moved.append(id)
+	var animate: bool = preferences.speed != 0 and not preferences.reduced_motion
+	if destination == "cup" and animate:
+		for k in range(moved.size()):
 			var entry := CupEntry.new()
 			add_child(entry)
-			entry.play(game.dice[index], game.boss_context(), from, 0.3 if preferences.speed == 2 else 0.5)
+			entry.play(game.dice[moved[k]], game.boss_context(), from + Die.PILE_OFFSETS[k % Die.PILE_OFFSETS.size()], 0.3 if preferences.speed == 2 else 0.5, k * 0.12)
+	if not moved.is_empty() or (destination == "reserve" and group.size() > 1):
 		render()
+		if destination == "reserve" and group.size() > 1 and animate: scatter_dice(group, from)
+
+## Dados soltados juntos en la mesa: caen donde se soltaron y se desparraman a sus lugares. Solo presentación.
+func scatter_dice(ids: Array, from: Vector2) -> void:
+	for k in range(ids.size()):
+		var die: Control = table_dice.get(ids[k])
+		if die == null or not is_instance_valid(die): continue
+		var landing := die.position
+		var angle := die.rotation_degrees
+		die.position = from + Die.PILE_OFFSETS[k % Die.PILE_OFFSETS.size()] - die.get_parent().position - die.size / 2.0
+		die.rotation_degrees = Die.PILE_ANGLES[k % Die.PILE_ANGLES.size()]
+		die.scale = Vector2.ONE * 1.25
+		die.z_index = 20
+		var speed_factor := 0.6 if preferences.speed == 2 else 1.0
+		var tween := die.create_tween()
+		tween.tween_property(die, "scale", Vector2.ONE, 0.12 * speed_factor)
+		tween.tween_property(die, "position", landing, 0.42 * speed_factor).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT).set_delay(k * 0.03)
+		tween.parallel().tween_property(die, "rotation_degrees", angle, 0.42 * speed_factor).set_delay(k * 0.03)
+		tween.tween_callback(func(): die.z_index = 0)
 
 func possible_combinations(index: int) -> Array:
 	if game.phase != "play" or game.rolls_made == 0 or index < 0 or index >= game.dice.size() or game.is_grouped(index) or game.dice[index].zone != "reserve": return []
@@ -1267,6 +1327,7 @@ func add_die(parent: Node, index: int, pos: Vector2, grouped := false, angle := 
 		if group.get("assigned", {}).has(index): die.wild_number = group.assigned[index]
 	die.die_index = index
 	die.chosen = index in selected
+	die.drag_group = group_for_drag.bind(index)
 	die.locked = grouped or game.phase != "play"
 	die.position = pos
 	die.size = Vector2(62, 62)
@@ -1487,6 +1548,17 @@ func shop_card(parent: Node, section: String, index: int, rect: Rect2) -> void:
 		if result.ok and offer.kind == "pack" and offer.effect.pack_kind == "receive_two":
 			show_sticker_reveal(offer.effect.items, previous_stickers), unavailable, true)
 	purchase.name = "Price"
+	# Todo lo que se vende se marca como clickeable: manito y borde amarillo sobre la silueta del objeto.
+	var offer_ring := OfferRing.new()
+	offer_ring.name = "OfferRing"
+	offer_ring.position = Vector2((rect.size.x - 100) / 2 - OfferRing.MARGIN, 10 - OfferRing.MARGIN)
+	offer_ring.key = JSON.stringify([offer.kind, offer.effect])
+	offer_ring.make_icon = func(holder: Node): shop_icon(holder, offer, Rect2(0, 0, 100, 91))
+	card.add_child(offer_ring)
+	for target in [object_hover, purchase]:
+		target.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+		target.mouse_entered.connect(func(): offer_ring.hover(true))
+		target.mouse_exited.connect(func(): offer_ring.hover(false))
 	object_hover.activated.connect(func():
 		if not purchase.disabled: purchase.pressed.emit())
 	purchase.add_theme_font_size_override("font_size", 20 if compact else 22)
@@ -1587,9 +1659,23 @@ func render_shop() -> void:
 	coin_sale_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
 	coin_sale_overlay.accepts = can_sell_dragged_coin
 	coin_sale_overlay.coin_dropped.connect(sell_dragged_coin)
-	coin_sale_overlay.add_theme_stylebox_override("panel", box(Color(0.46, 0.025, 0.10, 0.62), Color(0.93, 0.73, 0.40, 0.80), 2))
+	coin_sale_overlay.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
 	ui.add_child(coin_sale_overlay)
+	# La zona de venta sigue la forma de la valija (el interior es un trapecio) y usa la letra del juego.
+	var sale_shape := PackedVector2Array([Vector2(22, -2), Vector2(793, -2), Vector2(819, 377), Vector2(0, 377)])
+	coin_sale_overlay.shape = sale_shape
+	var sale_fill := Polygon2D.new()
+	sale_fill.polygon = sale_shape
+	sale_fill.color = Color(0.46, 0.025, 0.10, 0.62)
+	coin_sale_overlay.add_child(sale_fill)
+	var sale_edge := Line2D.new()
+	sale_edge.points = sale_shape
+	sale_edge.closed = true
+	sale_edge.width = 2.0
+	sale_edge.default_color = Color(0.93, 0.73, 0.40, 0.80)
+	coin_sale_overlay.add_child(sale_edge)
 	coin_sale_caption = shop_caption(coin_sale_overlay, "", Rect2(0, 140, 819, 90), 38)
+	coin_sale_caption.add_theme_font_override("font", ItemTooltip.pixel_font())
 	coin_sale_overlay.hide()
 
 func owned_shop_coin(coin: String, instance: int, rect: Rect2) -> Button:

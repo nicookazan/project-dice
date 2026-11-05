@@ -13,7 +13,7 @@ func _init() -> void:
 	z_index = 40
 
 ## `die_state` y `context` son los mismos que usa la mesa para dibujar el dado.
-func play(die_state, context, from: Vector2, seconds: float) -> void:
+func play(die_state, context, from: Vector2, seconds: float, delay := 0.0) -> void:
 	var die := Die.new()
 	die.configure_appearance(die_state, context)
 	die.locked = true
@@ -21,6 +21,7 @@ func play(die_state, context, from: Vector2, seconds: float) -> void:
 	die.size = Vector2(62, 62)
 	die.pivot_offset = die.size / 2.0
 	die.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	for state in ["normal", "hover", "pressed", "disabled", "focus"]: die.add_theme_stylebox_override(state, StyleBoxEmpty.new())
 	die.position = from - die.size / 2.0
 	add_child(die)
 	var wall := TextureRect.new()
@@ -33,6 +34,10 @@ func play(die_state, context, from: Vector2, seconds: float) -> void:
 	add_child(wall)
 	var mouth := MOUTH - die.size / 2.0
 	var tween := create_tween()
+	if delay > 0.0:
+		die.visible = false
+		tween.tween_interval(delay)
+		tween.tween_callback(func(): die.visible = true)
 	tween.tween_property(die, "position", mouth, seconds * 0.45).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 	tween.parallel().tween_property(die, "scale", Vector2.ONE * 0.62, seconds * 0.45)
 	tween.tween_property(die, "position:y", mouth.y + 70.0, seconds * 0.55).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)

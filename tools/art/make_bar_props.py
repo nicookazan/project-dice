@@ -64,6 +64,40 @@ def save_ring(name, ring):
     print("%-22s x=%d y=%d w=%d h=%d" % (name, x0, y0, x1 - x0, y1 - y0))
 
 
+STICKER_IDS = ["pair_loose", "trio", "straight", "full", "poker", "generala"]
+STICKER_SPOTS = {"pair_loose": (70, 122), "trio": (108, 134), "straight": (62, 168), "full": (102, 184), "poker": (74, 214), "generala": (108, 232)}
+THERMOS_AXIS, THERMOS_RADIUS = 86.0, 46.0
+
+
+def _snap(value):
+    return float(np.floor(value / 2.0 + 0.5)) * 2.0
+
+
+def _surface(x):
+    return THERMOS_AXIS + np.sin((x - THERMOS_AXIS) / THERMOS_RADIUS) * THERMOS_RADIUS
+
+
+def sticker_mask(sticker_id):
+    """Silueta del sticker tal como se dibuja sobre el termo (columnas comprimidas por el cilindro), en el espacio
+    del termo (144x350). Replica StickerArt.draw_on_thermos."""
+    sheet = np.array(Image.open(ART / "stickers-termo-v3.png").convert("RGBA"))
+    index = STICKER_IDS.index(sticker_id)
+    cx, cy = STICKER_SPOTS[sticker_id]
+    top = _snap(cy - 25.0)
+    left0 = cx - 25.0
+    mask = np.zeros((350, 144), bool)
+    for column in range(25):
+        left = left0 + column * 2.0
+        x0, x1 = int(_snap(_surface(left))), int(_snap(_surface(left + 2.0)))
+        if x1 <= x0:
+            continue
+        for row in range(25):
+            if sheet[row, index * 25 + column, 3] > 0:
+                y = int(top + row * 2)
+                mask[y:y + 2, x0:x1] = True
+    return mask
+
+
 def main():
     # La bandera exacta, y la pared sin ella.
     flag_canvas = Canvas(720, 150)
@@ -126,6 +160,14 @@ def main():
     fm[:r0] = False
     shop_mask[:900, :1440] = x2(fm)[:900, :1440]
     save_ring("aro-bandera-tienda-v3.png", ring_of(shop_mask))
+
+    # Stickers del termo: un aro por sticker en el espacio del termo (144x350), para dibujarlo sobre el termo.
+    for sticker_id in STICKER_IDS:
+        ring = ring_of(sticker_mask(sticker_id))
+        out = np.zeros((350, 144, 4), np.uint8)
+        out[ring] = GOLD
+        Image.fromarray(out).save(ART / ("aro-sticker-%s-v3.png" % sticker_id))
+    print("aro-sticker-*-v3.png: 6 aros de 144x350")
 
     # Mano del fondo: la silueta de la mano común (todas las manos comparten forma), en (624, 34).
     hand = np.array(Image.open(ART / "mano-v3.png").convert("RGBA"))[:53, :61, 3] > 0

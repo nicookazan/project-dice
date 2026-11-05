@@ -19,6 +19,11 @@ var hovering := false
 var combo_hint := false
 var sway_enabled := true
 var own_drag := false
+## Dados que viajan juntos al arrastrar este (los pone la mesa); si no devuelve más de uno, se arrastra solo este.
+var drag_group: Callable
+var faded := false
+const PILE_OFFSETS := [Vector2(-16, 8), Vector2(12, -8), Vector2(4, 14), Vector2(-8, -14), Vector2(18, 10)]
+const PILE_ANGLES := [-12.0, 9.0, 3.0, -6.0, 14.0]
 var shell_broken := false
 var wild_number := 0
 var pip_material := ""
@@ -196,8 +201,8 @@ func selection_brackets(color: Color) -> void:
 		draw_line(origin, origin + Vector2(direction.x * 11, 0), color, 2)
 		draw_line(origin, origin + Vector2(0, direction.y * 11), color, 2)
 
-func _get_drag_data(_at: Vector2) -> Variant:
-	if locked or value == 0: return null
+## Copia sin interacción de este dado para el dibujo que se lleva el mouse.
+func make_preview() -> Control:
 	var preview = get_script().new()
 	preview.value = value
 	preview.pip_material = pip_material
@@ -212,17 +217,43 @@ func _get_drag_data(_at: Vector2) -> Variant:
 	preview.add_theme_stylebox_override("normal", StyleBoxEmpty.new())
 	preview.add_theme_stylebox_override("hover", StyleBoxEmpty.new())
 	preview.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return preview
+
+func _get_drag_data(_at: Vector2) -> Variant:
+	if locked or value == 0: return null
+	var members: Array = drag_group.call() if drag_group.is_valid() else []
+	if members.size() < 2 or not self in members: members = [self]
+	var visual: Control
+	if members.size() == 1:
+		visual = make_preview()
+	else:
+		# Varios dados: se juntan en un bollito que se balancea como un solo objeto.
+		visual = Control.new()
+		visual.size = Vector2(62, 62)
+		visual.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		for k in range(members.size()):
+			var piece: Control = members[k].make_preview()
+			piece.pivot_offset = Vector2(31, 31)
+			piece.position = PILE_OFFSETS[k % PILE_OFFSETS.size()]
+			piece.rotation_degrees = PILE_ANGLES[k % PILE_ANGLES.size()]
+			piece.scale = Vector2.ONE * 0.94
+			visual.add_child(piece)
 	var sway := preload("res://scripts/drag_sway.gd").new()
-	sway.visual = preview
+	sway.visual = visual
 	sway.enabled = sway_enabled
-	sway.add_child(preview)
+	sway.add_child(visual)
 	set_drag_preview(sway)
+	var ids: Array = []
+	for member in members:
+		ids.append(member.die_index)
+		member.faded = true
+		member.modulate.a = 0.35
 	own_drag = true
-	modulate.a = 0.35
-	return {"die": die_index}
+	return {"die": die_index, "dice": ids}
 
 func _notification(what: int) -> void:
-	if what == NOTIFICATION_DRAG_END and own_drag:
+	if what == NOTIFICATION_DRAG_END and (own_drag or faded):
 		own_drag = false
+		faded = false
 		modulate.a = 1
 

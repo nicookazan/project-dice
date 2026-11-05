@@ -9,6 +9,7 @@ const SIZE := Vector2(314, 72)
 const MARGIN := 16
 const GAP := 16.0
 
+var ring: TextureRect
 var panel: PanelContainer
 var label: RichTextLabel
 
@@ -16,6 +17,13 @@ func _ready() -> void:
 	name = "StickerTip"
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	z_index = 90
+	# Borde dorado que sigue la silueta del sticker (sin recuadro); el aro vive en el espacio del termo.
+	ring = TextureRect.new()
+	ring.name = "StickerRing"
+	ring.stretch_mode = TextureRect.STRETCH_KEEP
+	ring.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	ring.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(ring)
 	panel = PanelContainer.new()
 	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var skin := Tip.skin()
@@ -36,11 +44,20 @@ func _ready() -> void:
 	hide()
 
 ## `rect` es el sticker en pantalla. `to_right`: la ventanita va a la derecha (tienda) en vez de a la izquierda (mesa).
-func show_for(id: String, level: int, catalog: Dictionary, rect: Rect2, to_right: bool) -> void:
+func show_for(id: String, level: int, catalog: Dictionary, rect: Rect2, to_right: bool, thermos_origin := Vector2.ZERO) -> void:
 	label.text = bbcode(id, level, catalog)
+	ring.texture = ring_texture(id)
+	ring.position = thermos_origin
 	if to_right: panel.position = Vector2(rect.end.x + GAP, rect.position.y - 20.0)
 	else: panel.position = Vector2(rect.position.x - SIZE.x - GAP - 2.0, rect.position.y - 28.0)
 	show()
+
+static var ring_cache: Dictionary = {}
+
+## Aro dorado del sticker en el espacio del termo (lo genera tools/art/make_bar_props.py).
+static func ring_texture(id: String) -> Texture2D:
+	if not ring_cache.has(id): ring_cache[id] = load("res://assets/art/pixel-v3/aro-sticker-%s-v3.png" % id)
+	return ring_cache[id]
 
 ## Lo que el sticker suma en su categoría con este nivel; sale de la misma función que usa la puntuación.
 static func effect(id: String, level: int, catalog: Dictionary) -> Dictionary:

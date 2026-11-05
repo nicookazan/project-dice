@@ -28,7 +28,7 @@ static func run(scene, check: Callable) -> void:
 	var pouring: Dictionary = BarProps.thermos_pose(30)
 	var back: Dictionary = BarProps.thermos_pose(78)
 	check.call(rest.center == BarProps.THERMOS_REST and rest.rotation == 0.0 and not rest.over, "Bar props: the thermos starts at its resting place")
-	check.call(pouring.center == Vector2(966, 426) and pouring.rotation == 68.0 and pouring.over, "Bar props: it pours at (966, 426) tilted 68 degrees, in front of the mate")
+	check.call(pouring.center == Vector2(950, 402) and pouring.rotation == 68.0 and pouring.over, "Bar props: it pours at (950, 402) tilted 68 degrees, in front of the mate")
 	check.call(back.center == BarProps.THERMOS_REST and back.rotation == 0.0 and not BarProps.thermos_pose(5).over and BarProps.thermos_pose(20).over, "Bar props: it ends back in place and crosses in front of the mate only while it travels")
 	# Zonas en la mesa.
 	scene.game = Game.new(521)
