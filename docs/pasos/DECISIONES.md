@@ -184,3 +184,16 @@ Versión 1 · 25 de octubre de 2026. Este registro evita bloquear todo el proyec
 
 **Estado:** Pendiente. Registrar aquí la decisión adoptada, su fuente y fecha al resolverla.
 
+## D14 — Jugabilidad e interactividad (etapa posterior al paso 20)
+
+**Decidido por defecto, a confirmar jugando:** (1) Reservar: la tela izquierda muestra "Reservar" pero el dado sigue armando grupo; la tela del medio sigue guardando dados sueltos. (2) Clic en la mano: juega piedra, papel o tijera; el poder del jefe se lee en la libreta y al pasar el mouse. (3) Piedra, papel o tijera es solo un gesto, sin ganador ni efecto. (4) Los guardianes de Dios no juegan; el clic muestra su información. (5) Clic en el termo: ceba el mate y se quita la ventana de detalle (los stickers se leen al pasar el mouse); si está robado conserva el clic actual. (6) Clic en el vaso: tira siempre que TIRAR esté habilitado; el botón TIRAR se queda. (7) "Jugadas posibles" viene activada por defecto. (8) Objetos con borde dorado: mano, sifones, bandera, termo y vaso.
+
+**Pasos afectados:** J01–J08.
+
+**Cuándo resolver / qué puede avanzar:** Todo avanza con estas decisiones; el autor las confirma o cambia al probar cada rama.
+
+**Preguntas abiertas:** ¿Reservar debería apartar el dado? ¿El jugador también elige en piedra, papel o tijera? ¿Se quita la ventana del termo? ¿El vaso tira solo con los 5 dados? ¿Más objetos con borde dorado?
+
+**Fuente:** plan de implementación de jugabilidad en Notion (4 de noviembre de 2026) y bocetos aprobados. T4 (vendedor enojado) quedó afuera por pedido del autor.
+
+**Estado:** Aplicada por defecto; confirmación pendiente.

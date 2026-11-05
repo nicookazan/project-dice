@@ -24,6 +24,8 @@
 
 # Estado actual — 27 de octubre de 2026
 
+**Etapa de jugabilidad e interactividad (4 de noviembre de 2026): J00 completado.** Fichas [J00–J08](docs/pasos/README.md), decisiones D14, generadores de los bocetos aprobados en `tools/art/bocetos-jugabilidad/` (reproducen byte a byte los GIF/PNG aprobados) y sprites del vaso (`vaso-brillo-v3.png`, `vaso-frente-v3.png`, de `tools/art/make_vaso_jugabilidad.py`). Sin cambios de comportamiento. Siguiente: J01.
+
 **Treinta caras negras/de gema integradas y guardadas en el PRD:** seis números en cada acabado mate, más cuerpo sin resultado, treinta recursos individuales y galería desde menú/Opciones. Mesa, arrastre, libreta de tienda y ofertas de gema/cara usan el nuevo diseño. **2101 comprobaciones aprobadas, cero fallos**, con conteo sobre los píxeles de todas las caras y revisión a dos resoluciones. [Catálogo, procedencia y límites](docs/CARAS-DE-DADOS.md). Resto del pase artístico pendiente.
 
 **Cambio visual confirmado:** las mejoras antes llamadas carcasas pasan a ser **material de los puntos**; negro base y gemas en los puntos, conservando sus efectos y reglas. No recolorean el cuerpo. Decisión documentada en ambos PRD y en el [diseño maestro](docs/DISENO-MAESTRO-DADOS.md). Aplicación en sprites, tienda y terminología de interfaz pendiente del pase artístico de 19; sin cambios de código en esta revisión.
