@@ -65,3 +65,13 @@ Los errores de escritura muestran un botón de reintento sin perder el estado vi
 ## Límites
 
 Persistencia local v1 para este prototipo; no sincroniza nube, cuentas, metaprogreso ni preferencias de pantalla. Los respaldos históricos se conservan; no se implementó una política de limpieza automática. Las pruebas no modifican el guardado del jugador. No se aprueba balance comercial pendiente D01/D02/D04 ni se declara validación humana de diversión. Siguiente paso: 16, validación integral y valores de prueba explícitos.
+
+## Actualización: versión 9 (etapa de monedas)
+
+La versión 9 suma seis campos a la partida: `hand_mult_bonus`, `hand_points_bonus`, `visit_discount`, `boss_shield_active`, `once_coins_seen` y `pending_coin_pack`. Arrancan vacíos y los usan las monedas nuevas de MON3 a MON8. La migración `coins_v9` (en `scripts/save_migrations.gd`) solo rellena lo que falta, así que migrar dos veces da lo mismo, y no toca semilla, azar, plata, inventario ni ofertas ya generadas.
+
+También reconstruye `shop_tables.coins` con el catálogo vigente, porque la tabla guardada trae precios de las rarezas anteriores y no incluye monedas nuevas. Solo lo hace con tablas de forma estándar (todas monedas de peso 1); las tablas de laboratorio se respetan.
+
+El validador acepta rangos (`hand_mult_bonus` 0–1000, `hand_points_bonus` 0–1.000.000, `visit_discount` 0–0,9) y rechaza ids de `once_coins_seen` que no existan. Mientras no exista la fase de elección de paquetes (MON7), un `pending_coin_pack` no vacío se rechaza.
+
+Las ofertas ya generadas conservan su precio hasta renovarse; la reventa cambia de inmediato con la rareza. Un guardado v9 hecho entre pasos de la etapa no recibe las monedas agregadas después: para probar cada paso, usar partida nueva. Evidencia: `tests/coin_rarity_tests.gd`.

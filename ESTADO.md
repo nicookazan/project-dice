@@ -24,7 +24,7 @@
 
 # Estado actual — 27 de octubre de 2026
 
-**Etapa de monedas (5 de noviembre de 2026): MON0 completado.** Fichas [MON0–MON9](docs/pasos/README.md) y decisiones D15, confirmadas por el autor. Suite base: 3452 comprobaciones, cero fallos. Sin cambios de comportamiento. Siguiente: MON1 (bocetos, a aprobar antes de integrar).
+**Etapa de monedas (5 de noviembre de 2026): MON0 y MON2 completados.** Fichas [MON0–MON9](docs/pasos/README.md) y decisiones D15, confirmadas por el autor. MON2: 10 cambios de rareza ([tabla](docs/MONEDAS-NUEVAS.md)) y guardado v9 con migración `coins_v9` ([contrato](docs/GUARDADO-Y-CONTINUAR.md)). Suite: 3481 comprobaciones, cero fallos (base: 3452). Siguiente: MON1 (bocetos, a aprobar antes de integrar).
 
 **Etapa de jugabilidad e interactividad (4 de noviembre de 2026): J00 completado.** Fichas [J00–J08](docs/pasos/README.md), decisiones D14, generadores de los bocetos aprobados en `tools/art/bocetos-jugabilidad/` (reproducen byte a byte los GIF/PNG aprobados) y sprites del vaso (`vaso-brillo-v3.png`, `vaso-frente-v3.png`, de `tools/art/make_vaso_jugabilidad.py`). Sin cambios de comportamiento. Siguiente: J01.
 

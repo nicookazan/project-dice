@@ -74,6 +74,17 @@ var double_mult := false
 var free_reroll_tokens := 0
 var free_reroll_used := false
 var free_renewals := 0
+## Etapa de monedas (guardado v9). Bonos de la mano actual: se limpian al anotar y al empezar la mano.
+var hand_mult_bonus := 0
+var hand_points_bonus := 0
+## Descuento de la visita a la tienda (0 = ninguno); se limpia al abrir una visita nueva.
+var visit_discount := 0.0
+## Escudo de jefe: suspende el poder del jefe durante la mano actual.
+var boss_shield_active := false
+## Monedas "una vez por partida" que ya aparecieron en una oferta.
+var once_coins_seen: Array = []
+## Paquete de monedas pagado y pendiente de elegir (vacío si no hay).
+var pending_coin_pack: Dictionary = {}
 var shop_tables: Dictionary = Shop.default_tables()
 var shop_state: Dictionary = {}
 var shop_offer_sequence := 0
@@ -138,6 +149,9 @@ func restart(seed_value: int = -1) -> void:
 	sticker_offers = {}
 	sticker_offer_sequence = 0
 	pending_sticker_pack = {}
+	pending_coin_pack = {}
+	once_coins_seen = []
+	visit_discount = 0.0
 	event_sequence = 0
 	_start_encounter()
 
@@ -170,6 +184,9 @@ func start_hand() -> void:
 	rolls_left = BASE_ROLLS + int(CoinEffects.sum_of(passives, "extra_rolls"))
 	rolls_made = 0
 	double_mult = false
+	hand_mult_bonus = 0
+	hand_points_bonus = 0
+	boss_shield_active = false
 	free_reroll_tokens = 0
 	free_reroll_used = false
 	groups = []
@@ -192,6 +209,8 @@ func snapshot() -> Dictionary:
 		"groups": groups, "passives": passives, "consumable": consumable,
 		"impulses": impulses, "double_mult": double_mult, "free_reroll_tokens": free_reroll_tokens,
 		"free_reroll_used": free_reroll_used, "free_renewals": free_renewals,
+		"hand_mult_bonus": hand_mult_bonus, "hand_points_bonus": hand_points_bonus, "visit_discount": visit_discount,
+		"boss_shield_active": boss_shield_active, "once_coins_seen": once_coins_seen, "pending_coin_pack": pending_coin_pack,
 		"offers": offers, "reroll_prices": reroll_prices,
 		"last_score": last_score, "payout": payout, "history": history,
 		"message": message, "events": events, "event_sequence": event_sequence,
@@ -703,6 +722,7 @@ func open_shop() -> bool:
 	shop_offer_sequence = generated.sequence
 	phase = "shop"
 	impulses = []
+	visit_discount = 0.0
 	reroll_prices = {"coins": 1, "components": 1, "numbers": 1, "stickers": 1}
 	free_renewals = int(CoinEffects.sum_of(passives, "free_renewals"))
 	return true

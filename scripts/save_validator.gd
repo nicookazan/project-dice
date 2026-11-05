@@ -74,6 +74,9 @@ static func validate(data: Variant) -> String:
 	if not BossRules.valid_encounters(g.level_encounters) or not BossRules.valid_rule(g.boss_rule): return "definición de jefe o recorrido inválida"
 	if g.phase not in PHASES or g.rival < 0 or g.rival >= g.level_encounters.size() or g.hand not in [1, 2] or g.points < 0 or g.rolls_left < 0 or g.rolls_left > 100 or g.rolls_made < 0 or g.rolls_made > 100: return "fase o contadores fuera de rango"
 	if not Campaign.valid_progress(g): return "progreso de campaña inconsistente"
+	if g.hand_mult_bonus < 0 or g.hand_mult_bonus > 1000 or g.hand_points_bonus < 0 or g.hand_points_bonus > 1000000 or g.visit_discount < 0.0 or g.visit_discount > 0.9: return "bonos de moneda fuera de rango"
+	if g.once_coins_seen.size() > 100 or not g.once_coins_seen.all(func(id): return id is String and Coins.DATA.has(id)): return "monedas de una vez inválidas"
+	if g.pending_coin_pack.size() > 0: return "paquete de monedas pendiente sin soporte"
 	if not BossRules.valid_state(g.boss_rule, g.boss_state, g.level_encounters[g.rival].kind == "boss"): return "estado del jefe inválido"
 	for key in ["event_sequence", "coin_instance_sequence", "shop_offer_sequence", "sticker_offer_sequence"]:
 		if g[key] < 0: return "secuencia negativa"

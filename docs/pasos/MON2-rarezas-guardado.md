@@ -2,7 +2,7 @@
 
 Etapa de monedas · 5 de noviembre de 2026.
 
-**Rama:** `feature/monedas-rarezas`. **Depende de:** MON0. **Estado actual:** Sin empezar. **Decisiones vinculadas:** D15.
+**Rama:** `feature/monedas-rarezas`. **Depende de:** MON0. **Estado actual:** Completado (suite: 3481 comprobaciones, cero fallos). **Decisiones vinculadas:** D15.
 
 ## Objetivo
 Aplicar los 10 cambios de rareza y dejar el guardado listo para el resto de la etapa.

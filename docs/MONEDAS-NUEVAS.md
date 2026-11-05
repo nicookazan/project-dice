@@ -188,3 +188,22 @@ Cambiar la cara de un dado a elección (ya existe con la compra de dados). Moned
 4. **Notion:** este documento es local; el PRD de Notion hay que actualizarlo a mano.
 
 Resueltos: U01 se reemplaza por Impulso 1 y 4; el comodín vale el número que imita.
+
+## Actualización: rarezas de la etapa de monedas (5 de noviembre de 2026)
+
+Cambios de rareza aprobados por el autor. Precio y reventa salen de la rareza (Común $4 / $2, Rara $6 / $3). Siguen provisionales hasta el ítem 7.
+
+| Moneda | Código | Antes | Ahora |
+|---|---|---|---|
+| Puntos de generala | C16 | Rara | Común |
+| Dados de metal | C22 | Rara | Común |
+| Dados elementales | C23 | Rara | Común |
+| Gemas | C24 | Rara | Común |
+| Seises | C35 | Rara | Común |
+| Renovación gratis | C21 | Común | Rara |
+| Tiradas sin usar | C37 | Común | Rara |
+| Última tirada | C38 | Común | Rara |
+| Segunda mano | C39 | Común | Rara |
+| Interés | C42 | Común | Rara |
+
+Las tablas de más arriba conservan la rareza original de cada moneda; esta tabla manda. Plan completo: [fichas MON0–MON9](pasos/README.md) y decisiones D15.

@@ -52,6 +52,22 @@ static func coins_v7(game: Dictionary) -> String:
 		game.shop_tables["coin_rarity_weights"] = staged.coin_rarity_weights
 	return ""
 
+## v8 -> v9 (etapa de monedas): campos nuevos de la partida y tabla de monedas de la tienda con el catálogo vigente.
+## Idempotente: solo rellena lo que falta. Semilla, azar, plata, inventario y ofertas ya generadas no se tocan.
+static func coins_v9(game: Dictionary) -> String:
+	const Shop = preload("res://scripts/shop.gd")
+	var defaults := {"hand_mult_bonus": 0, "hand_points_bonus": 0, "visit_discount": 0.0, "boss_shield_active": false, "once_coins_seen": [], "pending_coin_pack": {}}
+	for key in defaults:
+		if not game.has(key): game[key] = defaults[key]
+	# Las tablas guardadas traen precios de rarezas viejas y no incluyen las monedas nuevas. Solo se
+	# reconstruyen las de forma estándar (monedas de peso 1); las tablas de laboratorio se respetan.
+	if game.get("shop_tables") is Dictionary and game.shop_tables.get("coins") is Array:
+		var standard := true
+		for entry in game.shop_tables.coins:
+			if not entry is Dictionary or entry.get("kind") != "coin" or entry.get("weight") != 1.0: standard = false
+		if standard: game.shop_tables["coins"] = Shop.default_tables().coins
+	return ""
+
 ## v7 -> v8: los ids de prueba pasan al catálogo de jefes (por nivel y posición) y aparece `boss_state`.
 ## Se conservan semilla, estado del azar, cartera, inventario y progreso; la regla pasa a ser la del jefe del catálogo.
 static func bosses_v8(game: Dictionary) -> String:
