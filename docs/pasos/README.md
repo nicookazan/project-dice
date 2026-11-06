@@ -67,8 +67,8 @@ Versión 1 · 25 de octubre de 2026.
 | [MON5 — Monedas de un uso simples](MON5-uso-simples.md) | Monedas | MON1, MON2 | Completado |
 | [MON6 — Relanzo total, Voltear dado y Escudo de jefe](MON6-uso-complejas.md) | Monedas | MON5 | Completado |
 | [MON7 — Paquete de monedas: reglas](MON7-paquete-reglas.md) | Monedas | MON2 | Completado |
-| [MON8 — Paquete de monedas: interfaz](MON8-paquete-interfaz.md) | Monedas | MON1, MON7 | Sin empezar |
-| [MON9 — Cierre de la etapa de monedas](MON9-cierre-monedas.md) | Monedas | MON0–MON8 | Sin empezar |
+| [MON8 — Paquete de monedas: interfaz](MON8-paquete-interfaz.md) | Monedas | MON1, MON7 | Completado |
+| [MON9 — Cierre de la etapa de monedas](MON9-cierre-monedas.md) | Monedas | MON0–MON8 | En curso |
 
 Las fichas J00–J08 son la etapa de jugabilidad e interactividad posterior al paso 20 (plan en Notion; decisiones en D14). Las fichas MON0–MON9 son la etapa de monedas (plan en Notion; decisiones en D15). Orden no significa fecha ni duración. Se recomienda ejecutar una ficha por vez, comprobar su entrega y entonces habilitar la siguiente. Algunas dependencias permiten trabajo independiente, pero no se propone desarrollar todo simultáneamente.
 

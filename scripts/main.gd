@@ -20,6 +20,7 @@ const CoinArt = preload("res://scripts/coin_art.gd")
 const ShopArt = preload("res://scripts/shop_art.gd")
 const UiSkin = preload("res://scripts/ui_skin.gd")
 const ItemTooltip = preload("res://scripts/item_tooltip.gd")
+const CoinPackPanel = preload("res://scripts/coin_pack_panel.gd")
 const HoverButton = preload("res://scripts/hover_button.gd")
 const HoverPanel = preload("res://scripts/hover_panel.gd")
 const Materials = preload("res://scripts/materials.gd")
@@ -63,6 +64,8 @@ var repair_selection: Array = []
 var shop_section := "coins"
 var purchase_error := ""
 var pack_panel_open := true
+## Moneda del paquete que se está por reemplazar ("" = ninguna). Solo de pantalla, nunca se guarda.
+var coin_pack_replacing := ""
 var sticker_animation: Control
 var ui: Control
 var cup_zone: Zone
@@ -878,7 +881,7 @@ func update_hover_description() -> void:
 	if not is_instance_valid(hover_description): return
 	sync_sticker_zones()
 	var hovered := get_viewport().gui_get_hovered_control()
-	var blocked: bool = get_viewport().gui_is_dragging() or detail.visible or confirmation.visible or is_instance_valid(sticker_book) or game.phase in ["purchase_target", "sticker_choice"]
+	var blocked: bool = get_viewport().gui_is_dragging() or detail.visible or confirmation.visible or is_instance_valid(sticker_book) or game.phase in ["purchase_target", "sticker_choice", "coin_choice"]
 	var hovered_die: Die = hovered if hovered != null and hovered.get_script() == Die and hovered.die_index >= 0 and hovered.die_index < game.dice.size() and not blocked else null
 	var text := ""
 	if hovered != null and hovered is Control and hovered_die == null and not blocked:
@@ -956,7 +959,7 @@ func render() -> void:
 	finish_throw()
 	table_dice.clear()
 	var profile := Presentation.profile(game)
-	background.shop_mode = game.phase in ["shop", "purchase_target", "sticker_choice"]
+	background.shop_mode = game.phase in ["shop", "purchase_target", "sticker_choice", "coin_choice"]
 	background.stickers = game.cup.stickers.duplicate()
 	if is_instance_valid(background): background.configure(profile, preferences)
 	if is_instance_valid(audio): audio.configure(preferences, profile.environment)
@@ -988,14 +991,15 @@ func render() -> void:
 		render_entry()
 		checkpoint()
 		return
-	if game.phase != "sticker_choice": pack_panel_open = true
+	if game.phase not in ["sticker_choice", "coin_choice"]: pack_panel_open = true
+	if game.phase != "coin_choice": coin_pack_replacing = ""
 	if background.shop_mode:
 		render_shop()
 		finish_render()
 		return
 	button(ui, "Menú", Rect2(1220, 23, 185, 38), show_game_menu)
-	if game.phase not in ["shop", "purchase_target", "sticker_choice"]: shop_section = "coins"
-	if game.phase != "sticker_choice": pack_panel_open = true
+	if game.phase not in ["shop", "purchase_target", "sticker_choice", "coin_choice"]: shop_section = "coins"
+	if game.phase not in ["sticker_choice", "coin_choice"]: pack_panel_open = true
 	render_notebook()
 	render_table()
 	render_inventory()
@@ -1035,6 +1039,11 @@ func finish_render() -> void:
 	elif game.phase == "sticker_choice":
 		if pack_panel_open: render_pack_choice()
 		else: button(ui, "Elegir sticker pendiente", Rect2(1045, 748, 355, 40), func():
+			pack_panel_open = true
+			render())
+	elif game.phase == "coin_choice":
+		if pack_panel_open: CoinPackPanel.build(self)
+		else: button(ui, "Elegir moneda pendiente", Rect2(1045, 748, 355, 40), func():
 			pack_panel_open = true
 			render())
 	checkpoint()
@@ -1494,6 +1503,8 @@ func shop_offer_text(offer: Dictionary) -> Array:
 			var data: Dictionary = game.sticker_catalog[effect.id]
 			var level: int = game.cup.stickers.get(effect.id, 0)
 			return [Stickers.NAMES[effect.id], "Nivel %d → %d · +%s puntos/nivel\n+%s al multiplicador/nivel\nCategorías: %s." % [level, level + 1, number(data.points_per_level), number(data.multiplier_per_level), ", ".join(Stickers.CATEGORIES[effect.id])]]
+		"coin_pack": return ["Paquete de monedas", "%s. No se ve el contenido hasta comprarlo.
+Se puede comprar con el inventario lleno: después elegís y, si no hay lugar, reemplazás una moneda tuya." % CoinPackPanel.closed_text(effect)]
 		"pack": return ["Paquete de stickers", "Elegí uno entre tres distintos." if effect.pack_kind == "choose_one" else "Recibís dos stickers distintos."]
 	return ["Oferta", ""]
 
@@ -1529,6 +1540,13 @@ func shop_icon(parent: Node, offer: Dictionary, rect: Rect2) -> void:
 		return
 	if offer.kind == "coin":
 		add_coin(parent, offer.effect.coin_id, rect)
+		return
+	if offer.kind == "coin_pack":
+		var ring := panel(parent, Rect2(rect.position + Vector2(rect.size.x * 0.12, 0), rect.size - Vector2(rect.size.x * 0.24, 14)), Color.TRANSPARENT, gold)
+		ring.name = "PackRing"
+		ring.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		add_coin(parent, "pack_small" if offer.effect.size == "small" else "pack_large", Rect2(rect.position + Vector2(rect.size.x * 0.12, 2), rect.size - Vector2(rect.size.x * 0.24, 18)))
+		shop_caption(parent, CoinPackPanel.closed_text(offer.effect), Rect2(rect.position + Vector2(-6, rect.size.y - 18), Vector2(rect.size.x + 12, 18)), 11, gold)
 		return
 	if offer.kind in ["face", "shell", "material", "element"]:
 		var face := Die.new()

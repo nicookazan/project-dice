@@ -2,7 +2,7 @@
 
 Etapa de monedas · 5 de noviembre de 2026.
 
-**Rama:** `feature/monedas-cierre`. **Depende de:** MON0–MON8. **Estado actual:** Sin empezar. **Decisiones vinculadas:** D15, D11.
+**Rama:** `feature/monedas-paquete` (el cierre va en la misma rama). **Depende de:** MON0–MON8. **Estado actual:** Documentación y suite completas (4117 comprobaciones, cero fallos). Faltan los ítems 3 a 5, que son del autor: prueba rápida con `Jugar-jefe.cmd`, partida completa y marcar la tarea en Notion. **Decisiones vinculadas:** D15, D11.
 
 ## Objetivo
 Dejar documentada la etapa y probada en una partida real.

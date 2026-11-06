@@ -5,6 +5,7 @@ const Coins = preload("res://scripts/coins.gd")
 const Shop = preload("res://scripts/shop.gd")
 const SaveStore = preload("res://scripts/save_store.gd")
 const Validator = preload("res://scripts/save_validator.gd")
+const UI = preload("res://tests/interface_tests.gd")
 
 const UI_STATE = {"selected": [], "repair_selection": [], "shop_section": "coins", "pack_panel_open": false}
 ## Inventarios extremos para comprobar que el paquete siempre deja una elección legal.
@@ -274,3 +275,76 @@ static func _test_save(check: Callable) -> void:
 	foreign.pending_coin_pack.received_instances = [1]
 	foreign.pending_coin_pack.picks_left = 1
 	check.call(Validator.validate({"game": foreign, "ui": UI_STATE.duplicate(true)}) != "" or open.pending_coin_pack.items.has("full"), "MON7: una moneda recibida que no era del paquete se rechaza")
+
+## Pantalla con la escena real: carta cerrada, panel de elección, reemplazo, cerrar y reabrir.
+static func run_ui(scene, check: Callable) -> void:
+	var previous = scene.game
+	scene.detail.hide()
+	scene.confirmation.hide()
+	scene.pack_panel_open = true
+	scene.coin_pack_replacing = ""
+	var game = null
+	for seed_value in range(1, 80):
+		game = _shop_game(seed_value, INVENTORIES["lleno"].passives)
+		if _pack(game).effect.size == "large" and _pack(game).effect.items.filter(func(id): return id in Coins.PASSIVES).size() >= 2: break
+	scene.game = game
+	scene.render()
+	var card = scene.ui.get_node_or_null("Shop_coins/Offer_3")
+	var offer: Dictionary = _pack(game)
+	check.call(card != null and UI.text_in(card, "Elegí 2 entre 5") and scene.ui.get_node_or_null("Shop_coins/Offer_3/Price") != null, "MON8: la carta cerrada dice Elegí 2 entre 5 y trae precio")
+	check.call(offer.effect.items.all(func(id): return not UI.text_in(card, Coins.definition(id).name)), "MON8: la carta cerrada no muestra el contenido")
+	var cash: int = game.cash
+	scene.ui.get_node("Shop_coins/Offer_3/Price").pressed.emit()
+	check.call(game.phase == "coin_choice" and game.cash == cash - offer.price, "MON8: comprar desde la carta abre la elección y cobra")
+	var panel = scene.ui.get_node_or_null("CoinChoice")
+	check.call(panel != null and UI.text_in(panel, "ELEGÍ DOS MONEDAS") and UI.text_in(panel, "faltan 2 elecciones"), "MON8: el panel grande muestra el título y cuántas elecciones faltan")
+	check.call(offer.effect.items.all(func(id): return panel.get_node_or_null("PackCoin_" + id) != null), "MON8: el panel muestra las cinco cartas con su moneda")
+	# Cerrar y reabrir.
+	UI.find_button(panel, "Cerrar panel").pressed.emit()
+	check.call(not scene.pack_panel_open and scene.ui.get_node_or_null("CoinChoice") == null and UI.find_button(scene.ui, "Elegir moneda pendiente") != null and game.phase == "coin_choice", "MON8: cerrar el panel deja el botón para reabrirlo y la elección pendiente")
+	UI.find_button(scene.ui, "Elegir moneda pendiente").pressed.emit()
+	panel = scene.ui.get_node_or_null("CoinChoice")
+	check.call(scene.pack_panel_open and panel != null, "MON8: el botón reabre el panel")
+	# Inventario lleno: elegir una pasiva pide reemplazo y muestra la reventa.
+	var passive: String = offer.effect.items.filter(func(id): return id in Coins.PASSIVES)[0]
+	panel.get_node("PackCoin_" + passive).pressed.emit()
+	panel = scene.ui.get_node_or_null("CoinChoice")
+	check.call(scene.coin_pack_replacing == passive and panel != null and UI.text_in(panel, "reventa") and UI.find_button(panel, "Volver a las monedas del paquete") != null, "MON8: sin lugar se muestran las monedas propias con su reventa")
+	UI.find_button(panel, "Volver a las monedas del paquete").pressed.emit()
+	check.call(scene.coin_pack_replacing == "" and scene.ui.get_node_or_null("CoinChoice/PackCoin_" + passive) != null, "MON8: volver regresa a las cartas del paquete")
+	scene.ui.get_node("CoinChoice/PackCoin_" + passive).pressed.emit()
+	var outgoing: int = game.coin_inventory.equipped[1].instance_id
+	var outgoing_id: String = game.coin_inventory.equipped[1].coin_id
+	scene.ui.get_node("CoinChoice/ReplaceCoin_%d" % outgoing).pressed.emit()
+	check.call(passive in game.passives and outgoing_id not in game.passives and game.pending_coin_pack.picks_left == 1 and game.phase == "coin_choice", "MON8: reemplazar desde la pantalla aplica elección y reemplazo juntos")
+	check.call(UI.text_in(scene.ui.get_node("CoinChoice"), "falta 1 elección") and scene.ui.get_node("CoinChoice").get_node_or_null("PackCoin_" + passive).disabled, "MON8: lo ya elegido queda apagado y falta una elección")
+	# Moneda de ranura bloqueada: con Bolsillo no se puede sacar si quedarían más monedas que ranuras.
+	var pocket = null
+	for seed_value in range(1, 120):
+		pocket = _shop_game(seed_value, INVENTORIES["con Bolsillo"].passives)
+		if _pack(pocket).effect.items.any(func(id): return id in Coins.PASSIVES): break
+	scene.game = pocket
+	scene.pack_panel_open = true
+	scene.render()
+	scene.ui.get_node("Shop_coins/Offer_3/Price").pressed.emit()
+	var wanted: String = pocket.pending_coin_pack.items.filter(func(id): return id in Coins.PASSIVES)[0]
+	scene.ui.get_node("CoinChoice/PackCoin_" + wanted).pressed.emit()
+	var pocket_instance: int = pocket.coin_inventory.equipped[0].instance_id
+	var blocked = scene.ui.get_node_or_null("CoinChoice/ReplaceCoin_%d" % pocket_instance)
+	check.call(blocked != null and blocked.disabled and UI.text_in(blocked, "quedarían más monedas que ranuras"), "MON8: Bolsillo aparece apagado y explica por qué no se puede sacar")
+	# Paquete chico, inventario con lugar: elección directa de un solo toque.
+	var small = null
+	for seed_value in range(1, 80):
+		small = _shop_game(seed_value)
+		if _pack(small).effect.size == "small": break
+	scene.game = small
+	scene.pack_panel_open = true
+	scene.coin_pack_replacing = ""
+	scene.render()
+	check.call(UI.text_in(scene.ui.get_node("Shop_coins/Offer_3"), "Elegí 1 entre 2"), "MON8: la carta del paquete chico dice Elegí 1 entre 2")
+	scene.ui.get_node("Shop_coins/Offer_3/Price").pressed.emit()
+	check.call(UI.text_in(scene.ui.get_node("CoinChoice"), "ELEGÍ UNA MONEDA") and scene.ui.get_node("CoinChoice").get_children().filter(func(node): return node.name.begins_with("PackCoin_")).size() == 2, "MON8: el paquete chico muestra dos cartas")
+	scene.ui.get_node("CoinChoice/PackCoin_" + small.pending_coin_pack.items[0]).pressed.emit()
+	check.call(small.phase == "shop" and scene.ui.get_node_or_null("CoinChoice") == null, "MON8: elegir en el chico lo cierra y vuelve a la tienda")
+	scene.game = previous
+	scene.render()

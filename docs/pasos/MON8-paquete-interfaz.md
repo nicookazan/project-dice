@@ -2,7 +2,7 @@
 
 Etapa de monedas · 5 de noviembre de 2026.
 
-**Rama:** `feature/paquete-monedas-interfaz`. **Depende de:** MON1, MON7. **Estado actual:** Sin empezar. **Decisiones vinculadas:** D15.
+**Rama:** `feature/monedas-paquete` (junto con MON7). **Depende de:** MON1, MON7. **Estado actual:** Completado (suite: 4117 comprobaciones, cero fallos; capturas en `test-results/`). **Decisiones vinculadas:** D15.
 
 ## Objetivo
 Mostrar el paquete en la tienda y permitir elegir y reemplazar en pantalla.

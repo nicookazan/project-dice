@@ -308,3 +308,12 @@ Valores provisionales hasta el ítem 7.
 - **Pruebas existentes:** los escenarios que asumían cuatro monedas sueltas se ajustaron (conteos, `offers` del paquete) y los recorridos naturales con semilla fija pasaron de la semilla 3 a la 9 porque el paquete consume azar de la tienda y cambia los dados siguientes.
 
 Evidencia: `tests/coin_pack_tests.gd` (tabla, 60 semillas de generación, sin tabla, mismo contenido por semilla, compra con descuento / deuda / inventario lleno, bloqueos, elección chica y grande, reemplazo, recién recibida, Bolsillos, 6 inventarios extremos × 30 semillas sin quedar trabado, guardar y continuar en cada momento).
+
+## Actualización: paquete de monedas, interfaz (MON8, 6 de noviembre de 2026)
+
+- **Carta cerrada:** en la tienda el cuarto espacio de monedas muestra el frasco cerrado (`pack_small` / `pack_large` del arte de MON1) con aro dorado, el precio y "Elegí 1 entre 2" o "Elegí 2 entre 5". No muestra el contenido; la ficha emergente dice que se puede comprar con el inventario lleno.
+- **Panel:** `scripts/coin_pack_panel.gd` (estilo del panel de stickers). Muestra 2 o 5 cartas con icono, nombre, código, rareza, tipo, efecto completo y un estado ("Entra directo", "Reemplazá una de las tuyas", "Sin lugar posible", "ELEGIDA"), más cuántas elecciones faltan y el saldo. Las cinco cartas son de 208 px (las dos del paquete chico, de 232 px) y los textos largos se parten en líneas.
+- **Reemplazo:** si la moneda no entra, se pasa a una lista de las monedas propias del mismo tipo con su reventa. Las que no se pueden sacar (ranura que dejaría monedas de más, o la recién recibida del mismo paquete) van apagadas con el motivo. "Volver" regresa a las cartas. El reemplazo en curso (`coin_pack_replacing` en `main.gd`) es solo de pantalla y no se guarda.
+- **Cerrar y reabrir:** reutiliza `pack_panel_open`; con el panel cerrado aparece "Elegir moneda pendiente".
+- **Movimiento:** el panel no tiene animaciones, así que "Reducir movimiento" y la velocidad elegida no lo afectan.
+- **Capturas:** `tests/coin_pack_review.gd` (con GPU, sin `--headless`) deja en `test-results/` el paquete chico y el grande en la tienda, ambos paneles, inventario lleno, moneda de ranura bloqueada, panel cerrado y reabierto, tras la primera elección y textos largos. Pruebas de pantalla con la escena real en `tests/coin_pack_tests.gd` (`run_ui`).

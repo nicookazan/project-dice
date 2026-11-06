@@ -49,3 +49,12 @@ El catálogo ya no se limita a ocho monedas. `Coins.DATA` (scripts/coins.gd) tie
 - Las monedas de un uso admiten más de una ranura (C44); la interfaz dibuja todas.
 - Ventanas de uso: `play` (U01–U05, U08), `shop` (U06), `repair` (U07).
 - Arte provisional: las monedas fuera del atlas de ocho se dibujan como moneda tintada por rareza con su abreviatura (`Coins.SHORT`).
+
+## Etapa de monedas (noviembre de 2026)
+
+Catálogo vigente: 75 monedas, 57 pasivas (C01–C57) y 18 de un uso (U01–U18). Todo vive en filas de `scripts/coins.gd`; el detalle de cada paso está en [MONEDAS-NUEVAS.md](MONEDAS-NUEVAS.md).
+- Ventanas de uso nuevas: `play` también para U09–U15 y U18; `shop` para U16; `repair` para U17.
+- Fila con `once_per_run` (U14): aparece una sola vez por partida (`once_coins_seen`). Moneda de un uso que pide un dado (U12): `Coins.targeted`.
+- Paquete de monedas: `Coins.can_replace` decide los reemplazos al elegir del paquete; la que sale paga su reventa.
+- Duraciones nuevas en la ficha de moneda: "Inmediata" (U15) y "Visita actual a la tienda" (U16).
+- Suspensión por jefe: una moneda suspendida no da manos, tiradas ni plata; el Escudo de jefe (U14) las devuelve durante la mano protegida.

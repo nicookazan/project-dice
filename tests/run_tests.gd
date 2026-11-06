@@ -505,6 +505,7 @@ func _initialize() -> void:
 	CoinHandsTests.run_ui(scene, check)
 	CoinSimpleTests.run_ui(scene, check)
 	CoinComplexTests.run_ui(scene, check)
+	CoinPackTests.run_ui(scene, check)
 	var level_flow_demo: Dictionary = LevelFlowTests.run(scene, check)
 	await process_frame
 	var save_demo: Dictionary = SaveTests.run(scene, check)

@@ -75,3 +75,7 @@ También reconstruye `shop_tables.coins` con el catálogo vigente, porque la tab
 El validador acepta rangos (`hand_mult_bonus` 0–1000, `hand_points_bonus` 0–1.000.000, `visit_discount` 0–0,9) y rechaza ids de `once_coins_seen` que no existan. Mientras no exista la fase de elección de paquetes (MON7), un `pending_coin_pack` no vacío se rechaza.
 
 Las ofertas ya generadas conservan su precio hasta renovarse; la reventa cambia de inmediato con la rareza. Un guardado v9 hecho entre pasos de la etapa no recibe las monedas agregadas después: para probar cada paso, usar partida nueva. Evidencia: `tests/coin_rarity_tests.gd`.
+
+### Etapa de monedas: fases y campos en uso (MON4–MON8)
+
+Sin subir la versión (sigue v9): el campo `pending_coin_pack` es no vacío si y solo si la fase es `coin_choice`; `boss_shield_active` solo vale en la fase `play` contra un jefe; `once_coins_seen` guarda las monedas "una vez por partida" ya generadas; `visit_discount`, `hand_mult_bonus` y `hand_points_bonus` los usan U16, U10 y U11. La fase `coin_choice` figura en todas las listas de fases activas. Una mano 3 solo es válida con Mano extra en juego. La tabla de la tienda guardada trae `coin_packs` solo si es estándar (la migración la agrega). Un guardado hecho antes de agregarse una moneda no la ofrece: para probar, usar partida nueva.

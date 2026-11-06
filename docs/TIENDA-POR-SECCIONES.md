@@ -54,3 +54,5 @@ No se habilitan compras de dados, vaso ni valores comerciales finales. Siguiente
 - C45: `Game.offer_price` aplica −20 % (redondeo al más cercano, 0,5 hacia arriba) a ofertas y renovaciones. El contador de renovación sube sobre el precio base.
 - C19: `Game.can_afford` permite llegar a −$10; las reparaciones ya admitían deuda.
 - C21 / U06: `Game.free_renewals` cuenta las renovaciones gratis de la visita; una renovación gratis no sube el contador de su sección.
+- Paquete de monedas (MON7–MON8): con `shop_tables.coin_packs` el cuarto espacio de monedas es un paquete (chico $7 / grande $14, 65 / 35 %) y los otros tres son monedas sueltas; sin esa tabla son cuatro sueltas. El paquete se compra aun con el inventario lleno, abre la fase `coin_choice` y bloquea vender, usar, comprar, renovar y salir hasta terminar. Ver [MONEDAS-NUEVAS.md](MONEDAS-NUEVAS.md).
+- U16 Descuento de visita: `Game.visit_discount` (−50 %) se multiplica con C45 y se redondea una sola vez; aplica a ofertas, renovaciones y paquetes, no a reparaciones, y termina al abrir la próxima tienda.

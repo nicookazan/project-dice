@@ -131,3 +131,5 @@ Renovar actúa solo sobre la sección elegida, repone vacíos y vuelve a sortear
 - Sonido, animación y arte final; balance y diversión por validar jugando.
 
 El jefe disponible prohíbe generala; cinco iguales se pueden dividir en trío y par. Doble par sigue permitido si la selección cumple su regla.
+
+Etapa de monedas (noviembre de 2026): el cuarto espacio de monedas de la tienda es un paquete de 2 (se elige 1) o de 5 (se eligen 2) y se compra aun con el inventario lleno, reemplazando monedas propias si no hay lugar. U09 Relanzo total, U12 Voltear dado y U14 Escudo de jefe (una vez por partida) están en juego. Detalle y valores provisionales en [monedas nuevas](MONEDAS-NUEVAS.md).
