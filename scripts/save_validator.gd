@@ -109,7 +109,9 @@ static func validate(data: Variant) -> String:
 	for group in g.groups:
 		if not group is Dictionary or not ids(group.get("ids")) or not group.get("category") is String or not group.get("locked") is bool: return "grupo inválido"
 	if not g.groups.is_empty() and not Rules.validate_groups(g.dice, g.groups, CoinEffects.rules(g.passives)).is_empty(): return "agrupación inconsistente"
-	if g.level_encounters[g.rival].kind == "boss":
+	# Escudo de jefe (U14): solo vive durante la mano en juego contra un jefe, y apaga la regla de categorías prohibidas.
+	if g.boss_shield_active and (g.phase != "play" or g.level_encounters[g.rival].kind != "boss"): return "escudo de jefe fuera de lugar"
+	if g.level_encounters[g.rival].kind == "boss" and not g.boss_shield_active:
 		for group in g.groups:
 			if BossRules.forbidden(BossRules.context(g.boss_rule, true, g.boss_state, g.hand), group.category): return "categoría prohibida por jefe"
 	var inventory: Dictionary = g.coin_inventory
@@ -138,7 +140,7 @@ static func validate(data: Variant) -> String:
 	if g.free_reroll_tokens < 0 or g.free_reroll_tokens > 20 or g.free_renewals < 0 or g.free_renewals > 20: return "contadores de moneda inválidos"
 	if g.passives != equipped or g.consumable != (inventory.consumables[0].coin_id if not inventory.consumables.is_empty() else ""): return "vistas de inventario inconsistentes"
 	# Mano extra (C52): el límite sale de las monedas y del jefe; fuera de la partida en curso la mano es solo un recuerdo.
-	var hand_limit: int = Game.hand_limit_of(g.passives, g.boss_rule, g.level_encounters[g.rival].kind == "boss", g.boss_state, g.hand)
+	var hand_limit: int = Game.hand_limit_of(g.passives, g.boss_rule, g.level_encounters[g.rival].kind == "boss" and not g.boss_shield_active, g.boss_state, g.hand)
 	if g.phase in ["play", "hand_result", "lost"] and g.hand > hand_limit: return "mano fuera del límite"
 	if not g.last_score.is_empty() and not score(g.last_score): return "resultado incompleto"
 	if g.phase in ["hand_result", "reward", "repair", "won", "lost"] and g.last_score.is_empty(): return "falta resultado anotado"

@@ -267,3 +267,22 @@ Siete monedas de un uso que no piden elegir objetivo. El catálogo pasa a 72 mon
 - **Arte:** los siete ids ya tienen arte en `coins-nuevas-v3.png` (MON1).
 
 Evidencia: `tests/coin_simple_tests.gd` (catálogo, cada moneda, acumulación, orden con Doble mult, previsión igual a anotación, limpieza, redondeo único del descuento, reparación sin cobro, guardado y continuación con cada efecto activo, y pantalla de reparación con la escena real).
+
+## Actualización: monedas de un uso complejas (MON6, 6 de noviembre de 2026)
+
+Tres monedas de un uso Raras ($3 / reventa $1) que tocan tiradas, dados y poderes de jefe. El catálogo pasa a 75 monedas (57 pasivas y 18 de un uso).
+
+| Código | Moneda | Se usa en | Efecto |
+|---|---|---|---|
+| U09 | Relanzo total | mesa | relanza los cinco dados sin gastar tirada; deshace todos los grupos, también los bloqueados; requiere haber tirado |
+| U12 | Voltear dado | mesa | un dado suelto ya tirado pasa a la cara física opuesta (`faces.size() − 1 − face_index`) |
+| U14 | Escudo de jefe | mesa | apaga el poder del jefe durante la mano actual; solo contra un jefe, Dios incluido; una vez por partida |
+
+- **Relanzo total (D15, punto 7):** `roll()` se partió en validación más `_throw(rolled_ids, kept_ids, modo)`, que comparten el relanzo pagado, el libre y el total. El total cuenta como tirada hecha (deja de ser "servida"), no gasta presupuesto, usa el azar principal, registra el mismo evento de relanzo (animación, efectos de material y elemento) y desgasta Moneda gastada 1 por dado. Queda afuera el dado que el jefe fija: abducido o cargado (`Game.fixed_die()`). El dado asustado se relanza y vuelve al vaso como en cualquier tirada.
+- **Voltear dado (D15, punto 8):** `use_consumable(índice, dado)` acepta un objetivo. Sin dado o con uno inválido (en un grupo, sin tirar, fijado por el jefe) devuelve `false` y no consume la moneda, así que se puede cancelar. En pantalla: tocar la moneda activa el modo de elegir, tocarla otra vez lo cancela y la moneda se gasta al tocar el dado. El modo vive solo en `main.gd` (`flip_slot`), nunca en la partida ni en el guardado.
+- **Escudo de jefe (D15, puntos 3 y 4):** `Game.boss_power_on()` (hay jefe y el escudo no está activo) es la única forma de preguntar si el poder está en juego: la usan `boss_context()`, el termo robado, los dados marcados y sus bloqueos, los efectos de dado tras tirar, la carga del anillo, el impuesto al kiosco, las marcas de la pantalla y el límite de manos. Se apaga solo al anotar, después de cobrar el impuesto; la memoria del jefe (Chamuyero, Computadora) se registra igual. El termo vuelve durante la mano protegida y Tarjeta roja deja de expulsar a su moneda esa mano.
+- **Guardado:** `boss_shield_active` ya existía (v9). El validador lo acepta solo en la fase de mesa contra un jefe, y con él activo no rechaza categorías prohibidas ni recalcula el límite de manos con el poder encendido.
+- **Una vez por partida:** la fila lleva `once_per_run`. `Shop.generate` recibe `once_seen`, excluye lo ya visto y devuelve la lista actualizada; `Game` la guarda en `once_coins_seen` recién cuando aplica la generación (apertura, generación inicial o renovación). Cuenta al generarse la oferta, aunque no se compre ni se vea. El paquete de monedas (MON7) usará la misma lista.
+- **Límite conocido:** un guardado v9 anterior a MON6 conserva su tabla de tienda y no ofrece las tres monedas nuevas; las partidas nuevas sí. Hasta el cierre no hay guardados que importen.
+
+Evidencia: `tests/coin_complex_tests.gd` (catálogo; Relanzo total con 0 tiradas, con grupos bloqueados, misma semilla, Moneda gastada, dado cargado, asustado y abducido; Voltear dado con caras cambiadas, previsión, cancelación y dados fijados; Escudo contra cada jefe del catálogo con previsión = anotación y vuelta del poder, efectos del Kioskero, Chamuyero, Cebador, Referí y Dios; unicidad en 80 visitas con renovaciones y tras guardar y continuar; validación de guardados; y la pantalla con la escena real).

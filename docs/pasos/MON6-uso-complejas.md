@@ -2,7 +2,7 @@
 
 Etapa de monedas · 5 de noviembre de 2026.
 
-**Rama:** `feature/monedas-uso-complejas`. **Depende de:** MON5. **Estado actual:** Sin empezar. **Decisiones vinculadas:** D15 (puntos 3, 4, 7 y 8).
+**Rama:** `feature/monedas-uso-complejas`. **Depende de:** MON5. **Estado actual:** Completado (suite: 4055 comprobaciones, cero fallos). **Decisiones vinculadas:** D15 (puntos 3, 4, 7 y 8).
 
 ## Objetivo
 Agregar las tres monedas de un uso (todas Raras) que tocan tiradas, objetivos y poderes de jefe.

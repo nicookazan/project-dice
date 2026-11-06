@@ -57,6 +57,8 @@ var save_error := ""
 var session_started := false
 var game = Game.new()
 var selected: Array = []
+## Ranura de la moneda "Voltear dado" mientras se elige el dado; solo de pantalla, nunca se guarda (-1 = sin elegir).
+var flip_slot := -1
 var repair_selection: Array = []
 var shop_section := "coins"
 var purchase_error := ""
@@ -179,8 +181,19 @@ func present_detail(title: String, text: String, compact := false) -> void:
 	detail_body.scroll_to_line(0)
 	detail.popup_centered(Vector2i(540, 270) if compact else Vector2i(820, 560))
 
+## Voltear dado: primer toque en la moneda elige el modo, segundo toque lo cancela; la moneda se gasta al elegir el dado.
+func start_flip(slot: int) -> void:
+	flip_slot = -1 if flip_slot == slot else slot
+	if flip_slot >= 0: game.message = "Voltear dado: elegí un dado suelto ya tirado. Tocá la moneda de nuevo para cancelar."
+	render()
+
 func toggle_die(index: int) -> void:
 	if throwing: return
+	if flip_slot >= 0:
+		var slot := flip_slot
+		flip_slot = -1
+		act(func(): game.use_consumable(slot, index))
+		return
 	if preferences.drag_groups: return
 	if game.phase != "play" or detail.visible or game.rolls_made == 0 or game.is_grouped(index): return
 	if index in selected: selected.erase(index)
@@ -1114,7 +1127,9 @@ func render_notebook() -> void:
 	status.size = Vector2(254, 36)
 	status.add_theme_color_override("default_color", ink)
 	status.add_theme_font_size_override("normal_font_size", 13)
+	if flip_slot >= game.coin_inventory.consumables.size() or game.phase != "play": flip_slot = -1
 	status.text = purchase_error if not purchase_error.is_empty() else game.message
+	if game.boss_shield_active: status.text += "\nEscudo de jefe activo en esta mano."
 	for impulse in game.impulses: status.text += "\nImpulso activo: %s." % Coins.definition(impulse).name
 	if game.double_mult: status.text += "\nDoble mult activo en esta mano."
 	note.add_child(status)
@@ -1418,7 +1433,7 @@ func render_inventory() -> void:
 	for i in range(game.coin_inventory.consumables.size()):
 		var stored: String = game.coin_inventory.consumables[i].coin_id
 		var slot := i
-		var use := button(ui, "", Rect2(999 + i * 74, 748, 64, 60), func(): act(func(): game.use_consumable(slot)), not Coins.can_use(stored, game.phase) or BossRules.suspended(game.boss_context(), "coin", stored))
+		var use := button(ui, "", Rect2(999 + i * 74, 748, 64, 60), (func(): start_flip(slot)) if Coins.targeted(stored) else (func(): act(func(): game.use_consumable(slot))), not Coins.can_use(stored, game.phase) or BossRules.suspended(game.boss_context(), "coin", stored))
 		use.name = "ConsumableCoin" if i == 0 else "ConsumableCoin_" + str(i)
 		for state in ["normal", "hover", "pressed", "disabled", "focus"]: use.add_theme_stylebox_override(state, StyleBoxEmpty.new())
 		use.tooltip_text = Rules.COINS[stored].description + " Clic para consumir."

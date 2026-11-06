@@ -13,7 +13,8 @@ const PASSIVES = [
 	"veteran", "accumulated", "streak", "bosshunter",
 	"reserve_roll", "collector", "level_veteran", "served", "leftovers", "extra_hand"]
 const CONSUMABLES = ["boost", "roll", "boost_25", "boost_36", "double_mult", "free_renewal_use", "repair_gem", "free_reroll_use",
-	"mult_plus2", "points_bag", "two_rolls", "quick_cash", "visit_discount", "repair_all", "even_boost"]
+	"mult_plus2", "points_bag", "two_rolls", "quick_cash", "visit_discount", "repair_all", "even_boost",
+	"reroll_all", "flip_die", "boss_shield"]
 const RARITIES = ["common", "rare", "epic", "legendary"]
 const RARITY_NAMES = {"common": "Común", "rare": "Rara", "epic": "Épica", "legendary": "Legendaria"}
 ## [price, resale] by rarity.
@@ -33,7 +34,8 @@ const SHORT = {
 	"veteran": "Ve", "accumulated": "Ac", "streak": "Ra", "bosshunter": "Cz",
 	"reserve_roll": "TR", "collector": "Cb", "level_veteran": "VN", "served": "Sv", "leftovers": "So", "extra_hand": "M3",
 	"boost_25": "25", "boost_36": "36", "double_mult": "x2", "free_renewal_use": "R0", "repair_gem": "Rp", "free_reroll_use": "R1",
-	"mult_plus2": "+2", "points_bag": "Bp", "two_rolls": "T2", "quick_cash": "$5", "visit_discount": "-V", "repair_all": "RT", "even_boost": "246"}
+	"mult_plus2": "+2", "points_bag": "Bp", "two_rolls": "T2", "quick_cash": "$5", "visit_discount": "-V", "repair_all": "RT", "even_boost": "246",
+	"reroll_all": "R*", "flip_die": "VD", "boss_shield": "EJ"}
 
 ## Per coin: code, name, description, rarity, family, effects (+ optional overrides).
 const DATA = {
@@ -185,7 +187,13 @@ const DATA = {
 	"repair_all": {"code": "U17", "name": "Reparar todas", "description": "Repara gratis todas las carcasas rotas en la fase de reparación. Se consume.", "rarity": "epic", "family": "use", "scope": "gem", "duration": "encounter", "contexts": ["repair"],
 		"effects": [{"kind": "use_repair_all", "amount": 1}]},
 	"even_boost": {"code": "U18", "name": "Impulso par", "description": "+2 puntos por cada 2, 4 y 6 hasta terminar este encuentro. Se acumula con otros impulsos. Se consume.", "rarity": "common", "family": "use", "scope": "own_points", "duration": "encounter", "contexts": ["play"],
-		"effects": [{"kind": "impulse", "numbers": [2, 4, 6], "amount": 2}]}
+		"effects": [{"kind": "impulse", "numbers": [2, 4, 6], "amount": 2}]},
+	"reroll_all": {"code": "U09", "name": "Relanzo total", "description": "Relanzás los cinco dados sin gastar tirada: deshace todos los grupos, también los bloqueados. Requiere haber tirado. Cuenta como tirada hecha. Se consume.", "rarity": "rare", "family": "use", "scope": "roll_budget", "duration": "hand", "contexts": ["play"],
+		"effects": [{"kind": "use_reroll_all", "amount": 1}]},
+	"flip_die": {"code": "U12", "name": "Voltear dado", "description": "Elegí un dado suelto ya tirado: pasa a la cara opuesta. No afecta dados fijados por un jefe. Se consume al elegir el dado.", "rarity": "rare", "family": "use", "scope": "die", "duration": "hand", "contexts": ["play"],
+		"effects": [{"kind": "use_flip_die", "amount": 1}]},
+	"boss_shield": {"code": "U14", "name": "Escudo de jefe", "description": "Apaga el poder del jefe durante la mano actual. Solo contra un jefe. Aparece una sola vez por partida. Se consume.", "rarity": "rare", "family": "use", "scope": "boss", "duration": "hand", "contexts": ["play"], "once_per_run": true,
+		"effects": [{"kind": "use_boss_shield", "amount": 1}]}
 }
 
 static func definition(id: String) -> Dictionary:
@@ -206,6 +214,14 @@ static func definition(id: String) -> Dictionary:
 	result.id = id
 	result.provisional_economy = true
 	return result
+
+## Monedas que aparecen una sola vez por partida (cuenta al generarse la oferta).
+static func once_per_run(id: String) -> bool:
+	return DATA.get(id, {}).get("once_per_run", false)
+
+## Monedas que piden elegir un dado al usarse.
+static func targeted(id: String) -> bool:
+	return not effects(id).is_empty() and effects(id)[0].kind == "use_flip_die"
 
 static func catalog() -> Dictionary:
 	var result: Dictionary = {}

@@ -88,17 +88,20 @@ static func staged_coin_pool(pool: Array, tables: Dictionary, rng: RandomNumberG
 	return of_type.filter(func(item): return Coins.rarity_of(item.effect.coin_id) == chosen_rarity)
 
 static func generate(section: String, tables: Dictionary, stickers: Dictionary, owned: Array,
-		rng_state: int, sequence: int) -> Dictionary:
+		rng_state: int, sequence: int, once_seen: Array = []) -> Dictionary:
 	if section not in SIZES or section == "cup": return {"valid": false}
 	var source = tables.get(section, [])
 	if not source is Array: return {"valid": false}
+	# Monedas de una vez por partida: las ya generadas antes no vuelven; las de esta tanda se suman a `once_seen`.
+	var seen: Array = once_seen.duplicate()
 	var pool: Array = []
 	for data in source:
 		if not valid_candidate(section, data, stickers): return {"valid": false}
 		if section == "coins" and data.effect.coin_id in Coins.PASSIVES and data.effect.coin_id in owned: continue
+		if section == "coins" and Coins.once_per_run(data.effect.coin_id) and data.effect.coin_id in seen: continue
 		pool.append(data)
 	var result: Dictionary = empty_state()[section]
-	if pool.is_empty(): return {"valid": true, "section": result, "rng_state": rng_state, "sequence": sequence}
+	if pool.is_empty(): return {"valid": true, "section": result, "rng_state": rng_state, "sequence": sequence, "once_seen": seen}
 	var staged: bool = section == "coins" and tables.get("coin_type_weights") is Dictionary and not tables.coin_type_weights.is_empty()
 	if staged and (not valid_weights(tables.coin_type_weights) or not tables.get("coin_rarity_weights") is Dictionary): return {"valid": false}
 	var rarities: Array = []
@@ -127,9 +130,10 @@ static func generate(section: String, tables: Dictionary, stickers: Dictionary, 
 			var kind := "sticker" if index == 0 else "pack"
 			eligible = pool.filter(func(item): return item.kind == kind)
 		var offer := pick(eligible, rng)
-		if section == "coins" and offer.effect.coin_id in Coins.PASSIVES:
+		if section == "coins" and (offer.effect.coin_id in Coins.PASSIVES or Coins.once_per_run(offer.effect.coin_id)):
 			var chosen_id: String = offer.effect.coin_id
 			pool = pool.filter(func(item): return item.effect.coin_id != chosen_id)
+			if Coins.once_per_run(chosen_id) and chosen_id not in seen: seen.append(chosen_id)
 		offer.erase("weight")
 		if offer.kind == "pack":
 			var candidates: Array = offer.effect.pool.duplicate()
@@ -143,7 +147,7 @@ static func generate(section: String, tables: Dictionary, stickers: Dictionary, 
 		offer["offer_id"] = str(sequence)
 		result.slots[index] = offer
 	result.configured = true
-	return {"valid": true, "section": result, "rng_state": rng.state, "sequence": sequence}
+	return {"valid": true, "section": result, "rng_state": rng.state, "sequence": sequence, "once_seen": seen}
 
 static func clean_passive_offers(state: Dictionary, owned: Array) -> Dictionary:
 	var cleaned := state.duplicate(true)

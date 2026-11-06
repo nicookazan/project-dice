@@ -260,7 +260,7 @@ static func hand_limit_of(passive_ids: Array, rule: Dictionary, boss_active: boo
 	return BASE_HANDS + int(CoinEffects.sum_of(active, "extra_hands"))
 
 func hand_limit() -> int:
-	return hand_limit_of(passives, boss_rule, is_boss(), boss_state, hand)
+	return hand_limit_of(passives, boss_rule, boss_power_on(), boss_state, hand)
 
 ## One builder for preview and scoring, so both always agree. It only reads state.
 func coin_context() -> Dictionary:
@@ -331,10 +331,15 @@ func is_boss(index: int = -1) -> bool:
 
 ## Don Cebador se lleva el termo mientras se juega su encuentro (presentación y botón del termo).
 func thermos_stolen() -> bool:
-	return is_boss() and BossRules.is_power(boss_rule, "thermos_theft") and phase in ["play", "hand_result", "lost"]
+	return boss_power_on() and BossRules.is_power(boss_rule, "thermos_theft") and phase in ["play", "hand_result", "lost"]
+
+## El poder del jefe está en juego: hay jefe y el Escudo (U14) no lo apaga en esta mano.
+## Toda consulta al poder (`boss_rule`) pasa por acá; la memoria del jefe entre manos no.
+func boss_power_on() -> bool:
+	return is_boss() and not boss_shield_active
 
 func boss_context() -> Dictionary:
-	return BossRules.context(boss_rule, is_boss() and phase in ["play", "hand_result"], boss_state, hand)
+	return BossRules.context(boss_rule, boss_power_on() and phase in ["play", "hand_result"], boss_state, hand)
 
 func has_next_encounter() -> bool:
 	return rival + 1 < level_encounters.size() or (not campaign.is_empty() and level_index + 1 < campaign.size())
@@ -448,7 +453,7 @@ func move_die(index: int, zone: String) -> bool:
 
 ## Poderes de dados que impiden mover un dado marcado.
 func _boss_blocks_move(index: int, zone: String) -> bool:
-	if not is_boss() or int(boss_state.get("die", -1)) != index: return false
+	if not boss_power_on() or int(boss_state.get("die", -1)) != index: return false
 	if BossRules.is_power(boss_rule, "abduction"):
 		message = "Ese dado fue abducido y no se puede mover."
 		return true
@@ -474,7 +479,7 @@ func _set_face(id: int, number: int, results: Array) -> bool:
 
 ## Efectos de dados de los jefes tras tirar. Los sorteos propios usan un generador aparte: el azar principal no cambia.
 func _apply_boss_roll(rolled_ids: Array, results: Array) -> void:
-	if not is_boss() or boss_rule.get("kind") != "boss_power": return
+	if not boss_power_on() or boss_rule.get("kind") != "boss_power": return
 	var marked := int(boss_state.get("die", -1))
 	match boss_rule.target:
 		"loaded_die":
@@ -498,7 +503,7 @@ func _apply_boss_roll(rolled_ids: Array, results: Array) -> void:
 ## Marcas visibles para la interfaz: dado -> clase de poder.
 func boss_marks() -> Dictionary:
 	var marked := int(boss_state.get("die", -1))
-	if not is_boss() or marked < 0: return {}
+	if not boss_power_on() or marked < 0: return {}
 	var kinds := {"scared_die": "scared", "loaded_die": "loaded", "abduction": "abducted"}
 	return {marked: kinds.get(boss_rule.get("target", ""), "")} if kinds.has(boss_rule.get("target", "")) else {}
 
@@ -515,10 +520,21 @@ func roll() -> bool:
 	if rolled_ids.is_empty():
 		message = "Elegí al menos un dado para el vaso. No se gastó ninguna tirada."
 		return false
-	if rolls_made > 0 and is_boss() and BossRules.is_power(boss_rule, "ring_charge") and rolled_ids.size() < 2:
+	if rolls_made > 0 and boss_power_on() and BossRules.is_power(boss_rule, "ring_charge") and rolled_ids.size() < 2:
 		message = "La carga del anillo solo deja conservar tres dados: mandá al menos dos al vaso."
 		return false
 	lock_groups()
+	_throw(rolled_ids, kept_ids, "free" if free else "paid")
+	return true
+
+## Dado que un jefe deja fijo (abducido o cargado) y que ni Relanzo total ni Voltear dado tocan. -1 si no hay.
+func fixed_die() -> int:
+	if not boss_power_on() or not (BossRules.is_power(boss_rule, "abduction") or BossRules.is_power(boss_rule, "loaded_die")): return -1
+	return int(boss_state.get("die", -1))
+
+## Tira los dados de `rolled_ids`. `mode`: "paid" gasta una tirada, "free" es un relanzo libre y "total" es Relanzo total (U09).
+func _throw(rolled_ids: Array, kept_ids: Array, mode: String) -> void:
+	var free := mode == "free"
 	var initial := rolls_made == 0
 	var results: Array = []
 	for die in dice:
@@ -534,14 +550,15 @@ func roll() -> bool:
 		if active_rules().get("free_reroll", false) and not free_reroll_used: free_reroll_used = true
 		else: free_reroll_tokens -= 1
 		message = "Relanzo libre: no gastó tirada."
+	elif mode == "total":
+		message = "Relanzo total: los grupos se deshicieron y no se gastó tirada."
 	else:
 		rolls_left -= 1
 		message = "Seleccioná dados para armar un grupo, reservarlos o enviarlos al vaso."
 	var event := _record_event(INITIAL_ROLL if initial else REROLL,
-		{"rolled_ids": rolled_ids, "kept_ids": kept_ids, "results": results, "roll_number": rolls_made, "free": free})
+		{"rolled_ids": rolled_ids, "kept_ids": kept_ids, "results": results, "roll_number": rolls_made, "free": free or mode == "total"})
 	_after_roll(event)
 	_wear_coins(rolled_ids.size())
-	return true
 
 func form_group(ids: Array) -> bool:
 	if phase != "play" or rolls_made == 0 or ids.is_empty(): return false
@@ -654,6 +671,7 @@ func score_hand() -> bool:
 	hand_mult_bonus = 0
 	hand_points_bonus = 0
 	_collect_kiosk_tax()
+	boss_shield_active = false # El Escudo (U14) vale una sola mano; la memoria del jefe ya se registró arriba.
 	if points < target() and hand >= hand_limit():
 		phase = "lost"
 		impulses = []
@@ -662,7 +680,7 @@ func score_hand() -> bool:
 
 ## Impuesto al kiosco: $2 por anotación, sin dejar saldo negativo por el cobro.
 func _collect_kiosk_tax() -> void:
-	if not is_boss() or not BossRules.is_power(boss_rule, "kiosk_tax"): return
+	if not boss_power_on() or not BossRules.is_power(boss_rule, "kiosk_tax"): return
 	var charge := mini(2, maxi(cash, 0))
 	cash -= charge
 	boss_state.tax = int(boss_state.get("tax", 0)) + charge
@@ -727,13 +745,15 @@ func _generated_shop() -> Dictionary:
 	var state := Shop.empty_state()
 	var staged_rng: int = rng.state
 	var serial: int = shop_offer_sequence
+	var seen: Array = once_coins_seen.duplicate()
 	for section in ["coins", "components", "numbers", "stickers"]:
-		var generated := Shop.generate(section, shop_tables, sticker_catalog, passives, staged_rng, serial)
+		var generated := Shop.generate(section, shop_tables, sticker_catalog, passives, staged_rng, serial, seen)
 		if not generated.valid: return {"valid": false}
 		state[section] = generated.section
 		staged_rng = generated.rng_state
 		serial = generated.sequence
-	return {"valid": true, "state": state, "rng_state": staged_rng, "sequence": serial}
+		seen = generated.once_seen
+	return {"valid": true, "state": state, "rng_state": staged_rng, "sequence": serial, "once_seen": seen}
 
 func open_shop() -> bool:
 	if phase != "reward": return false
@@ -742,6 +762,7 @@ func open_shop() -> bool:
 	shop_state = generated.state
 	rng.state = generated.rng_state
 	shop_offer_sequence = generated.sequence
+	once_coins_seen = generated.once_seen
 	phase = "shop"
 	impulses = []
 	visit_discount = 0.0
@@ -757,6 +778,7 @@ func generate_offers() -> bool:
 	shop_state = generated.state
 	rng.state = generated.rng_state
 	shop_offer_sequence = generated.sequence
+	once_coins_seen = generated.once_seen
 	return true
 
 func inspect_shop_offer(section: String, id: String) -> Dictionary:
@@ -772,7 +794,7 @@ func renewal_price(section: String) -> int:
 func refresh_shop(section: String = "coins") -> bool:
 	var price := renewal_price(section)
 	if phase != "shop" or not can_afford(price) or not shop_state.has(section) or not reroll_prices.has(section): return false
-	var generated := Shop.generate(section, shop_tables, sticker_catalog, passives, rng.state, shop_offer_sequence)
+	var generated := Shop.generate(section, shop_tables, sticker_catalog, passives, rng.state, shop_offer_sequence, once_coins_seen)
 	if not generated.valid or not generated.section.configured: return false
 	if free_renewals > 0: free_renewals -= 1
 	else:
@@ -781,6 +803,7 @@ func refresh_shop(section: String = "coins") -> bool:
 	shop_state[section] = generated.section
 	rng.state = generated.rng_state
 	shop_offer_sequence = generated.sequence
+	once_coins_seen = generated.once_seen
 	message = "Sección renovada."
 	return true
 
@@ -904,7 +927,8 @@ func _advance_encounter() -> bool:
 	_start_encounter()
 	return true
 
-func use_consumable(index: int = 0) -> bool:
+## `target` es el dado elegido para las monedas que lo piden (Voltear dado); las demás lo ignoran.
+func use_consumable(index: int = 0, target: int = -1) -> bool:
 	if index < 0 or index >= coin_inventory.consumables.size(): return false
 	var id: String = coin_inventory.consumables[index].coin_id
 	if not Coins.can_use(id, phase): return false
@@ -912,6 +936,29 @@ func use_consumable(index: int = 0) -> bool:
 	var data := Coins.definition(id)
 	var effect: Dictionary = data.effects[0]
 	match effect.kind:
+		"use_reroll_all":
+			if phase != "play" or rolls_made == 0: return false
+			var fixed := fixed_die()
+			var rolled_ids: Array = []
+			var kept_ids: Array = []
+			for die in dice:
+				if die.id == fixed: kept_ids.append(die.id)
+				else: rolled_ids.append(die.id)
+			groups = []
+			for die_id in rolled_ids: dice[die_id].zone = "cup"
+			_throw(rolled_ids, kept_ids, "total")
+		"use_flip_die":
+			if target < 0 or target >= dice.size() or rolls_made == 0 or is_grouped(target) or target == fixed_die():
+				message = "Ese dado no se puede voltear: tiene que estar suelto, ya tirado y no fijado por un jefe."
+				return false
+			var flipped: Dictionary = dice[target]
+			flipped.face_index = flipped.faces.size() - 1 - int(flipped.face_index)
+			flipped.value = DiceState.number_on_face(flipped, flipped.face_index)
+			message = "Dado %d: pasó a la cara opuesta (%d)." % [target + 1, flipped.value]
+		"use_boss_shield":
+			if not is_boss() or boss_shield_active: return false
+			boss_shield_active = true
+			message = "Escudo de jefe: el poder de %s queda apagado esta mano." % boss_rule.get("name", "el jefe")
 		"impulse":
 			if id not in impulses: impulses.append(id)
 			var shown: Array = effect.numbers.map(func(n): return str(n))
