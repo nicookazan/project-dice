@@ -19,6 +19,7 @@ const HAND_SCORED := "hand_scored"
 const ENCOUNTER_CLOSED := "encounter_closed"
 const COIN_BROKEN := "coin_broken"
 const BASE_ROLLS := 3
+const BASE_HANDS := 2
 var rng := RandomNumberGenerator.new()
 var run_seed: int
 var phase := "play"
@@ -74,6 +75,17 @@ var double_mult := false
 var free_reroll_tokens := 0
 var free_reroll_used := false
 var free_renewals := 0
+## Etapa de monedas (guardado v9). Bonos de la mano actual: se limpian al anotar y al empezar la mano.
+var hand_mult_bonus := 0
+var hand_points_bonus := 0
+## Descuento de la visita a la tienda (0 = ninguno); se limpia al abrir una visita nueva.
+var visit_discount := 0.0
+## Escudo de jefe: suspende el poder del jefe durante la mano actual.
+var boss_shield_active := false
+## Monedas "una vez por partida" que ya aparecieron en una oferta.
+var once_coins_seen: Array = []
+## Paquete de monedas pagado y pendiente de elegir (vacío si no hay).
+var pending_coin_pack: Dictionary = {}
 var shop_tables: Dictionary = Shop.default_tables()
 var shop_state: Dictionary = {}
 var shop_offer_sequence := 0
@@ -138,6 +150,9 @@ func restart(seed_value: int = -1) -> void:
 	sticker_offers = {}
 	sticker_offer_sequence = 0
 	pending_sticker_pack = {}
+	pending_coin_pack = {}
+	once_coins_seen = []
+	visit_discount = 0.0
 	event_sequence = 0
 	_start_encounter()
 
@@ -167,9 +182,15 @@ func _refresh_boss_state() -> void:
 	boss_state = BossRules.draw_state(boss_rule, run_seed, level_index, rival, passives) if is_boss() else {}
 
 func start_hand() -> void:
-	rolls_left = BASE_ROLLS + int(CoinEffects.sum_of(passives, "extra_rolls"))
+	# Solo cuentan las monedas que el jefe no suspende (C20 también: una suspendida no da tiradas).
+	var active := _active_passives()
+	rolls_left = BASE_ROLLS + int(CoinEffects.sum_of(active, "extra_rolls"))
+	if hand == 1: rolls_left += int(CoinEffects.sum_of(active, "extra_rolls_first"))
 	rolls_made = 0
 	double_mult = false
+	hand_mult_bonus = 0
+	hand_points_bonus = 0
+	boss_shield_active = false
 	free_reroll_tokens = 0
 	free_reroll_used = false
 	groups = []
@@ -192,6 +213,8 @@ func snapshot() -> Dictionary:
 		"groups": groups, "passives": passives, "consumable": consumable,
 		"impulses": impulses, "double_mult": double_mult, "free_reroll_tokens": free_reroll_tokens,
 		"free_reroll_used": free_reroll_used, "free_renewals": free_renewals,
+		"hand_mult_bonus": hand_mult_bonus, "hand_points_bonus": hand_points_bonus, "visit_discount": visit_discount,
+		"boss_shield_active": boss_shield_active, "once_coins_seen": once_coins_seen, "pending_coin_pack": pending_coin_pack,
 		"offers": offers, "reroll_prices": reroll_prices,
 		"last_score": last_score, "payout": payout, "history": history,
 		"message": message, "events": events, "event_sequence": event_sequence,
@@ -229,19 +252,30 @@ func _active_passives() -> Array:
 func active_rules() -> Dictionary:
 	return CoinEffects.rules(_active_passives())
 
+## Manos del encuentro: 2 más las de Mano extra (C52) si el jefe no la suspende. No depende de la fase,
+## así que vale también al perder y al validar un guardado.
+static func hand_limit_of(passive_ids: Array, rule: Dictionary, boss_active: bool, state: Dictionary, current_hand: int) -> int:
+	var context := BossRules.context(rule, boss_active, state, current_hand)
+	var active: Array = passive_ids.filter(func(id): return not BossRules.suspended(context, "coin", id))
+	return BASE_HANDS + int(CoinEffects.sum_of(active, "extra_hands"))
+
+func hand_limit() -> int:
+	return hand_limit_of(passives, boss_rule, boss_power_on(), boss_state, hand)
+
 ## One builder for preview and scoring, so both always agree. It only reads state.
 func coin_context() -> Dictionary:
 	var sticker_total := 0
 	for level in cup.stickers.values(): sticker_total += int(level)
-	return {"hand": hand, "rolls_made": rolls_made, "rolls_left": rolls_left, "cash": cash,
+	return {"hand": hand, "level": level_index + 1, "rolls_made": rolls_made, "rolls_left": rolls_left, "cash": cash,
 		"equipped_count": coin_inventory.equipped.size(), "sticker_total": sticker_total,
-		"states": Coins.state_of(coin_inventory.equipped), "double_mult": double_mult}
+		"states": Coins.state_of(coin_inventory.equipped), "double_mult": double_mult,
+		"hand_mult_bonus": hand_mult_bonus, "hand_points_bonus": hand_points_bonus}
 
 func credit_limit() -> int:
 	return int(CoinEffects.sum_of(passives, "credit"))
 
 func offer_price(price: int) -> int:
-	return CoinEffects.discounted(price, passives)
+	return CoinEffects.discounted(price, passives, visit_discount)
 
 func free_reroll_ready() -> bool:
 	if rolls_made == 0: return false
@@ -297,10 +331,15 @@ func is_boss(index: int = -1) -> bool:
 
 ## Don Cebador se lleva el termo mientras se juega su encuentro (presentación y botón del termo).
 func thermos_stolen() -> bool:
-	return is_boss() and BossRules.is_power(boss_rule, "thermos_theft") and phase in ["play", "hand_result", "lost"]
+	return boss_power_on() and BossRules.is_power(boss_rule, "thermos_theft") and phase in ["play", "hand_result", "lost"]
+
+## El poder del jefe está en juego: hay jefe y el Escudo (U14) no lo apaga en esta mano.
+## Toda consulta al poder (`boss_rule`) pasa por acá; la memoria del jefe entre manos no.
+func boss_power_on() -> bool:
+	return is_boss() and not boss_shield_active
 
 func boss_context() -> Dictionary:
-	return BossRules.context(boss_rule, is_boss() and phase in ["play", "hand_result"], boss_state, hand)
+	return BossRules.context(boss_rule, boss_power_on() and phase in ["play", "hand_result"], boss_state, hand)
 
 func has_next_encounter() -> bool:
 	return rival + 1 < level_encounters.size() or (not campaign.is_empty() and level_index + 1 < campaign.size())
@@ -387,7 +426,7 @@ func route() -> Array:
 		if i < rival or phase == "won": status = "Superado"
 		elif i == rival:
 			status = "Derrota" if phase == "lost" else "Actual"
-			if phase in ["reward", "repair", "shop", "purchase_target", "sticker_choice"]: status = "Superado"
+			if phase in ["reward", "repair", "shop", "purchase_target", "sticker_choice", "coin_choice"]: status = "Superado"
 		result.append({"index": i, "name": "Jefe" if is_boss(i) else "Rival %d" % (i + 1), "target": level_encounters[i].target, "status": status, "rule": boss_rule.name if is_boss(i) else "Sin regla especial"})
 	return result
 
@@ -414,7 +453,7 @@ func move_die(index: int, zone: String) -> bool:
 
 ## Poderes de dados que impiden mover un dado marcado.
 func _boss_blocks_move(index: int, zone: String) -> bool:
-	if not is_boss() or int(boss_state.get("die", -1)) != index: return false
+	if not boss_power_on() or int(boss_state.get("die", -1)) != index: return false
 	if BossRules.is_power(boss_rule, "abduction"):
 		message = "Ese dado fue abducido y no se puede mover."
 		return true
@@ -440,7 +479,7 @@ func _set_face(id: int, number: int, results: Array) -> bool:
 
 ## Efectos de dados de los jefes tras tirar. Los sorteos propios usan un generador aparte: el azar principal no cambia.
 func _apply_boss_roll(rolled_ids: Array, results: Array) -> void:
-	if not is_boss() or boss_rule.get("kind") != "boss_power": return
+	if not boss_power_on() or boss_rule.get("kind") != "boss_power": return
 	var marked := int(boss_state.get("die", -1))
 	match boss_rule.target:
 		"loaded_die":
@@ -464,7 +503,7 @@ func _apply_boss_roll(rolled_ids: Array, results: Array) -> void:
 ## Marcas visibles para la interfaz: dado -> clase de poder.
 func boss_marks() -> Dictionary:
 	var marked := int(boss_state.get("die", -1))
-	if not is_boss() or marked < 0: return {}
+	if not boss_power_on() or marked < 0: return {}
 	var kinds := {"scared_die": "scared", "loaded_die": "loaded", "abduction": "abducted"}
 	return {marked: kinds.get(boss_rule.get("target", ""), "")} if kinds.has(boss_rule.get("target", "")) else {}
 
@@ -481,10 +520,21 @@ func roll() -> bool:
 	if rolled_ids.is_empty():
 		message = "Elegí al menos un dado para el vaso. No se gastó ninguna tirada."
 		return false
-	if rolls_made > 0 and is_boss() and BossRules.is_power(boss_rule, "ring_charge") and rolled_ids.size() < 2:
+	if rolls_made > 0 and boss_power_on() and BossRules.is_power(boss_rule, "ring_charge") and rolled_ids.size() < 2:
 		message = "La carga del anillo solo deja conservar tres dados: mandá al menos dos al vaso."
 		return false
 	lock_groups()
+	_throw(rolled_ids, kept_ids, "free" if free else "paid")
+	return true
+
+## Dado que un jefe deja fijo (abducido o cargado) y que ni Relanzo total ni Voltear dado tocan. -1 si no hay.
+func fixed_die() -> int:
+	if not boss_power_on() or not (BossRules.is_power(boss_rule, "abduction") or BossRules.is_power(boss_rule, "loaded_die")): return -1
+	return int(boss_state.get("die", -1))
+
+## Tira los dados de `rolled_ids`. `mode`: "paid" gasta una tirada, "free" es un relanzo libre y "total" es Relanzo total (U09).
+func _throw(rolled_ids: Array, kept_ids: Array, mode: String) -> void:
+	var free := mode == "free"
 	var initial := rolls_made == 0
 	var results: Array = []
 	for die in dice:
@@ -500,14 +550,15 @@ func roll() -> bool:
 		if active_rules().get("free_reroll", false) and not free_reroll_used: free_reroll_used = true
 		else: free_reroll_tokens -= 1
 		message = "Relanzo libre: no gastó tirada."
+	elif mode == "total":
+		message = "Relanzo total: los grupos se deshicieron y no se gastó tirada."
 	else:
 		rolls_left -= 1
 		message = "Seleccioná dados para armar un grupo, reservarlos o enviarlos al vaso."
 	var event := _record_event(INITIAL_ROLL if initial else REROLL,
-		{"rolled_ids": rolled_ids, "kept_ids": kept_ids, "results": results, "roll_number": rolls_made, "free": free})
+		{"rolled_ids": rolled_ids, "kept_ids": kept_ids, "results": results, "roll_number": rolls_made, "free": free or mode == "total"})
 	_after_roll(event)
 	_wear_coins(rolled_ids.size())
-	return true
 
 func form_group(ids: Array) -> bool:
 	if phase != "play" or rolls_made == 0 or ids.is_empty(): return false
@@ -617,8 +668,11 @@ func score_hand() -> bool:
 	Coins.advance(coin_inventory.equipped, "hand_scored")
 	Coins.advance(coin_inventory.equipped, "hand_combo" if combined else "hand_plain")
 	double_mult = false
+	hand_mult_bonus = 0
+	hand_points_bonus = 0
 	_collect_kiosk_tax()
-	if points < target() and hand >= 2:
+	boss_shield_active = false # El Escudo (U14) vale una sola mano; la memoria del jefe ya se registró arriba.
+	if points < target() and hand >= hand_limit():
 		phase = "lost"
 		impulses = []
 		message = "Se terminaron las manos. El azar se queda con esta."
@@ -626,14 +680,14 @@ func score_hand() -> bool:
 
 ## Impuesto al kiosco: $2 por anotación, sin dejar saldo negativo por el cobro.
 func _collect_kiosk_tax() -> void:
-	if not is_boss() or not BossRules.is_power(boss_rule, "kiosk_tax"): return
+	if not boss_power_on() or not BossRules.is_power(boss_rule, "kiosk_tax"): return
 	var charge := mini(2, maxi(cash, 0))
 	cash -= charge
 	boss_state.tax = int(boss_state.get("tax", 0)) + charge
 	message = "Mano anotada en azul. Impuesto al kiosco: −$%d." % charge
 
 func next_hand() -> bool:
-	if phase != "hand_result" or hand >= 2: return false
+	if phase != "hand_result" or hand >= hand_limit(): return false
 	hand += 1
 	phase = "play"
 	start_hand()
@@ -644,7 +698,12 @@ func close_encounter() -> bool:
 	var cash_before := cash
 	var base_reward: int = Campaign.NORMAL_REWARD
 	if not campaign.is_empty() and is_boss(): base_reward = Campaign.candidate(campaign[level_index], selected_bosses[str(level_index)]).base_reward
-	payout = Rules.reward(cash, points, target(), 2 - hand, base_reward)
+	payout = Rules.reward(cash, points, target(), hand_limit() - hand, base_reward)
+	# Cobrador (C54): suma aparte del cobro base, solo si el jefe no la suspende (el cierre ocurre en hand_result).
+	var collected := int(CoinEffects.sum_of(_active_passives(), "encounter_cash"))
+	if collected > 0:
+		payout["coins"] = collected
+		payout.total += collected
 	cash += payout.total
 	impulses = []
 	Coins.advance(coin_inventory.equipped, "encounter_won")
@@ -686,13 +745,15 @@ func _generated_shop() -> Dictionary:
 	var state := Shop.empty_state()
 	var staged_rng: int = rng.state
 	var serial: int = shop_offer_sequence
+	var seen: Array = once_coins_seen.duplicate()
 	for section in ["coins", "components", "numbers", "stickers"]:
-		var generated := Shop.generate(section, shop_tables, sticker_catalog, passives, staged_rng, serial)
+		var generated := Shop.generate(section, shop_tables, sticker_catalog, passives, staged_rng, serial, seen)
 		if not generated.valid: return {"valid": false}
 		state[section] = generated.section
 		staged_rng = generated.rng_state
 		serial = generated.sequence
-	return {"valid": true, "state": state, "rng_state": staged_rng, "sequence": serial}
+		seen = generated.once_seen
+	return {"valid": true, "state": state, "rng_state": staged_rng, "sequence": serial, "once_seen": seen}
 
 func open_shop() -> bool:
 	if phase != "reward": return false
@@ -701,8 +762,10 @@ func open_shop() -> bool:
 	shop_state = generated.state
 	rng.state = generated.rng_state
 	shop_offer_sequence = generated.sequence
+	once_coins_seen = generated.once_seen
 	phase = "shop"
 	impulses = []
+	visit_discount = 0.0
 	reroll_prices = {"coins": 1, "components": 1, "numbers": 1, "stickers": 1}
 	free_renewals = int(CoinEffects.sum_of(passives, "free_renewals"))
 	return true
@@ -715,6 +778,7 @@ func generate_offers() -> bool:
 	shop_state = generated.state
 	rng.state = generated.rng_state
 	shop_offer_sequence = generated.sequence
+	once_coins_seen = generated.once_seen
 	return true
 
 func inspect_shop_offer(section: String, id: String) -> Dictionary:
@@ -730,7 +794,7 @@ func renewal_price(section: String) -> int:
 func refresh_shop(section: String = "coins") -> bool:
 	var price := renewal_price(section)
 	if phase != "shop" or not can_afford(price) or not shop_state.has(section) or not reroll_prices.has(section): return false
-	var generated := Shop.generate(section, shop_tables, sticker_catalog, passives, rng.state, shop_offer_sequence)
+	var generated := Shop.generate(section, shop_tables, sticker_catalog, passives, rng.state, shop_offer_sequence, once_coins_seen)
 	if not generated.valid or not generated.section.configured: return false
 	if free_renewals > 0: free_renewals -= 1
 	else:
@@ -739,6 +803,7 @@ func refresh_shop(section: String = "coins") -> bool:
 	shop_state[section] = generated.section
 	rng.state = generated.rng_state
 	shop_offer_sequence = generated.sequence
+	once_coins_seen = generated.once_seen
 	message = "Sección renovada."
 	return true
 
@@ -816,9 +881,70 @@ func _commit_purchase(section: String, offer: Dictionary, plan: Dictionary) -> D
 	if updates.has("pending_pack"):
 		pending_sticker_pack = updates.pending_pack.duplicate(true)
 		phase = "sticker_choice"
+	if updates.has("pending_coin_pack"):
+		pending_coin_pack = updates.pending_coin_pack.duplicate(true)
+		phase = "coin_choice"
+		_settle_coin_pack()
 	message = plan.message
 	last_purchase_result = plan.duplicate(true)
 	return plan.duplicate(true)
+
+## Paquete de monedas (D15). Para cada moneda que falta elegir: si entra directo, o qué monedas propias del mismo tipo
+## se pueden reemplazar (`replace`, ids de instancia) y cuáles se ven pero no se pueden sacar (`blocked`).
+func coin_choice_options() -> Array:
+	var result: Array = []
+	if pending_coin_pack.is_empty(): return result
+	for id in pending_coin_pack.items:
+		if id in pending_coin_pack.received: continue
+		var data := Coins.definition(id)
+		var same_type: Array = coin_inventory.equipped if data.type == "passive" else coin_inventory.consumables
+		var direct := Coins.can_store(coin_inventory, id)
+		var replace: Array = []
+		var blocked: Array = []
+		for item in same_type:
+			if item.instance_id in pending_coin_pack.received_instances: continue
+			if Coins.can_replace(coin_inventory, item.instance_id, id): replace.append(item.instance_id)
+			else: blocked.append(item.instance_id)
+		result.append({"id": id, "direct": direct, "replace": replace, "blocked": blocked})
+	return result
+
+## Elige una moneda del paquete. Si no hay lugar hay que decir cuál se reemplaza (por instancia): una sola operación
+## que aplica la elección y el reemplazo juntos, y la que sale paga su reventa.
+func choose_coin(id: String, replace_instance_id: int = 0) -> bool:
+	if phase != "coin_choice" or pending_coin_pack.is_empty() or id not in pending_coin_pack.items or id in pending_coin_pack.received: return false
+	var data := Coins.definition(id)
+	var direct := Coins.can_store(coin_inventory, id)
+	if not direct:
+		if replace_instance_id == 0 or replace_instance_id in pending_coin_pack.received_instances or not Coins.can_replace(coin_inventory, replace_instance_id, id):
+			message = "No hay lugar para esa moneda: elegí cuál de las tuyas reemplazar."
+			return false
+		var list: Array = coin_inventory.equipped if data.type == "passive" else coin_inventory.consumables
+		for i in range(list.size()):
+			if list[i].instance_id == replace_instance_id:
+				cash += Coins.definition(list[i].coin_id).resale
+				list.remove_at(i)
+				break
+	coin_instance_sequence += 1
+	var item := Coins.instance(id, coin_instance_sequence)
+	if data.type == "passive": coin_inventory.equipped.append(item)
+	else: coin_inventory.consumables.append(item)
+	Coins.refresh_capacity(coin_inventory)
+	pending_coin_pack.received.append(id)
+	pending_coin_pack.received_instances.append(item.instance_id)
+	pending_coin_pack.picks_left -= 1
+	message = "Recibiste %s." % data.name
+	_settle_coin_pack()
+	return true
+
+## Cierra el paquete cuando se eligió todo o cuando ya no queda ninguna elección legal (nunca deja la partida trabada).
+func _settle_coin_pack() -> void:
+	if pending_coin_pack.is_empty(): return
+	var legal := coin_choice_options().filter(func(option): return option.direct or not option.replace.is_empty())
+	if pending_coin_pack.picks_left > 0 and not legal.is_empty(): return
+	if purchase_receipts.has(pending_coin_pack.offer_id): purchase_receipts[pending_coin_pack.offer_id]["selected"] = pending_coin_pack.received.duplicate()
+	if pending_coin_pack.picks_left > 0: message = "No quedan elecciones posibles: el paquete se cierra."
+	pending_coin_pack = {}
+	phase = "shop"
 
 func buy(slot: int, expected_offer_id: String = "") -> bool:
 	if phase != "shop" or slot < 0 or slot >= offers.size(): return false
@@ -862,7 +988,8 @@ func _advance_encounter() -> bool:
 	_start_encounter()
 	return true
 
-func use_consumable(index: int = 0) -> bool:
+## `target` es el dado elegido para las monedas que lo piden (Voltear dado); las demás lo ignoran.
+func use_consumable(index: int = 0, target: int = -1) -> bool:
 	if index < 0 or index >= coin_inventory.consumables.size(): return false
 	var id: String = coin_inventory.consumables[index].coin_id
 	if not Coins.can_use(id, phase): return false
@@ -870,13 +997,60 @@ func use_consumable(index: int = 0) -> bool:
 	var data := Coins.definition(id)
 	var effect: Dictionary = data.effects[0]
 	match effect.kind:
+		"use_reroll_all":
+			if phase != "play" or rolls_made == 0: return false
+			var fixed := fixed_die()
+			var rolled_ids: Array = []
+			var kept_ids: Array = []
+			for die in dice:
+				if die.id == fixed: kept_ids.append(die.id)
+				else: rolled_ids.append(die.id)
+			groups = []
+			for die_id in rolled_ids: dice[die_id].zone = "cup"
+			_throw(rolled_ids, kept_ids, "total")
+		"use_flip_die":
+			if target < 0 or target >= dice.size() or rolls_made == 0 or is_grouped(target) or target == fixed_die():
+				message = "Ese dado no se puede voltear: tiene que estar suelto, ya tirado y no fijado por un jefe."
+				return false
+			var flipped: Dictionary = dice[target]
+			flipped.face_index = flipped.faces.size() - 1 - int(flipped.face_index)
+			flipped.value = DiceState.number_on_face(flipped, flipped.face_index)
+			message = "Dado %d: pasó a la cara opuesta (%d)." % [target + 1, flipped.value]
+		"use_boss_shield":
+			if not is_boss() or boss_shield_active: return false
+			boss_shield_active = true
+			message = "Escudo de jefe: el poder de %s queda apagado esta mano." % boss_rule.get("name", "el jefe")
 		"impulse":
 			if id not in impulses: impulses.append(id)
 			var shown: Array = effect.numbers.map(func(n): return str(n))
-			message = "Impulso activo: cada %s suma +%d hasta terminar este encuentro." % [" y ".join(shown), effect.amount]
+			var listed: String = shown[0] if shown.size() == 1 else ", ".join(shown.slice(0, shown.size() - 1)) + " y " + shown[shown.size() - 1]
+			message = "Impulso activo: cada %s suma +%d hasta terminar este encuentro." % [listed, effect.amount]
 		"use_extra_roll":
 			rolls_left += int(effect.amount)
-			message = "Una tirada adicional disponible en esta mano."
+			message = "Una tirada adicional disponible en esta mano." if int(effect.amount) == 1 else "%d tiradas adicionales disponibles en esta mano." % int(effect.amount)
+		"use_hand_mult":
+			hand_mult_bonus += int(effect.amount)
+			message = "Mult +%d activo: se suma al multiplicador de cada combinación de esta mano." % int(effect.amount)
+		"use_hand_points":
+			hand_points_bonus += int(effect.amount)
+			message = "Bolsa de puntos: +%d puntos planos en esta mano." % int(effect.amount)
+		"use_cash":
+			cash += int(effect.amount)
+			message = "Plata rápida: +$%d." % int(effect.amount)
+		"use_visit_discount":
+			if visit_discount > 0.0: return false
+			visit_discount = float(effect.amount)
+			message = "Descuento de visita activo: -%d %% hasta salir de la tienda." % int(round(float(effect.amount) * 100.0))
+		"use_repair_all":
+			if phase != "repair" or repair_resolution.get("status", "") != "pending": return false
+			var fixed: Array = repair_resolution.available_ids.duplicate()
+			for die_id in fixed: dice[die_id].shell_broken = false
+			repair_resolution.status = "repaired"
+			repair_resolution.selected_ids = fixed
+			repair_resolution.cost = 0
+			repair_resolution["cash_after"] = cash
+			phase = repair_resolution.next_phase
+			message = "Reparar todas: carcasas reparadas gratis."
 		"use_double_mult":
 			if double_mult: return false
 			double_mult = true

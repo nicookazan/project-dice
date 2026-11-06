@@ -20,6 +20,7 @@ const CoinArt = preload("res://scripts/coin_art.gd")
 const ShopArt = preload("res://scripts/shop_art.gd")
 const UiSkin = preload("res://scripts/ui_skin.gd")
 const ItemTooltip = preload("res://scripts/item_tooltip.gd")
+const CoinPackPanel = preload("res://scripts/coin_pack_panel.gd")
 const HoverButton = preload("res://scripts/hover_button.gd")
 const HoverPanel = preload("res://scripts/hover_panel.gd")
 const Materials = preload("res://scripts/materials.gd")
@@ -57,10 +58,14 @@ var save_error := ""
 var session_started := false
 var game = Game.new()
 var selected: Array = []
+## Ranura de la moneda "Voltear dado" mientras se elige el dado; solo de pantalla, nunca se guarda (-1 = sin elegir).
+var flip_slot := -1
 var repair_selection: Array = []
 var shop_section := "coins"
 var purchase_error := ""
 var pack_panel_open := true
+## Moneda del paquete que se está por reemplazar ("" = ninguna). Solo de pantalla, nunca se guarda.
+var coin_pack_replacing := ""
 var sticker_animation: Control
 var ui: Control
 var cup_zone: Zone
@@ -179,8 +184,19 @@ func present_detail(title: String, text: String, compact := false) -> void:
 	detail_body.scroll_to_line(0)
 	detail.popup_centered(Vector2i(540, 270) if compact else Vector2i(820, 560))
 
+## Voltear dado: primer toque en la moneda elige el modo, segundo toque lo cancela; la moneda se gasta al elegir el dado.
+func start_flip(slot: int) -> void:
+	flip_slot = -1 if flip_slot == slot else slot
+	if flip_slot >= 0: game.message = "Voltear dado: elegí un dado suelto ya tirado. Tocá la moneda de nuevo para cancelar."
+	render()
+
 func toggle_die(index: int) -> void:
 	if throwing: return
+	if flip_slot >= 0:
+		var slot := flip_slot
+		flip_slot = -1
+		act(func(): game.use_consumable(slot, index))
+		return
 	if preferences.drag_groups: return
 	if game.phase != "play" or detail.visible or game.rolls_made == 0 or game.is_grouped(index): return
 	if index in selected: selected.erase(index)
@@ -865,7 +881,7 @@ func update_hover_description() -> void:
 	if not is_instance_valid(hover_description): return
 	sync_sticker_zones()
 	var hovered := get_viewport().gui_get_hovered_control()
-	var blocked: bool = get_viewport().gui_is_dragging() or detail.visible or confirmation.visible or is_instance_valid(sticker_book) or game.phase in ["purchase_target", "sticker_choice"]
+	var blocked: bool = get_viewport().gui_is_dragging() or detail.visible or confirmation.visible or is_instance_valid(sticker_book) or game.phase in ["purchase_target", "sticker_choice", "coin_choice"]
 	var hovered_die: Die = hovered if hovered != null and hovered.get_script() == Die and hovered.die_index >= 0 and hovered.die_index < game.dice.size() and not blocked else null
 	var text := ""
 	if hovered != null and hovered is Control and hovered_die == null and not blocked:
@@ -943,7 +959,7 @@ func render() -> void:
 	finish_throw()
 	table_dice.clear()
 	var profile := Presentation.profile(game)
-	background.shop_mode = game.phase in ["shop", "purchase_target", "sticker_choice"]
+	background.shop_mode = game.phase in ["shop", "purchase_target", "sticker_choice", "coin_choice"]
 	background.stickers = game.cup.stickers.duplicate()
 	if is_instance_valid(background): background.configure(profile, preferences)
 	if is_instance_valid(audio): audio.configure(preferences, profile.environment)
@@ -975,14 +991,15 @@ func render() -> void:
 		render_entry()
 		checkpoint()
 		return
-	if game.phase != "sticker_choice": pack_panel_open = true
+	if game.phase not in ["sticker_choice", "coin_choice"]: pack_panel_open = true
+	if game.phase != "coin_choice": coin_pack_replacing = ""
 	if background.shop_mode:
 		render_shop()
 		finish_render()
 		return
 	button(ui, "Menú", Rect2(1220, 23, 185, 38), show_game_menu)
-	if game.phase not in ["shop", "purchase_target", "sticker_choice"]: shop_section = "coins"
-	if game.phase != "sticker_choice": pack_panel_open = true
+	if game.phase not in ["shop", "purchase_target", "sticker_choice", "coin_choice"]: shop_section = "coins"
+	if game.phase not in ["sticker_choice", "coin_choice"]: pack_panel_open = true
 	render_notebook()
 	render_table()
 	render_inventory()
@@ -1024,6 +1041,11 @@ func finish_render() -> void:
 		else: button(ui, "Elegir sticker pendiente", Rect2(1045, 748, 355, 40), func():
 			pack_panel_open = true
 			render())
+	elif game.phase == "coin_choice":
+		if pack_panel_open: CoinPackPanel.build(self)
+		else: button(ui, "Elegir moneda pendiente", Rect2(1045, 748, 355, 40), func():
+			pack_panel_open = true
+			render())
 	checkpoint()
 	if save_error != "":
 		button(ui, "Error al guardar · reintentar", Rect2(590, 72, 390, 38), func():
@@ -1052,7 +1074,7 @@ func render_notebook() -> void:
 	label(note, "LIBRETA", Vector2(28, 14), 22, ink)
 	label(note, "PUNTOS / OBJETIVO", Vector2(28, 49), 14, ink)
 	label(note, "%d / %d" % [game.points, game.target()], Vector2(28, 69), 32, ink)
-	label(note, "Mano %d / 2" % game.hand, Vector2(28, 115), 18, ink)
+	label(note, "Mano %d / %d" % [game.hand, game.hand_limit()], Vector2(28, 115), 18, ink)
 	label(note, money_text(game.cash), Vector2(211, 115), 22, ink)
 	label(note, "Tiradas restantes: %d" % game.rolls_left, Vector2(28, 143), 18, ink)
 	label(note, "Nivel %d · Rival %d / %d" % [game.level_index + 1, game.rival + 1, game.level_encounters.size()], Vector2(28, 177), 15, ink)
@@ -1114,7 +1136,9 @@ func render_notebook() -> void:
 	status.size = Vector2(254, 36)
 	status.add_theme_color_override("default_color", ink)
 	status.add_theme_font_size_override("normal_font_size", 13)
+	if flip_slot >= game.coin_inventory.consumables.size() or game.phase != "play": flip_slot = -1
 	status.text = purchase_error if not purchase_error.is_empty() else game.message
+	if game.boss_shield_active: status.text += "\nEscudo de jefe activo en esta mano."
 	for impulse in game.impulses: status.text += "\nImpulso activo: %s." % Coins.definition(impulse).name
 	if game.double_mult: status.text += "\nDoble mult activo en esta mano."
 	note.add_child(status)
@@ -1386,8 +1410,9 @@ func render_actions() -> void:
 	if game.phase == "hand_result":
 		if game.points >= game.target():
 			button(ui, "Cerrar y cobrar", Rect2(375, 626, 236, 42), func(): act(game.close_encounter), false, true)
-		if game.hand < 2:
-			button(ui, "Jugar segunda mano", Rect2(725, 626, 262, 42), func(): act(game.next_hand))
+		if game.hand < game.hand_limit():
+			var next_name: String = ["", "primera", "segunda", "tercera", "cuarta"][mini(game.hand + 1, 4)]
+			button(ui, "Jugar %s mano" % next_name, Rect2(725, 626, 262, 42), func(): act(game.next_hand))
 			if game.points >= game.target():
 				label(ui, "Otra mano consume el premio de $2 por mano sobrante.", Vector2(375, 593), 16, cream, 690)
 
@@ -1417,7 +1442,7 @@ func render_inventory() -> void:
 	for i in range(game.coin_inventory.consumables.size()):
 		var stored: String = game.coin_inventory.consumables[i].coin_id
 		var slot := i
-		var use := button(ui, "", Rect2(999 + i * 74, 748, 64, 60), func(): act(func(): game.use_consumable(slot)), not Coins.can_use(stored, game.phase) or BossRules.suspended(game.boss_context(), "coin", stored))
+		var use := button(ui, "", Rect2(999 + i * 74, 748, 64, 60), (func(): start_flip(slot)) if Coins.targeted(stored) else (func(): act(func(): game.use_consumable(slot))), not Coins.can_use(stored, game.phase) or BossRules.suspended(game.boss_context(), "coin", stored))
 		use.name = "ConsumableCoin" if i == 0 else "ConsumableCoin_" + str(i)
 		for state in ["normal", "hover", "pressed", "disabled", "focus"]: use.add_theme_stylebox_override(state, StyleBoxEmpty.new())
 		use.tooltip_text = Rules.COINS[stored].description + " Clic para consumir."
@@ -1448,7 +1473,7 @@ func add_coin(parent: Node, coin: String, rect: Rect2) -> void:
 func inspect_coin(coin: String) -> void:
 	var data := Coins.definition(coin)
 	if data.is_empty(): return
-	var duration: String = {"equipped": "Mientras está equipada", "hand": "Mano actual", "encounter": "Encuentro actual"}[data.duration]
+	var duration: String = {"equipped": "Mientras está equipada", "hand": "Mano actual", "encounter": "Encuentro actual", "instant": "Inmediata", "visit": "Visita actual a la tienda"}[data.duration]
 	var windows := {"play": "durante la jugada", "shop": "en la tienda", "repair": "en la fase de reparación"}
 	var use_windows: Array = data.use_contexts.map(func(window): return windows.get(window, window))
 	var context := "Pasiva al puntuar; no se consume." if data.type == "passive" else "Se usa " + ", ".join(use_windows) + "."
@@ -1478,6 +1503,8 @@ func shop_offer_text(offer: Dictionary) -> Array:
 			var data: Dictionary = game.sticker_catalog[effect.id]
 			var level: int = game.cup.stickers.get(effect.id, 0)
 			return [Stickers.NAMES[effect.id], "Nivel %d → %d · +%s puntos/nivel\n+%s al multiplicador/nivel\nCategorías: %s." % [level, level + 1, number(data.points_per_level), number(data.multiplier_per_level), ", ".join(Stickers.CATEGORIES[effect.id])]]
+		"coin_pack": return ["Paquete de monedas", "%s. No se ve el contenido hasta comprarlo.
+Se puede comprar con el inventario lleno: después elegís y, si no hay lugar, reemplazás una moneda tuya." % CoinPackPanel.closed_text(effect)]
 		"pack": return ["Paquete de stickers", "Elegí uno entre tres distintos." if effect.pack_kind == "choose_one" else "Recibís dos stickers distintos."]
 	return ["Oferta", ""]
 
@@ -1513,6 +1540,13 @@ func shop_icon(parent: Node, offer: Dictionary, rect: Rect2) -> void:
 		return
 	if offer.kind == "coin":
 		add_coin(parent, offer.effect.coin_id, rect)
+		return
+	if offer.kind == "coin_pack":
+		var ring := panel(parent, Rect2(rect.position + Vector2(rect.size.x * 0.12, 0), rect.size - Vector2(rect.size.x * 0.24, 14)), Color.TRANSPARENT, gold)
+		ring.name = "PackRing"
+		ring.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		add_coin(parent, "pack_small" if offer.effect.size == "small" else "pack_large", Rect2(rect.position + Vector2(rect.size.x * 0.12, 2), rect.size - Vector2(rect.size.x * 0.24, 18)))
+		shop_caption(parent, CoinPackPanel.closed_text(offer.effect), Rect2(rect.position + Vector2(-6, rect.size.y - 18), Vector2(rect.size.x + 12, 18)), 11, gold)
 		return
 	if offer.kind in ["face", "shell", "material", "element"]:
 		var face := Die.new()
@@ -1902,6 +1936,7 @@ func render_result() -> void:
 		if game.phase == "won": label(modal, "VICTORIA · 21 ENCUENTROS COMPLETADOS" if not game.campaign.is_empty() else "VICTORIA · NIVEL DE PRUEBA COMPLETADO", Vector2(36, 69), 16, cream)
 		var p: Dictionary = game.payout
 		label(modal, "%d / %d puntos\n\nVictoria                              $%d\nManos sobrantes                  $%d\nExceso de puntos                 $%d\nIntereses                             $%d\n\nTOTAL COBRADO                  $%d" % [game.points, game.target(), p.base, p.hands, p.excess, p.interest, p.total], Vector2(36, 90), 21, cream)
+		if p.get("coins", 0) > 0: label(modal, "Incluye $%d de Cobrador." % p.coins, Vector2(36, 330), 16, gold)
 		button(modal, "Prototipo completado · volver a jugar", Rect2(36, 371, 566, 49), start_new_run, false, true)
 	button(modal, "Volver al menú", Rect2(36, 437, 566, 36), func(): request_navigation("menu"))
 
@@ -1921,7 +1956,13 @@ func render_encounter_choice() -> void:
 		label(modal, names[i], Vector2(200, 133 + i * 32), 18, cream, 360)
 		var amount := label(modal, "$%d" % values[i], Vector2(580, 133 + i * 32), 18, cream, 80)
 		amount.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	shop_caption(modal, "TOTAL COBRADO: $%d   ·   SALDO: %s" % [p.total, money_text(game.cash)], Rect2(32, 272, 796, 34), 20, gold)
+	var total_y := 272.0
+	if p.get("coins", 0) > 0:
+		label(modal, "Cobrador", Vector2(200, 261), 18, cream, 360)
+		var coin_amount := label(modal, "$%d" % p.coins, Vector2(580, 261), 18, cream, 80)
+		coin_amount.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		total_y = 298.0
+	shop_caption(modal, "TOTAL COBRADO: $%d   ·   SALDO: %s" % [p.total, money_text(game.cash)], Rect2(32, total_y, 796, 34), 20, gold)
 	shop_caption(modal, "¿CÓMO QUERÉS SEGUIR?", Rect2(32, 335, 796, 32), 22, gold)
 	var next_text := "Próximo: %s" % ("jefe" if game.is_boss(game.rival + 1) else "rival %d" % [game.rival + 2]) if game.rival + 1 < game.level_encounters.size() else "Entrar al nivel %d" % [game.level_index + 2]
 	shop_caption(modal, "Comprá mejoras para tus dados.", Rect2(42, 390, 374, 28), 16)
@@ -1938,12 +1979,19 @@ func render_encounter_choice() -> void:
 func render_repairs() -> void:
 	var modal := panel(ui, Rect2(350, 160, 740, 580), Color("263c3d"), gold)
 	label(modal, "REPARAR CARCASAS", Vector2(30, 24), 30, gold)
+	# Las monedas de reparación usables van en fila, una al lado de la otra.
+	var repair_slots: Array = []
 	for slot in range(game.coin_inventory.consumables.size()):
 		var stored: Dictionary = game.coin_inventory.consumables[slot]
-		if Coins.can_use(stored.coin_id, "repair") and not game.repair_resolution.get("free_one", false):
-			var slot_index := slot
-			var use_button := button(modal, "Usar " + Coins.definition(stored.coin_id).name, Rect2(430, 18, 280, 40), func(): act(func(): game.use_consumable(slot_index)))
-			use_button.name = "UseRepairCoin"
+		var is_free_one: bool = Coins.effects(stored.coin_id)[0].kind == "use_repair_free"
+		if Coins.can_use(stored.coin_id, "repair") and not (is_free_one and game.repair_resolution.get("free_one", false)):
+			repair_slots.append(slot)
+	var button_width := 280.0 if repair_slots.size() <= 1 else 160.0
+	for i in range(repair_slots.size()):
+		var slot_index: int = repair_slots[i]
+		var use_button := button(modal, ("Usar " if repair_slots.size() <= 1 else "") + Coins.definition(game.coin_inventory.consumables[slot_index].coin_id).name, Rect2(710 - button_width * (repair_slots.size() - i) - 8.0 * (repair_slots.size() - i - 1), 18, button_width, 40), func(): act(func(): game.use_consumable(slot_index)))
+		use_button.name = "UseRepairCoin"
+		if repair_slots.size() > 1: use_button.add_theme_font_size_override("font_size", 14)
 	label(modal, "Ya cobraste $%d · Saldo: %s\nElegí cuáles reparar o continuá sin reparar." % [game.payout.total, money_text(game.cash)], Vector2(30, 78), 21, cream, 680)
 	var y := 150.0
 	for id in game.repair_resolution.available_ids:

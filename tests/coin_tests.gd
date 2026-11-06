@@ -9,7 +9,7 @@ static func run(check: Callable) -> Dictionary:
 	return _test_effects_and_contexts(check)
 
 static func _test_catalog_and_instances(check: Callable) -> void:
-	check.call(Coins.catalog().size() == 59 and Coins.PASSIVES.size() == 51 and Coins.CONSUMABLES.size() == 8, "coins: first batch is 51 passives (C01-C51) and 8 single-use coins")
+	check.call(Coins.catalog().size() == 75 and Coins.PASSIVES.size() == 57 and Coins.CONSUMABLES.size() == 18, "coins: 57 passives (C01-C57) and 18 single-use coins")
 	for id in Coins.catalog():
 		var data := Coins.definition(id)
 		var complete := true
@@ -79,7 +79,7 @@ static func _test_transactions(check: Callable) -> void:
 	check.call(game.buy(0) and game.cash == 0 and game.passives.size() == 5, "coins: exact funds complete purchase after a slot is freed")
 	game.shop_state = {}
 	game.generate_offers()
-	check.call(game.offers.all(func(id): return id not in game.passives and Coins.DATA.has(id)), "coins: provisional uniform generator excludes owned passives")
+	check.call(game.offers.all(func(id): return id == "" or (id not in game.passives and Coins.DATA.has(id))), "coins: provisional uniform generator excludes owned passives")
 	for phase in ["play", "hand_result", "reward", "repair", "won", "lost", "sticker_choice"]:
 		game.phase = phase
 		before = game.snapshot()

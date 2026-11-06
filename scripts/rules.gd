@@ -190,7 +190,7 @@ static func score(dice: Array, groups: Array, passives: Array, boost: Variant, s
 	var rolls_made: int = coin_context.get("rolls_made", 1 if served else 2)
 	var sticker_total := 0
 	for level in sticker_levels.values(): sticker_total += int(level)
-	var context := {"hand": 1, "rolls_made": rolls_made, "rolls_left": maxi(3 - rolls_made, 0), "cash": 0,
+	var context := {"hand": 1, "level": 1, "rolls_made": rolls_made, "rolls_left": maxi(3 - rolls_made, 0), "cash": 0,
 		"equipped_count": passives.size(), "sticker_total": sticker_total, "states": {}, "double_mult": false}
 	context.merge(coin_context, true)
 	var double_mult: bool = context.double_mult and not BossRules.suspended(boss_context, "coin", "double_mult")
@@ -278,6 +278,9 @@ static func score(dice: Array, groups: Array, passives: Array, boost: Variant, s
 				multiplier_additions.append_array(CoinEffects.die_mult(effective_passives, dice[index], numbers[index]))
 			multiplier_additions.append_array(CoinEffects.group_mult(effective_passives, cat, rules, context))
 			coin_points = CoinEffects.group_points(effective_passives, cat, rules)
+			# Mult +2 (U10) se suma antes de Doble mult; solo combinaciones, nunca los sobrantes.
+			var mult_bonus: int = 0 if BossRules.suspended(boss_context, "coin", "mult_plus2") else int(context.get("hand_mult_bonus", 0))
+			if mult_bonus > 0: multiplier_additions.append({"source": "consumable:mult_plus2", "amount": float(mult_bonus)})
 			if double_mult: multiplier_factors.append({"source": "consumable:double_mult", "amount": 2.0})
 		var repeat_factor := BossRules.repeat_factor(boss_context, cat)
 		if repeat_factor != 1.0: multiplier_factors.append({"source": "boss:repeat", "amount": repeat_factor})
@@ -293,11 +296,20 @@ static func score(dice: Array, groups: Array, passives: Array, boost: Variant, s
 		rows.append(row)
 		if cat not in ["Par", "Doble par", "Sin combinación"]:
 			counts[cat] = counts.get(cat, 0) + 1
+	# Dados fuera de toda combinación (el abducido no cuenta); lo usa Sobrantes (C57).
+	context["leftover_dice"] = leftovers.size()
 	for item in CoinEffects.hand_rows(effective_passives, context):
 		var flat := resolve_group(0, 0.0, item.points)
 		flat.merge({"category": "Moneda · " + COINS[item.source.trim_prefix("coin:")].name, "category_base": 0,
 			"served_bonus": 0, "ids": [], "die_rows": [], "source": item.source})
 		rows.append(flat)
+	# Bolsa de puntos (U11): fila plana fuera de todo multiplicador.
+	var bag_points := 0 if BossRules.suspended(boss_context, "coin", "points_bag") else int(context.get("hand_points_bonus", 0))
+	if bag_points > 0:
+		var bag := resolve_group(0, 0.0, float(bag_points))
+		bag.merge({"category": "Moneda · " + COINS["points_bag"].name, "category_base": 0,
+			"served_bonus": 0, "ids": [], "die_rows": [], "source": "consumable:points_bag"})
+		rows.append(bag)
 	# Historical pure-scoring fixtures only: a five-die game cannot repeat trios.
 	for cat in counts:
 		if counts[cat] > 1:

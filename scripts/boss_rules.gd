@@ -170,7 +170,7 @@ static func valid_state(rule: Dictionary, state: Variant, boss_active: bool) -> 
 	if boss_active and is_power(rule, "board_lock"):
 		return state.size() == 1 and state.get("locked") is String and (state.locked == "" or state.locked in CATEGORIES)
 	if boss_active and is_power(rule, "kiosk_tax"):
-		return state.size() == 1 and state.get("tax") is int and state.tax >= 0 and state.tax <= 4
+		return state.size() == 1 and state.get("tax") is int and state.tax >= 0 and state.tax <= 6
 	if boss_active and is_power(rule, "no_repeat"):
 		if state.size() != 1 or not state.get("scored") is Array: return false
 		return state.scored.all(func(name): return name is String and name in CATEGORIES) and state.scored.size() == Array(state.scored).reduce(func(seen, name): return seen if name in seen else seen + [name], []).size()

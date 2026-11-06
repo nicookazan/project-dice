@@ -49,6 +49,6 @@ static func valid_progress(game: Dictionary) -> bool:
 			for encounter in plan: completed.append(encounter.id)
 		else:
 			if game.level_encounters != plan or game.boss_rule != chosen.rule: return false
-			var count: int = game.rival + (1 if game.phase in ["reward", "repair", "shop", "purchase_target", "sticker_choice", "won"] else 0)
+			var count: int = game.rival + (1 if game.phase in ["reward", "repair", "shop", "purchase_target", "sticker_choice", "coin_choice", "won"] else 0)
 			for i in range(count): completed.append(plan[i].id)
 	return completed == game.completed_encounters

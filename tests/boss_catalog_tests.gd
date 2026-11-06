@@ -209,14 +209,14 @@ static func _migration(check: Callable) -> void:
 	service.read_file(service.path)
 	check.call(FileAccess.get_file_as_string(service.path) == content, "Boss migration v7 -> v8: reading never rewrites the original file")
 	var saved: Dictionary = service.save(SaveTests.payload(original))
-	check.call(saved.ok and FileAccess.get_file_as_string(service.path + ".bak") == content and JSON.parse_string(FileAccess.get_file_as_string(service.path)).version == 8, "Boss migration v7 -> v8: first checkpoint publishes v8 and backs up the v7 file")
+	check.call(saved.ok and FileAccess.get_file_as_string(service.path + ".bak") == content and JSON.parse_string(FileAccess.get_file_as_string(service.path)).version == Store.VERSION, "Boss migration v7 -> v8: first checkpoint publishes the current version and backs up the v7 file")
 	var unknown := v7_payload(original)
 	unknown.game.selected_bosses["0"] = "prueba_l9_9"
 	var broken = SaveTests.store()
 	write_version(broken, unknown, 7)
 	check.call(not broken.read_file(broken.path).ok and FileAccess.get_file_as_string(broken.path) != "", "Boss migration v7 -> v8: unknown boss ids are rejected and the file is kept")
 	var future = SaveTests.store()
-	write_version(future, SaveTests.payload(original), 9)
+	write_version(future, SaveTests.payload(original), Store.VERSION + 1)
 	check.call(future.read_file(future.path).code == "version", "Boss migration: a newer version is refused and kept")
 
 static func _art(check: Callable) -> void:

@@ -59,8 +59,22 @@ Versión 1 · 25 de octubre de 2026.
 | [J06 — Vaso que tira](J06-vaso-tira.md) | Jugabilidad | J01, J05 | Implementado; falta prueba del autor |
 | [J07 — Mano del jefe](J07-mano-jefe.md) | Jugabilidad | J05 | Implementado; falta prueba del autor y aprobar la hoja de poses |
 | [J08 — Vuelo del sticker](J08-sticker-vuelo.md) | Jugabilidad | J00 | Implementado; falta prueba del autor |
+| [MON0 — Preparación de la etapa de monedas](MON0-preparacion-monedas.md) | Monedas | 20 | Completado |
+| [MON1 — Bocetos y arte de monedas](MON1-arte-monedas.md) | Monedas | MON0 | Completado |
+| [MON2 — Rarezas y guardado v9](MON2-rarezas-guardado.md) | Monedas | MON0 | Completado |
+| [MON3 — Pasivas nuevas](MON3-pasivas-nuevas.md) | Monedas | MON1, MON2 | Completado |
+| [MON4 — Mano extra](MON4-mano-extra.md) | Monedas | MON3 | Completado |
+| [MON5 — Monedas de un uso simples](MON5-uso-simples.md) | Monedas | MON1, MON2 | Completado |
+| [MON6 — Relanzo total, Voltear dado y Escudo de jefe](MON6-uso-complejas.md) | Monedas | MON5 | Completado |
+| [MON7 — Paquete de monedas: reglas](MON7-paquete-reglas.md) | Monedas | MON2 | Completado |
+| [MON8 — Paquete de monedas: interfaz](MON8-paquete-interfaz.md) | Monedas | MON1, MON7 | Completado |
+| [MON9 — Cierre de la etapa de monedas](MON9-cierre-monedas.md) | Monedas | MON0–MON8 | En curso |
 
-Las fichas J00–J08 son la etapa de jugabilidad e interactividad posterior al paso 20 (plan en Notion; decisiones en D14). Orden no significa fecha ni duración. Se recomienda ejecutar una ficha por vez, comprobar su entrega y entonces habilitar la siguiente. Algunas dependencias permiten trabajo independiente, pero no se propone desarrollar todo simultáneamente.
+| [TX1 — Elementos de los dados más grandes](TX1-elementos-grandes.md) | Texturas | 20 | Prototipo sin integrar |
+| [TX2 — Fondos de ventana animados](TX2-fondos-animados.md) | Texturas | 20 | Prototipo sin integrar |
+| [TX3 — Arte de los metales nuevos](TX3-metales-arte.md) | Texturas | 20 | Bocetos aprobados; reglas sin definir |
+
+Las fichas J00–J08 son la etapa de jugabilidad e interactividad posterior al paso 20 (plan en Notion; decisiones en D14). Las fichas MON0–MON9 son la etapa de monedas (plan en Notion; decisiones en D15). Orden no significa fecha ni duración. Se recomienda ejecutar una ficha por vez, comprobar su entrega y entonces habilitar la siguiente. Algunas dependencias permiten trabajo independiente, pero no se propone desarrollar todo simultáneamente.
 
 ## Hitos verificables
 

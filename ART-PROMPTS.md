@@ -32,6 +32,8 @@ El cuerpo del dado ahora usa el sprite transparente `assets/art/ivory-die-v3.png
 
 `assets/art/pixel-v3/coins-v3.png`: generado con `tools/art/make_coins.gd` (máscaras por primitivas + `pixel_lib.gd`), sin IA de imagen; basado en los emblemas de `coins-v2.png` (cinco puntos, escalera, corona, cuatro cuadrados, sol, luna y estrella, dos dados, dado con flecha). Ver `docs/PLAN-ARTE-PIXEL.md`.
 
+`assets/art/pixel-v3/coins-nuevas-v3.png` (5/11/2026, etapa de monedas MON1): 16 monedas nuevas y 2 paquetes de monedas en una hoja de 6 × 3 celdas de 32 × 32 px, generada con `tools/art/make_coins_nuevas.gd` (máscaras por primitivas + `pixel_lib.gd`, sin IA de imagen). Los bocetos fueron aprobados por el autor antes de integrarlos y la hoja es idéntica byte a byte a lo aprobado. El borde sigue la rareza: Común cobre, Rara plata, Épica violeta, Legendaria oro. Orden de celdas en `scripts/coin_art.gd` (`NEW_IDS`). `coins-v3.png` (las 8 monedas originales) no se tocó; `tests/coin_art_tests.gd` lo verifica por hash.
+
 `assets/art/pixel-v3/termo-v3.png` y `stickers-v3.png`: generados con `tools/art/make_thermos_stickers.gd` (sin IA de imagen), a partir del termo plateado con asa negra y de los seis stickers (par, trío, escalera, full, póker, generala) existentes.
 
 `assets/art/pixel-v3/mesa-v3.png` y `termo-mesa-v3.png` (`tools/art/make_mesa.gd`) y `vaso-v3.png` (`tools/art/make_mate_vaso.gd`): generados (sin IA de imagen), tomando como referencia la composición de `mesa-libreta-frontal-v1.png` (paño con tres paneles, termo de acero, vaso de cuero negro con costuras doradas).

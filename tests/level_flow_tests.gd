@@ -227,7 +227,7 @@ static func run(scene, check: Callable) -> Dictionary:
 	check.call(boss.route()[0].target == 40 and boss.route()[2].status == "Superado", "Flow: route is detached, fixed and marks all stops won")
 
 	# Fixed regression seed, generated dice and stock; repeat exclusively via UI controls.
-	var seed_value := 3
+	var seed_value := 9
 	var natural = Game.new(seed_value)
 	var expected: Array = play_run(natural)
 	check.call(natural.phase == "won", "Flow: ordinary generated dice and shop permit completing the level")

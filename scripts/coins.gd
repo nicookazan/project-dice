@@ -10,8 +10,11 @@ const PASSIVES = [
 	"num_1", "num_2", "num_3", "num_4", "num_5", "num_6", "sixes",
 	"first_roll", "unused_rolls", "last_roll", "second_hand", "thermos", "collection", "interest",
 	"pocket", "pocket_small", "discount", "tempered_gem", "jeweler",
-	"veteran", "accumulated", "streak", "bosshunter"]
-const CONSUMABLES = ["boost", "roll", "boost_25", "boost_36", "double_mult", "free_renewal_use", "repair_gem", "free_reroll_use"]
+	"veteran", "accumulated", "streak", "bosshunter",
+	"reserve_roll", "collector", "level_veteran", "served", "leftovers", "extra_hand"]
+const CONSUMABLES = ["boost", "roll", "boost_25", "boost_36", "double_mult", "free_renewal_use", "repair_gem", "free_reroll_use",
+	"mult_plus2", "points_bag", "two_rolls", "quick_cash", "visit_discount", "repair_all", "even_boost",
+	"reroll_all", "flip_die", "boss_shield"]
 const RARITIES = ["common", "rare", "epic", "legendary"]
 const RARITY_NAMES = {"common": "Común", "rare": "Rara", "epic": "Épica", "legendary": "Legendaria"}
 ## [price, resale] by rarity.
@@ -29,7 +32,10 @@ const SHORT = {
 	"first_roll": "1T", "unused_rolls": "TS", "last_roll": "UT", "second_hand": "M2", "thermos": "Te", "collection": "Co", "interest": "In",
 	"pocket": "B+", "pocket_small": "b+", "discount": "-%", "tempered_gem": "GT", "jeweler": "Jo",
 	"veteran": "Ve", "accumulated": "Ac", "streak": "Ra", "bosshunter": "Cz",
-	"boost_25": "25", "boost_36": "36", "double_mult": "x2", "free_renewal_use": "R0", "repair_gem": "Rp", "free_reroll_use": "R1"}
+	"reserve_roll": "TR", "collector": "Cb", "level_veteran": "VN", "served": "Sv", "leftovers": "So", "extra_hand": "M3",
+	"boost_25": "25", "boost_36": "36", "double_mult": "x2", "free_renewal_use": "R0", "repair_gem": "Rp", "free_reroll_use": "R1",
+	"mult_plus2": "+2", "points_bag": "Bp", "two_rolls": "T2", "quick_cash": "$5", "visit_discount": "-V", "repair_all": "RT", "even_boost": "246",
+	"reroll_all": "R*", "flip_die": "VD", "boss_shield": "EJ"}
 
 ## Per coin: code, name, description, rarity, family, effects (+ optional overrides).
 const DATA = {
@@ -63,7 +69,7 @@ const DATA = {
 		"effects": [{"kind": "category_points", "categories": ["Full"], "amount": 18}]},
 	"poker_pts": {"code": "C15", "name": "Puntos de póker", "description": "+22 puntos al anotar un póker.", "rarity": "common", "family": "points",
 		"effects": [{"kind": "category_points", "categories": ["Póker"], "amount": 22}]},
-	"generala_pts": {"code": "C16", "name": "Puntos de generala", "description": "+30 puntos al anotar una generala.", "rarity": "rare", "family": "points",
+	"generala_pts": {"code": "C16", "name": "Puntos de generala", "description": "+30 puntos al anotar una generala.", "rarity": "common", "family": "points",
 		"effects": [{"kind": "category_points", "categories": ["Generala"], "amount": 30}]},
 	"flat_mult": {"code": "C17", "name": "+1 mult", "description": "+1 al multiplicador de cada combinación de la mano.", "rarity": "rare", "family": "general",
 		"effects": [{"kind": "flat_group_mult", "amount": 1}]},
@@ -74,13 +80,13 @@ const DATA = {
 		"effects": [{"kind": "credit", "amount": 10}]},
 	"extra_roll_perm": {"code": "C20", "name": "Tirada permanente", "description": "+1 tirada por mano (4 en vez de 3).", "rarity": "legendary", "family": "general",
 		"effects": [{"kind": "extra_rolls", "amount": 1}]},
-	"free_renewal": {"code": "C21", "name": "Renovación gratis", "description": "La primera renovación de cada visita a la tienda es gratis.", "rarity": "common", "family": "economy",
+	"free_renewal": {"code": "C21", "name": "Renovación gratis", "description": "La primera renovación de cada visita a la tienda es gratis.", "rarity": "rare", "family": "economy",
 		"effects": [{"kind": "free_renewals", "amount": 1}]},
-	"metal": {"code": "C22", "name": "Dados de metal", "description": "Por cada dado de acero o cobre: +1 punto y +0,5 mult si está en una combinación.", "rarity": "rare", "family": "die_type",
+	"metal": {"code": "C22", "name": "Dados de metal", "description": "Por cada dado de acero o cobre: +1 punto y +0,5 mult si está en una combinación.", "rarity": "common", "family": "die_type",
 		"effects": [{"kind": "die_points_if", "filter": {"material": ["steel", "copper"]}, "amount": 1}, {"kind": "die_mult_if", "filter": {"material": ["steel", "copper"]}, "amount": 0.5}]},
-	"elemental": {"code": "C23", "name": "Dados elementales", "description": "Por cada dado con elemento: +1 punto y +0,5 mult si está en una combinación.", "rarity": "rare", "family": "die_type",
+	"elemental": {"code": "C23", "name": "Dados elementales", "description": "Por cada dado con elemento: +1 punto y +0,5 mult si está en una combinación.", "rarity": "common", "family": "die_type",
 		"effects": [{"kind": "die_points_if", "filter": {"element": "any"}, "amount": 1}, {"kind": "die_mult_if", "filter": {"element": "any"}, "amount": 0.5}]},
-	"gems": {"code": "C24", "name": "Gemas", "description": "Por cada dado con gema: +1 punto y +0,5 mult si está en una combinación.", "rarity": "rare", "family": "die_type",
+	"gems": {"code": "C24", "name": "Gemas", "description": "Por cada dado con gema: +1 punto y +0,5 mult si está en una combinación.", "rarity": "common", "family": "die_type",
 		"effects": [{"kind": "die_points_if", "filter": {"shell": "any"}, "amount": 1}, {"kind": "die_mult_if", "filter": {"shell": "any"}, "amount": 0.5}]},
 	"straight4": {"code": "C25", "name": "Escaleras de 4", "description": "La escalera se arma con 4 dados (1234, 2345, 3456, 4561); el quinto queda como sobrante.", "rarity": "epic", "family": "rule",
 		"effects": [{"kind": "rule", "rule": "straight4"}]},
@@ -102,21 +108,21 @@ const DATA = {
 		"effects": [{"kind": "die_points_if", "filter": {"numbers": [5]}, "amount": 5}]},
 	"num_6": {"code": "C34", "name": "Seis", "description": "+5 puntos por cada dado que salga 6.", "rarity": "common", "family": "number",
 		"effects": [{"kind": "die_points_if", "filter": {"numbers": [6]}, "amount": 5}]},
-	"sixes": {"code": "C35", "name": "Seises", "description": "+1 mult por cada 6 que esté en una combinación.", "rarity": "rare", "family": "number",
+	"sixes": {"code": "C35", "name": "Seises", "description": "+1 mult por cada 6 que esté en una combinación.", "rarity": "common", "family": "number",
 		"effects": [{"kind": "die_mult_if", "filter": {"numbers": [6]}, "amount": 1}]},
 	"first_roll": {"code": "C36", "name": "Primera tirada", "description": "+1 mult si anotás en la primera tirada de la mano.", "rarity": "rare", "family": "rhythm",
 		"effects": [{"kind": "cond_mult", "when": "first_roll", "amount": 1}]},
-	"unused_rolls": {"code": "C37", "name": "Tiradas sin usar", "description": "+5 puntos de mano por cada tirada que no usaste.", "rarity": "common", "family": "rhythm",
+	"unused_rolls": {"code": "C37", "name": "Tiradas sin usar", "description": "+5 puntos de mano por cada tirada que no usaste.", "rarity": "rare", "family": "rhythm",
 		"effects": [{"kind": "hand_points", "per": "unused_rolls", "amount": 5}]},
-	"last_roll": {"code": "C38", "name": "Última tirada", "description": "+20 puntos de mano si anotás gastando la última tirada.", "rarity": "common", "family": "rhythm",
+	"last_roll": {"code": "C38", "name": "Última tirada", "description": "+20 puntos de mano si anotás gastando la última tirada.", "rarity": "rare", "family": "rhythm",
 		"effects": [{"kind": "hand_points", "per": "last_roll", "amount": 20}]},
-	"second_hand": {"code": "C39", "name": "Segunda mano", "description": "+1 mult en la segunda mano del encuentro.", "rarity": "common", "family": "position",
+	"second_hand": {"code": "C39", "name": "Segunda mano", "description": "+1 mult en la segunda mano del encuentro.", "rarity": "rare", "family": "position",
 		"effects": [{"kind": "cond_mult", "when": "second_hand", "amount": 1}]},
 	"thermos": {"code": "C40", "name": "Termo", "description": "+0,5 mult por cada nivel de sticker en el termo.", "rarity": "rare", "family": "position",
 		"effects": [{"kind": "scaled_mult", "per": "sticker_levels", "amount": 0.5}]},
 	"collection": {"code": "C41", "name": "Colección", "description": "+1 mult por cada moneda equipada, incluida esta.", "rarity": "rare", "family": "position",
 		"effects": [{"kind": "scaled_mult", "per": "equipped", "amount": 1}]},
-	"interest": {"code": "C42", "name": "Interés", "description": "+1 punto de mano por cada $5 de saldo.", "rarity": "common", "family": "position",
+	"interest": {"code": "C42", "name": "Interés", "description": "+1 punto de mano por cada $5 de saldo.", "rarity": "rare", "family": "position",
 		"effects": [{"kind": "hand_points", "per": "cash_fifth", "amount": 1}]},
 	"pocket": {"code": "C43", "name": "Bolsillo", "description": "Capacidad de monedas pasivas +2 (ocupa una; neto +1).", "rarity": "rare", "family": "infra",
 		"effects": [{"kind": "slots", "passive": 2, "consumable": 0}]},
@@ -140,6 +146,18 @@ const DATA = {
 	"bosshunter": {"code": "C51", "name": "Cazajefes", "description": "+1 mult permanente por cada jefe vencido con ella equipada.", "rarity": "epic", "family": "growth",
 		"state": {"bosses": 0},
 		"effects": [{"kind": "state_mult", "key": "bosses", "amount": 1}, {"kind": "grow", "key": "bosses", "on": "boss_won", "amount": 1}]},
+	"reserve_roll": {"code": "C53", "name": "Tirada de reserva", "description": "+1 tirada en la primera mano de cada encuentro.", "rarity": "rare", "family": "general",
+		"effects": [{"kind": "extra_rolls_first", "amount": 1}]},
+	"collector": {"code": "C54", "name": "Cobrador", "description": "+$1 al ganar cada encuentro.", "rarity": "rare", "family": "general",
+		"effects": [{"kind": "encounter_cash", "amount": 1}]},
+	"level_veteran": {"code": "C55", "name": "Veterano de nivel", "description": "+0,25 mult por cada nivel de campaña alcanzado.", "rarity": "rare", "family": "general",
+		"effects": [{"kind": "scaled_mult", "per": "campaign_level", "amount": 0.25}]},
+	"served": {"code": "C56", "name": "Servida", "description": "+2 mult si anotás en la primera tirada de la mano.", "rarity": "rare", "family": "general",
+		"effects": [{"kind": "cond_mult", "when": "first_roll", "amount": 2}]},
+	"leftovers": {"code": "C57", "name": "Sobrantes", "description": "+2 puntos de mano por cada dado que quede fuera de una combinación.", "rarity": "rare", "family": "general",
+		"effects": [{"kind": "hand_points", "per": "leftover_dice", "amount": 2}]},
+	"extra_hand": {"code": "C52", "name": "Mano extra", "description": "3 manos por encuentro en vez de 2.", "rarity": "legendary", "family": "general",
+		"effects": [{"kind": "extra_hands", "amount": 1}]},
 	"boost": {"code": "U01", "name": "Impulso 1 y 4", "description": "+3 puntos por cada 1 y 4 hasta terminar este encuentro. Se consume.", "rarity": "common", "family": "use", "scope": "own_points", "effect": "boost", "amount": 3, "duration": "encounter", "contexts": ["play"],
 		"effects": [{"kind": "impulse", "numbers": [1, 4], "amount": 3}]},
 	"roll": {"code": "U02", "name": "Una tirada más", "description": "+1 tirada disponible en la mano actual. Se consume.", "rarity": "common", "family": "use", "scope": "roll_budget", "effect": "extra_roll", "amount": 1, "duration": "hand", "contexts": ["play"],
@@ -155,7 +173,27 @@ const DATA = {
 	"repair_gem": {"code": "U07", "name": "Reparar gema", "description": "Repara gratis la gema de mayor costo que elijas en la fase de reparación. Se consume.", "rarity": "common", "family": "use", "scope": "gem", "effect": "repair_gem", "amount": 1, "duration": "encounter", "contexts": ["repair"],
 		"effects": [{"kind": "use_repair_free", "amount": 1}]},
 	"free_reroll_use": {"code": "U08", "name": "Relanzo libre", "description": "Relanzar un solo dado no gasta tirada (una vez). Se consume.", "rarity": "common", "family": "use", "scope": "roll_budget", "effect": "free_reroll", "amount": 1, "duration": "hand", "contexts": ["play"],
-		"effects": [{"kind": "use_free_reroll", "amount": 1}]}
+		"effects": [{"kind": "use_free_reroll", "amount": 1}]},
+	"mult_plus2": {"code": "U10", "name": "Mult +2", "description": "+2 al multiplicador de cada combinación de la mano actual, antes de Doble mult. Se acumula. Se consume.", "rarity": "rare", "family": "use", "scope": "multiplier", "duration": "hand", "contexts": ["play"],
+		"effects": [{"kind": "use_hand_mult", "amount": 2}]},
+	"points_bag": {"code": "U11", "name": "Bolsa de puntos", "description": "+20 puntos planos a la mano actual, fuera de todo multiplicador. Se acumula. Se consume.", "rarity": "common", "family": "use", "scope": "hand", "duration": "hand", "contexts": ["play"],
+		"effects": [{"kind": "use_hand_points", "amount": 20}]},
+	"two_rolls": {"code": "U13", "name": "Dos tiradas más", "description": "+2 tiradas disponibles en la mano actual. Se consume.", "rarity": "epic", "family": "use", "scope": "roll_budget", "duration": "hand", "contexts": ["play"],
+		"effects": [{"kind": "use_extra_roll", "amount": 2}]},
+	"quick_cash": {"code": "U15", "name": "Plata rápida", "description": "+$5 al instante. Solo se usa durante el encuentro, no en la tienda. Se consume.", "rarity": "common", "family": "use", "scope": "economy", "duration": "instant", "contexts": ["play"],
+		"effects": [{"kind": "use_cash", "amount": 5}]},
+	"visit_discount": {"code": "U16", "name": "Descuento de visita", "description": "Ofertas, renovaciones y paquetes -50 % hasta salir de esta visita; se multiplica con Descuento. No aplica a reparaciones. Se consume.", "rarity": "rare", "family": "use", "scope": "economy", "duration": "visit", "contexts": ["shop"],
+		"effects": [{"kind": "use_visit_discount", "amount": 0.5}]},
+	"repair_all": {"code": "U17", "name": "Reparar todas", "description": "Repara gratis todas las carcasas rotas en la fase de reparación. Se consume.", "rarity": "epic", "family": "use", "scope": "gem", "duration": "encounter", "contexts": ["repair"],
+		"effects": [{"kind": "use_repair_all", "amount": 1}]},
+	"even_boost": {"code": "U18", "name": "Impulso par", "description": "+2 puntos por cada 2, 4 y 6 hasta terminar este encuentro. Se acumula con otros impulsos. Se consume.", "rarity": "common", "family": "use", "scope": "own_points", "duration": "encounter", "contexts": ["play"],
+		"effects": [{"kind": "impulse", "numbers": [2, 4, 6], "amount": 2}]},
+	"reroll_all": {"code": "U09", "name": "Relanzo total", "description": "Relanzás los cinco dados sin gastar tirada: deshace todos los grupos, también los bloqueados. Requiere haber tirado. Cuenta como tirada hecha. Se consume.", "rarity": "rare", "family": "use", "scope": "roll_budget", "duration": "hand", "contexts": ["play"],
+		"effects": [{"kind": "use_reroll_all", "amount": 1}]},
+	"flip_die": {"code": "U12", "name": "Voltear dado", "description": "Elegí un dado suelto ya tirado: pasa a la cara opuesta. No afecta dados fijados por un jefe. Se consume al elegir el dado.", "rarity": "rare", "family": "use", "scope": "die", "duration": "hand", "contexts": ["play"],
+		"effects": [{"kind": "use_flip_die", "amount": 1}]},
+	"boss_shield": {"code": "U14", "name": "Escudo de jefe", "description": "Apaga el poder del jefe durante la mano actual. Solo contra un jefe. Aparece una sola vez por partida. Se consume.", "rarity": "rare", "family": "use", "scope": "boss", "duration": "hand", "contexts": ["play"], "once_per_run": true,
+		"effects": [{"kind": "use_boss_shield", "amount": 1}]}
 }
 
 static func definition(id: String) -> Dictionary:
@@ -176,6 +214,14 @@ static func definition(id: String) -> Dictionary:
 	result.id = id
 	result.provisional_economy = true
 	return result
+
+## Monedas que aparecen una sola vez por partida (cuenta al generarse la oferta).
+static func once_per_run(id: String) -> bool:
+	return DATA.get(id, {}).get("once_per_run", false)
+
+## Monedas que piden elegir un dado al usarse.
+static func targeted(id: String) -> bool:
+	return not effects(id).is_empty() and effects(id)[0].kind == "use_flip_die"
 
 static func catalog() -> Dictionary:
 	var result: Dictionary = {}
@@ -241,6 +287,29 @@ static func can_remove(inventory: Dictionary, id: String) -> bool:
 	var limits := capacity(remaining)
 	var passives_after: int = remaining.size()
 	return passives_after <= limits.shared and inventory.consumables.size() <= limits.consumable
+
+## Reemplazo del paquete: sale la moneda `instance_id` y entra `incoming_id`, del mismo tipo (pasiva por pasiva, de un uso por de un uso).
+## La capacidad se calcula con la moneda que entra: Bolsillo y Bolsillo chico no salen si quedarían más monedas que ranuras.
+static func can_replace(inventory: Dictionary, instance_id: int, incoming_id: String) -> bool:
+	var incoming := definition(incoming_id)
+	if incoming.is_empty(): return false
+	var passive: bool = incoming.type in ["passive", "active"]
+	var equipped: Array = inventory.equipped.duplicate()
+	var consumables: Array = inventory.consumables.duplicate()
+	var source: Array = equipped if passive else consumables
+	var found := false
+	for i in range(source.size()):
+		if source[i].instance_id == instance_id:
+			source.remove_at(i)
+			found = true
+			break
+	if not found: return false
+	if passive:
+		if incoming_id in ids(equipped): return false
+		equipped.append(instance(incoming_id, 0))
+	else: consumables.append(instance(incoming_id, 0))
+	var limits := capacity(ids(equipped))
+	return equipped.size() <= limits.shared and consumables.size() <= limits.consumable
 
 static func can_use(id: String, context: String) -> bool:
 	var data := definition(id)

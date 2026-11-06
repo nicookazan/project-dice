@@ -188,3 +188,132 @@ Cambiar la cara de un dado a elección (ya existe con la compra de dados). Moned
 4. **Notion:** este documento es local; el PRD de Notion hay que actualizarlo a mano.
 
 Resueltos: U01 se reemplaza por Impulso 1 y 4; el comodín vale el número que imita.
+
+## Actualización: rarezas de la etapa de monedas (5 de noviembre de 2026)
+
+Cambios de rareza aprobados por el autor. Precio y reventa salen de la rareza (Común $4 / $2, Rara $6 / $3). Siguen provisionales hasta el ítem 7.
+
+| Moneda | Código | Antes | Ahora |
+|---|---|---|---|
+| Puntos de generala | C16 | Rara | Común |
+| Dados de metal | C22 | Rara | Común |
+| Dados elementales | C23 | Rara | Común |
+| Gemas | C24 | Rara | Común |
+| Seises | C35 | Rara | Común |
+| Renovación gratis | C21 | Común | Rara |
+| Tiradas sin usar | C37 | Común | Rara |
+| Última tirada | C38 | Común | Rara |
+| Segunda mano | C39 | Común | Rara |
+| Interés | C42 | Común | Rara |
+
+Las tablas de más arriba conservan la rareza original de cada moneda; esta tabla manda. Plan completo: [fichas MON0–MON9](pasos/README.md) y decisiones D15.
+
+## Actualización: pasivas nuevas de la etapa de monedas (MON3, 5 de noviembre de 2026)
+
+Cinco pasivas Raras ($6 / reventa $3), todas como filas de `scripts/coins.gd`. Mano extra (C52) va aparte, en MON4.
+
+| Código | Moneda | Efecto | Cómo se calcula |
+|---|---|---|---|
+| C53 | Tirada de reserva | +1 tirada en la primera mano de cada encuentro | `extra_rolls_first`, aplicado en `start_hand()` si es la mano 1 |
+| C54 | Cobrador | +$1 al ganar cada encuentro | `encounter_cash`, fila propia `payout.coins` en el cobro, incluida en `payout.total` |
+| C55 | Veterano de nivel | +0,25 mult por cada nivel de campaña alcanzado | `scaled_mult` con `level` (nivel 1 = 0,25; nivel 7 = 1,75) |
+| C56 | Servida | +2 mult si anotás en la primera tirada de la mano | `cond_mult` con `first_roll`; se acumula con Primera tirada (+3) |
+| C57 | Sobrantes | +2 puntos de mano por cada dado fuera de una combinación | `hand_points` por `leftover_dice`, calculado en `Rules.score` |
+
+- **Suspensión (D15, punto 12):** una moneda suspendida por el jefe no da tiradas ni plata. Esto corrige a Tirada permanente (C20), que antes seguía dando la tirada aunque estuviera suspendida. `start_hand()` usa ahora `_active_passives()`.
+- **Sobrantes:** cuenta los dados que no están en ningún grupo; el dado abducido no cuenta. Con Escaleras de 4, el quinto dado sí. Sin ningún grupo, los cinco sobran (+10).
+- **Cobrador:** se acredita junto con el cobro, solo si el jefe no la suspende, y se muestra en la pantalla del cobro (fila "Cobrador" y total desplazado). Un guardado sin `payout.coins` sigue siendo válido.
+- **Tirada de reserva:** la tirada extra también cuenta para Tiradas sin usar (C37).
+- **Contexto:** `Game.coin_context()` suma `level` (`level_index + 1`); `Rules.score` lo trae por defecto en 1 y calcula `leftover_dice` antes de las filas de puntos de mano. Previsión y anotación usan el mismo cálculo.
+- **Arte:** los cinco ids ya tienen arte en `coins-nuevas-v3.png` (MON1).
+
+Evidencia: `tests/coin_batch2_tests.gd` (catálogo, cada moneda, previsión igual a anotación en primera tirada y relanzada, suspensión por el jefe con Tarjeta roja, validación de guardados y pantalla del cobro con la escena real).
+
+## Actualización: Mano extra (MON4, 5 de noviembre de 2026)
+
+| Código | Moneda | Rareza | Efecto |
+|---|---|---|---|
+| C52 | Mano extra | Legendaria ($14 / reventa $7) | 3 manos por encuentro en vez de 2 |
+
+- **Un solo lugar:** `Game.hand_limit()` (y su versión estática `Game.hand_limit_of`, que usa el validador de guardados) es 2 más las manos de las monedas que el jefe no suspende. No depende de la fase, así que vale al perder y al validar.
+- **Dónde se usa:** derrota (`score_hand`), pasar de mano (`next_hand`), manos sobrantes del cobro (`close_encounter`), la libreta ("Mano N / 3"), el botón de la mano siguiente ("Jugar segunda mano" / "Jugar tercera mano") y el validador.
+- **Premio:** cada mano sobrante sigue pagando $2. Ganar en la primera de tres paga $4; en la segunda, $2; en la tercera, $0.
+- **Jefes (D15, puntos 10 y 11):** la tercera mano repite la ruleta de la segunda (Relojero); la memoria de Chamuyero y del bloqueo de categoría sigue siendo la de la mano 1; el impuesto al kiosco admite hasta $6 en el guardado (antes $4). Si Tarjeta roja expulsa a Mano extra, el encuentro tiene 2 manos.
+- **Segunda mano (C39)** sigue pagando solo en la mano 2.
+- **Guardado:** la mano 3 solo es válida durante el encuentro si el límite es 3. Una vez cerrado el encuentro (cobro, reparación, tienda) la mano es solo un recuerdo, así que vender la moneda en la tienda no invalida el guardado.
+
+Evidencia: `tests/coin_hands_tests.gd`.
+
+## Actualización: monedas de un uso simples (MON5, 6 de noviembre de 2026)
+
+Siete monedas de un uso que no piden elegir objetivo. El catálogo pasa a 72 monedas (57 pasivas y 15 de un uso). Precios por rareza: Común $2 / $1, Rara $3 / $1, Épica $5 / $2.
+
+| Código | Moneda | Rareza | Se usa en | Efecto |
+|---|---|---|---|---|
+| U10 | Mult +2 | Rara | mesa | +2 al multiplicador de cada combinación de la mano; se acumula; se suma antes de Doble mult; no toca los sobrantes |
+| U11 | Bolsa de puntos | Común | mesa | +20 puntos planos a la mano, en su propia fila, fuera de todo multiplicador; se acumula |
+| U13 | Dos tiradas más | Épica | mesa | +2 tiradas en la mano actual (reutiliza `use_extra_roll`) |
+| U15 | Plata rápida | Común | mesa | +$5 al instante; no se usa en la tienda |
+| U16 | Descuento de visita | Rara | tienda | −50 % en ofertas, renovaciones y paquetes hasta salir de la visita; no aplica a reparaciones |
+| U17 | Reparar todas | Épica | reparación | repara gratis todas las carcasas rotas y deja la fase resuelta |
+| U18 | Impulso par | Común | mesa | +2 por cada 2, 4 y 6 hasta terminar el encuentro; se acumula con otros impulsos |
+
+- **Estado:** reutiliza `hand_mult_bonus`, `hand_points_bonus` y `visit_discount` del guardado v9 (MON2). Los dos bonos de mano se limpian al anotar y en `start_hand()`; `visit_discount`, en `open_shop()`. U17 no necesita estado nuevo.
+- **Puntaje:** `Game.coin_context()` pasa los dos bonos a `Rules.score`, el mismo camino que usa la previsión, así que previsión y anotación coinciden. Mult +2 entra como suma de multiplicador (fuente `consumable:mult_plus2`) antes de la duplicación de Doble mult; Bolsa de puntos es una fila plana (`consumable:points_bag`).
+- **Descuento de visita:** `CoinEffects.discounted(precio, pasivas, visita)` multiplica los factores y redondea una sola vez: con Descuento (C45) queda precio × 0,8 × 0,5; un precio de 6 pasa a 2 (con dos redondeos daría 3). No se apila con otra moneda igual en la misma visita.
+- **Valor provisional:** Bolsa de puntos (+20) es un valor de prueba, no balance aprobado; el −50 % del Descuento de visita sale de D15 (punto 6).
+- **Mensajes:** el de `use_extra_roll` sale del valor ("2 tiradas adicionales…") y el de impulso lista "2, 4 y 6" sin repetir la "y".
+- **Pantalla de reparación:** las monedas de reparación usables se ubican en fila (con dos, sin "Usar" para que entren). La ficha de moneda entiende las duraciones nuevas "Inmediata" y "Visita actual a la tienda".
+- **Arte:** los siete ids ya tienen arte en `coins-nuevas-v3.png` (MON1).
+
+Evidencia: `tests/coin_simple_tests.gd` (catálogo, cada moneda, acumulación, orden con Doble mult, previsión igual a anotación, limpieza, redondeo único del descuento, reparación sin cobro, guardado y continuación con cada efecto activo, y pantalla de reparación con la escena real).
+
+## Actualización: monedas de un uso complejas (MON6, 6 de noviembre de 2026)
+
+Tres monedas de un uso Raras ($3 / reventa $1) que tocan tiradas, dados y poderes de jefe. El catálogo pasa a 75 monedas (57 pasivas y 18 de un uso).
+
+| Código | Moneda | Se usa en | Efecto |
+|---|---|---|---|
+| U09 | Relanzo total | mesa | relanza los cinco dados sin gastar tirada; deshace todos los grupos, también los bloqueados; requiere haber tirado |
+| U12 | Voltear dado | mesa | un dado suelto ya tirado pasa a la cara física opuesta (`faces.size() − 1 − face_index`) |
+| U14 | Escudo de jefe | mesa | apaga el poder del jefe durante la mano actual; solo contra un jefe, Dios incluido; una vez por partida |
+
+- **Relanzo total (D15, punto 7):** `roll()` se partió en validación más `_throw(rolled_ids, kept_ids, modo)`, que comparten el relanzo pagado, el libre y el total. El total cuenta como tirada hecha (deja de ser "servida"), no gasta presupuesto, usa el azar principal, registra el mismo evento de relanzo (animación, efectos de material y elemento) y desgasta Moneda gastada 1 por dado. Queda afuera el dado que el jefe fija: abducido o cargado (`Game.fixed_die()`). El dado asustado se relanza y vuelve al vaso como en cualquier tirada.
+- **Voltear dado (D15, punto 8):** `use_consumable(índice, dado)` acepta un objetivo. Sin dado o con uno inválido (en un grupo, sin tirar, fijado por el jefe) devuelve `false` y no consume la moneda, así que se puede cancelar. En pantalla: tocar la moneda activa el modo de elegir, tocarla otra vez lo cancela y la moneda se gasta al tocar el dado. El modo vive solo en `main.gd` (`flip_slot`), nunca en la partida ni en el guardado.
+- **Escudo de jefe (D15, puntos 3 y 4):** `Game.boss_power_on()` (hay jefe y el escudo no está activo) es la única forma de preguntar si el poder está en juego: la usan `boss_context()`, el termo robado, los dados marcados y sus bloqueos, los efectos de dado tras tirar, la carga del anillo, el impuesto al kiosco, las marcas de la pantalla y el límite de manos. Se apaga solo al anotar, después de cobrar el impuesto; la memoria del jefe (Chamuyero, Computadora) se registra igual. El termo vuelve durante la mano protegida y Tarjeta roja deja de expulsar a su moneda esa mano.
+- **Guardado:** `boss_shield_active` ya existía (v9). El validador lo acepta solo en la fase de mesa contra un jefe, y con él activo no rechaza categorías prohibidas ni recalcula el límite de manos con el poder encendido.
+- **Una vez por partida:** la fila lleva `once_per_run`. `Shop.generate` recibe `once_seen`, excluye lo ya visto y devuelve la lista actualizada; `Game` la guarda en `once_coins_seen` recién cuando aplica la generación (apertura, generación inicial o renovación). Cuenta al generarse la oferta, aunque no se compre ni se vea. El paquete de monedas (MON7) usará la misma lista.
+- **Límite conocido:** un guardado v9 anterior a MON6 conserva su tabla de tienda y no ofrece las tres monedas nuevas; las partidas nuevas sí. Hasta el cierre no hay guardados que importen.
+
+Evidencia: `tests/coin_complex_tests.gd` (catálogo; Relanzo total con 0 tiradas, con grupos bloqueados, misma semilla, Moneda gastada, dado cargado, asustado y abducido; Voltear dado con caras cambiadas, previsión, cancelación y dados fijados; Escudo contra cada jefe del catálogo con previsión = anotación y vuelta del poder, efectos del Kioskero, Chamuyero, Cebador, Referí y Dios; unicidad en 80 visitas con renovaciones y tras guardar y continuar; validación de guardados; y la pantalla con la escena real).
+
+## Actualización: paquete de monedas, reglas (MON7, 6 de noviembre de 2026)
+
+El cuarto espacio de la sección de monedas pasa a ser un paquete (D15, puntos 1 y 2). Quedan 3 monedas sueltas y el paquete.
+
+| Paquete | Muestra | Se eligen | Precio | Probabilidad |
+|---|---|---|---|---|
+| Chico | 2 | 1 | $7 | 65 % |
+| Grande | 5 | 2 | $14 | 35 % |
+
+Valores provisionales hasta el ítem 7.
+
+- **Tabla:** `coin_packs` en `Shop.default_tables()`, en el perfil de validación y en guardados anteriores con tabla estándar (la migración `coins_v9` la agrega). Sin esa tabla los cuatro espacios son monedas sueltas, como necesitan los escenarios de prueba con tablas propias. `Shop.COIN_PACK_SIZES` define tamaños y mínimo de pasivas.
+- **Generación:** el paquete se sortea después de las sueltas con las mismas etapas (tipo, rareza, moneda). Sin repetidos, sin pasivas propias y sin pasivas iguales a las sueltas de la misma visita; el grande trae siempre al menos 2 pasivas. El contenido queda guardado en la oferta (`effect.items`), así que mirar o cambiar de pestaña no lo cambia. Las monedas de una vez por partida que salgan en un paquete cuentan en `once_coins_seen`.
+- **Compra:** `Purchases` entiende `coin_pack`; se puede comprar con el inventario lleno y con deuda (Moneda de oro). El descuento baja el precio y el recibo guarda lo pagado de verdad.
+- **Elección:** fase `coin_choice` con `pending_coin_pack` (`offer_id`, `size`, `picks`, `picks_left`, `items`, `received`, `received_instances`, `paid`). Bloquea vender, usar monedas, comprar, renovar y salir. `Game.coin_choice_options()` informa por moneda si entra directo, qué monedas propias se pueden reemplazar y cuáles no. `Game.choose_coin(id, replace_instance_id)` aplica elección y reemplazo juntos.
+- **Reemplazo:** `Coins.can_replace(inventario, instance_id, moneda_que_entra)` calcula la capacidad con la moneda que entra. Una pasiva reemplaza a una pasiva y una de un uso a una de un uso. La que sale paga su reventa. La recién recibida del mismo paquete no se puede reemplazar. Bolsillo y Bolsillo chico no salen si quedarían más monedas que ranuras.
+- **Sin salida:** con inventario lleno siempre hay una pasiva reemplazable (como mucho 2 monedas de ranura entre 5 o más) y una de un uso siempre puede reemplazar a otra de un uso; el grande trae 2 pasivas. Por si acaso, `_settle_coin_pack()` cierra el paquete si no queda ninguna elección legal.
+- **Guardado:** `pending_coin_pack` es no vacío si y solo si la fase es `coin_choice`; el validador revisa forma, elecciones restantes, candidatos y recibo. La fase se agregó a todas las listas de fases (`save_store.gd`, `save_validator.gd`, `save_migrations.gd`, `campaign.gd`, `game.gd`).
+- **Pruebas existentes:** los escenarios que asumían cuatro monedas sueltas se ajustaron (conteos, `offers` del paquete) y los recorridos naturales con semilla fija pasaron de la semilla 3 a la 9 porque el paquete consume azar de la tienda y cambia los dados siguientes.
+
+Evidencia: `tests/coin_pack_tests.gd` (tabla, 60 semillas de generación, sin tabla, mismo contenido por semilla, compra con descuento / deuda / inventario lleno, bloqueos, elección chica y grande, reemplazo, recién recibida, Bolsillos, 6 inventarios extremos × 30 semillas sin quedar trabado, guardar y continuar en cada momento).
+
+## Actualización: paquete de monedas, interfaz (MON8, 6 de noviembre de 2026)
+
+- **Carta cerrada:** en la tienda el cuarto espacio de monedas muestra el frasco cerrado (`pack_small` / `pack_large` del arte de MON1) con aro dorado, el precio y "Elegí 1 entre 2" o "Elegí 2 entre 5". No muestra el contenido; la ficha emergente dice que se puede comprar con el inventario lleno.
+- **Panel:** `scripts/coin_pack_panel.gd` (estilo del panel de stickers). Muestra 2 o 5 cartas con icono, nombre, código, rareza, tipo, efecto completo y un estado ("Entra directo", "Reemplazá una de las tuyas", "Sin lugar posible", "ELEGIDA"), más cuántas elecciones faltan y el saldo. Las cinco cartas son de 208 px (las dos del paquete chico, de 232 px) y los textos largos se parten en líneas.
+- **Reemplazo:** si la moneda no entra, se pasa a una lista de las monedas propias del mismo tipo con su reventa. Las que no se pueden sacar (ranura que dejaría monedas de más, o la recién recibida del mismo paquete) van apagadas con el motivo. "Volver" regresa a las cartas. El reemplazo en curso (`coin_pack_replacing` en `main.gd`) es solo de pantalla y no se guarda.
+- **Cerrar y reabrir:** reutiliza `pack_panel_open`; con el panel cerrado aparece "Elegir moneda pendiente".
+- **Movimiento:** el panel no tiene animaciones, así que "Reducir movimiento" y la velocidad elegida no lo afectan.
+- **Capturas:** `tests/coin_pack_review.gd` (con GPU, sin `--headless`) deja en `test-results/` el paquete chico y el grande en la tienda, ambos paneles, inventario lleno, moneda de ranura bloqueada, panel cerrado y reabierto, tras la primera elección y textos largos. Pruebas de pantalla con la escena real en `tests/coin_pack_tests.gd` (`run_ui`).

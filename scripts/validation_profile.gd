@@ -20,6 +20,7 @@ static func tables() -> Dictionary:
 	var staged := Shop.default_tables()
 	result["coin_type_weights"] = staged.coin_type_weights
 	result["coin_rarity_weights"] = staged.coin_rarity_weights
+	result["coin_packs"] = staged.coin_packs
 	for id in Coins.catalog(): result.coins.append({"kind": "coin", "price": Coins.definition(id).price, "weight": 1.0, "effect": {"coin_id": id}})
 	for id in ["steel", "copper"]: result.components.append({"kind": "material", "price": 3, "weight": 1.0, "effect": {"id": id}})
 	for id in ["fire", "water", "electricity", "earth", "wind"]: result.components.append({"kind": "element", "price": 3, "weight": 1.0, "effect": {"id": id}})
