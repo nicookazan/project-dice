@@ -70,6 +70,10 @@ Versión 1 · 25 de octubre de 2026.
 | [MON8 — Paquete de monedas: interfaz](MON8-paquete-interfaz.md) | Monedas | MON1, MON7 | Completado |
 | [MON9 — Cierre de la etapa de monedas](MON9-cierre-monedas.md) | Monedas | MON0–MON8 | En curso |
 
+| [TX1 — Elementos de los dados más grandes](TX1-elementos-grandes.md) | Texturas | 20 | Prototipo sin integrar |
+| [TX2 — Fondos de ventana animados](TX2-fondos-animados.md) | Texturas | 20 | Prototipo sin integrar |
+| [TX3 — Arte de los metales nuevos](TX3-metales-arte.md) | Texturas | 20 | Bocetos aprobados; reglas sin definir |
+
 Las fichas J00–J08 son la etapa de jugabilidad e interactividad posterior al paso 20 (plan en Notion; decisiones en D14). Las fichas MON0–MON9 son la etapa de monedas (plan en Notion; decisiones en D15). Orden no significa fecha ni duración. Se recomienda ejecutar una ficha por vez, comprobar su entrega y entonces habilitar la siguiente. Algunas dependencias permiten trabajo independiente, pero no se propone desarrollar todo simultáneamente.
 
 ## Hitos verificables

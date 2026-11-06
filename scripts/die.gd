@@ -134,41 +134,17 @@ func _draw() -> void:
 	if pip_suspended or body_suspended or element_suspended:
 		draw_string(ThemeDB.fallback_font, Vector2(2, 61), "S", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color("663a30"))
 
+## Hoja de las marcas de elemento (TX1): una celda de 96×96 por elemento, con el dado en (17,17).
+const ELEMENT_ART = preload("res://assets/art/pixel-v3/elementos-v3.png")
+const ELEMENT_CELLS := {"fire": 0, "water": 1, "electricity": 2, "earth": 3, "wind": 4}
+const ELEMENT_CELL := 96
+const ELEMENT_MARGIN := 17
+
 func draw_element_edges() -> void:
-	# Edge-only accents leave every pip unobstructed, including the six.
-	for side in [-1, 1]:
-		var x: float = 31.0 + side * 27.0
-		match element:
-			"electricity":
-				var path := PackedVector2Array([Vector2(x - side * 6, 4), Vector2(x - side * 2, 10), Vector2(x - side * 4, 15), Vector2(x, 20), Vector2(x - side * 2, 25)])
-				draw_polyline(path, Color("d78205"), 3)
-				draw_polyline(path, Color("ffe72c"), 1.6)
-				draw_polyline(PackedVector2Array([Vector2(x, 36), Vector2(x - side * 2, 42), Vector2(x, 46), Vector2(x - side * 3, 51), Vector2(x - side * 6, 56)]), Color("ffdc22"), 2)
-			"fire":
-				draw_polyline(PackedVector2Array([Vector2(x - side * 2, 49), Vector2(x - side * 3, 54), Vector2(x - side * 7, 57), Vector2(x - side * 11, 57)]), Color("e6541a"), 2)
-				for y in [13, 34, 48, 54]:
-					var edge_x: float = x - side * (3 if y == 54 else 0)
-					draw_rect(Rect2(edge_x - 1, y, 3, 4), Color("e74612"))
-					draw_rect(Rect2(edge_x, y - 2, 1.5, 3), Color("ffd04a"))
-			"water":
-				for y in [12, 31, 46, 54]:
-					var edge_x: float = x - side * (4 if y == 54 else 0)
-					draw_rect(Rect2(edge_x - 1, y, 3, 3), Color("168ad0"))
-					draw_rect(Rect2(edge_x, y, 1, 1), Color("a6f5ff"))
-				draw_line(Vector2(x - side * 8, 57), Vector2(x - side * 3, 55), Color("47d3ed"), 2)
-				draw_line(Vector2(x - side * 13, 57), Vector2(x - side * 9, 57), Color("168ad0"), 1.5)
-			"earth":
-				for distance in [6, 11]:
-					draw_rect(Rect2(x - side * distance - 1, 55, 3, 3), Color("916136"))
-					draw_rect(Rect2(x - side * distance - 1, 55, 2, 1), Color("d6aa6e"))
-				for y in [15, 38, 49, 54]:
-					var edge_x: float = x - side * (4 if y == 54 else 0)
-					draw_rect(Rect2(edge_x - 1, y, 3, 3), Color("795131"))
-					draw_rect(Rect2(edge_x - 1, y, 2, 1), Color("c99558"))
-			"wind":
-				draw_polyline(PackedVector2Array([Vector2(x - side * 5, 56), Vector2(x - side * 11, 57), Vector2(x - side * 13, 55)]), Color("71d9e9"), 1.5)
-				for y in [10, 35, 51]:
-					draw_polyline(PackedVector2Array([Vector2(x - side * 3, y - 3), Vector2(x, y), Vector2(x - side * 1, y + 3), Vector2(x - side * 4, y + 3)]), Color("71d9e9"), 1.5)
+	# Las marcas viven sobre el borde y las esquinas: ningún punto queda tapado, ni siquiera el seis.
+	if not ELEMENT_CELLS.has(element): return
+	var cell: int = ELEMENT_CELLS[element]
+	draw_texture_rect_region(ELEMENT_ART, Rect2(-ELEMENT_MARGIN, -ELEMENT_MARGIN, ELEMENT_CELL, ELEMENT_CELL), Rect2(cell * ELEMENT_CELL, 0, ELEMENT_CELL, ELEMENT_CELL))
 
 func pixel_pip(center: Vector2, radius: float, color: Color) -> void:
 	var r := radius

@@ -24,8 +24,12 @@ const HAND_FRAME_SECONDS := 0.11
 const StickerArt = preload("res://scripts/sticker_art.gd")
 const StickerDefinitions = preload("res://scripts/stickers.gd")
 const BarProps = preload("res://scripts/bar_props.gd")
+const WindowFx = preload("res://scripts/window_fx.gd")
 ## Sifones, bandera y termo que reaccionan al clic (animaciones de presentación).
 var props := BarProps.new()
+## Fondos animados de las ventanas (TX2): textura aparte que solo existe con movimiento y en ambientes animados.
+var window_fx: SubViewport
+var fx_key := ""
 var pour_layer: Control
 ## Mientras el vaso tira se dibuja aparte (CupThrow): el del fondo se oculta.
 var cup_hidden := false
@@ -77,11 +81,28 @@ func configure(profile: Dictionary, preferences: Dictionary) -> void:
 	speed = preferences.speed
 	props.motion = motion
 	props.speed = speed
+	_configure_window_fx(profile)
 	# Las animaciones solo existen sobre la mesa y con movimiento: cualquier otro cambio las corta.
 	if shop_mode != last_shop_mode or not motion: props.stop_all()
 	last_shop_mode = shop_mode
 	queue_redraw()
 	if is_instance_valid(pour_layer): pour_layer.queue_redraw()
+
+## Activa, cambia o apaga el fondo animado. Sin movimiento (o en la tienda, o en «cierre») se ve el cuadro fijo de siempre.
+func _configure_window_fx(profile: Dictionary) -> void:
+	if not (motion and not shop_mode and WindowFx.is_animated(environment_id)):
+		fx_key = ""
+		if window_fx != null: window_fx.render_target_update_mode = SubViewport.UPDATE_DISABLED
+		return
+	var gothic: bool = WindowFx.is_gothic(profile)
+	if window_fx == null:
+		window_fx = WindowFx.new()
+		add_child(window_fx)
+	var key := "%s:%s" % [environment_id, gothic]
+	if key != fx_key:
+		window_fx.setup(environment_id, gothic)
+		fx_key = key
+	window_fx.render_target_update_mode = SubViewport.UPDATE_ALWAYS
 
 func _process(delta: float) -> void:
 	if props.any_busy():
@@ -94,6 +115,7 @@ func _process(delta: float) -> void:
 		queue_redraw()
 	if motion:
 		elapsed += delta * speed
+		if fx_key != "": window_fx.update_time(elapsed)
 		queue_redraw()
 
 func _ready() -> void:
@@ -157,7 +179,9 @@ func _draw() -> void:
 		else:
 			# Pixel-v3 panels are 401×110 logical px: every logical pixel lands on a 2×2 block of the window.
 			var source := Rect2(origin + (window.position - panorama.position) / 2.0, window.size / 2.0)
-			draw_texture_rect_region(EXTERIORS, window, source)
+			# Con el fondo animado el panel vive en su propia textura (402×111, origen en 0,0); si no, se recorta de la hoja.
+			if fx_key != "": draw_texture_rect_region(window_fx.get_texture(), window, Rect2((window.position - panorama.position) / 2.0, window.size / 2.0))
+			else: draw_texture_rect_region(EXTERIORS, window, source)
 	# Wooden mullions over the glass (not over the boarded-up "cierre" windows); hand and cloud stay in front.
 	if not shop_mode and environment_id != "cierre": draw_texture_rect(MULLIONS_V3, Rect2(0, 0, 1440, 300), false)
 	if not shop_mode:

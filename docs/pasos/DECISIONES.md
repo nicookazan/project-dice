@@ -220,3 +220,26 @@ Versión 1 · 25 de octubre de 2026. Este registro evita bloquear todo el proyec
 12. **Monedas suspendidas:** no dan manos, tiradas ni plata. Corrige a Tirada permanente (C20), que hoy sigue dando la tirada.
 
 **Fuente:** [plan de implementación del ítem 5](https://app.notion.com/p/40fc28142b5580f78431fc36d9e1f587) y [tarea con las monedas aprobadas](https://app.notion.com/p/40fc28142b55803db5fec97224f065e0). La subpágina "Decisiones de monedas" es una versión anterior.
+
+## D16 — Texturas: elecciones sobre los bocetos del 5 de noviembre
+
+**Estado:** Confirmada por el autor el 5 de noviembre de 2026 al elegir entre bocetos A/B. Es arte y presentación; los efectos de los metales nuevos no están definidos.
+
+**Pasos afectados:** TX1–TX3.
+
+**Decisiones:**
+
+1. **Fondos animados:**
+   - Día: nubes de A y pájaros de B (sin destellos en los techos).
+   - Tarde: B (ventanas que se encienden y murciélagos).
+   - Noche: B (ventanas calmas, estrellas, fugaz), pero **la luna queda fija**: las estrellas titilantes no la tocan.
+   - Noche con El Gótico: B (señal chica y lejana).
+   - Espacio: mezcla de A y B, a confirmar: rocas a la deriva (A) y galaxia con ondas (B).
+   - Agujero negro: B (el disco se retuerce).
+   - Cielo: A (rayos y nubes).
+2. **Elementos de los dados:** A para los cinco. Marcas grandes sobre el borde del dado, sin tapar los puntos.
+3. **Metales nuevos (solo arte):** hierro oxidado B (goteos y costra), cobre oxidado A (pátina en manchas), oro A (pulido).
+4. **Sin definir (bloquea cablearlos):** si "acero" pasa a llamarse "hierro"; efecto de los oxidados y del oro (el oro "da dinero si no se usa para hacer puntos": cuánto, cuándo, cómo se compra); si entran a la tienda y al guardado.
+5. **Reglas de las animaciones:** respetan "Reducir movimiento" y la velocidad, usan un azar aparte y no tocan semilla ni guardado.
+
+**Fuente:** [bocetos del 5 de noviembre](https://claude.ai/artifact/F6gWSJHa3X4ubawQ1SFUMo) y la página «4. Texturas» de Notion.
