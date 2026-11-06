@@ -79,7 +79,7 @@ static func _test_transactions(check: Callable) -> void:
 	check.call(game.buy(0) and game.cash == 0 and game.passives.size() == 5, "coins: exact funds complete purchase after a slot is freed")
 	game.shop_state = {}
 	game.generate_offers()
-	check.call(game.offers.all(func(id): return id not in game.passives and Coins.DATA.has(id)), "coins: provisional uniform generator excludes owned passives")
+	check.call(game.offers.all(func(id): return id == "" or (id not in game.passives and Coins.DATA.has(id))), "coins: provisional uniform generator excludes owned passives")
 	for phase in ["play", "hand_result", "reward", "repair", "won", "lost", "sticker_choice"]:
 		game.phase = phase
 		before = game.snapshot()

@@ -7,13 +7,14 @@ const Numbers = preload("res://scripts/number_upgrades.gd")
 const Gems = preload("res://scripts/gems.gd")
 const Elements = preload("res://scripts/elements.gd")
 const TARGETED = ["material", "shell", "element", "face"]
-const KINDS = {"coins": ["coin"], "components": ["material", "shell", "element"], "numbers": ["global", "face"], "stickers": ["sticker", "pack"]}
+const KINDS = {"coins": ["coin", "coin_pack"], "components": ["material", "shell", "element"], "numbers": ["global", "face"], "stickers": ["sticker", "pack"]}
 
 static func error(code: String, message: String) -> Dictionary:
 	return {"ok": false, "code": code, "message": message, "cost": 0, "changes": {}}
 
 static func valid_offer(section: String, offer: Dictionary, catalog: Dictionary) -> bool:
 	if offer.is_empty() or offer.get("offer_id", "") == "" or offer.get("kind") not in KINDS.get(section, []): return false
+	if offer.kind == "coin_pack": return Shop.valid_coin_pack_offer(offer)
 	if offer.kind == "pack":
 		if not offer.get("effect") is Dictionary: return false
 		return not Stickers.offer(offer.effect.get("pack_kind", ""), offer.effect.get("items", []), offer.get("price"), catalog).is_empty()
@@ -71,6 +72,9 @@ static func prepare(section: String, offer: Dictionary, target: Dictionary, dice
 			Coins.refresh_capacity(updated)
 			updates = {"coin_inventory": updated, "coin_sequence": serial + 1}
 			label = data.name
+		"coin_pack":
+			updates["pending_coin_pack"] = {"offer_id": offer.offer_id, "size": effect.size, "picks": effect.picks, "picks_left": effect.picks, "items": effect.items.duplicate(), "received": [], "received_instances": [], "paid": cost}
+			label = "paquete de monedas"
 		"sticker", "pack":
 			var ids: Array = [effect.id] if offer.kind == "sticker" else effect.items
 			var updated := Stickers.increased(levels, ids, catalog)

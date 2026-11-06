@@ -2,7 +2,7 @@
 
 Etapa de monedas · 5 de noviembre de 2026.
 
-**Rama:** `feature/paquete-monedas-reglas`. **Depende de:** MON2. **Estado actual:** Sin empezar. **Decisiones vinculadas:** D15 (puntos 1 y 2), D04.
+**Rama:** `feature/monedas-paquete` (junto con MON8). **Depende de:** MON2. **Estado actual:** Completado (suite: 4102 comprobaciones, cero fallos). **Decisiones vinculadas:** D15 (puntos 1 y 2), D04.
 
 ## Objetivo
 El cuarto espacio de la sección de monedas pasa a ser un paquete: chico (muestra 2, se elige 1; $7; 65 %) o grande (muestra 5, se eligen 2; $14; 35 %). Valores provisionales hasta el ítem 7.

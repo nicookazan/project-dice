@@ -286,3 +286,25 @@ Tres monedas de un uso Raras ($3 / reventa $1) que tocan tiradas, dados y podere
 - **Límite conocido:** un guardado v9 anterior a MON6 conserva su tabla de tienda y no ofrece las tres monedas nuevas; las partidas nuevas sí. Hasta el cierre no hay guardados que importen.
 
 Evidencia: `tests/coin_complex_tests.gd` (catálogo; Relanzo total con 0 tiradas, con grupos bloqueados, misma semilla, Moneda gastada, dado cargado, asustado y abducido; Voltear dado con caras cambiadas, previsión, cancelación y dados fijados; Escudo contra cada jefe del catálogo con previsión = anotación y vuelta del poder, efectos del Kioskero, Chamuyero, Cebador, Referí y Dios; unicidad en 80 visitas con renovaciones y tras guardar y continuar; validación de guardados; y la pantalla con la escena real).
+
+## Actualización: paquete de monedas, reglas (MON7, 6 de noviembre de 2026)
+
+El cuarto espacio de la sección de monedas pasa a ser un paquete (D15, puntos 1 y 2). Quedan 3 monedas sueltas y el paquete.
+
+| Paquete | Muestra | Se eligen | Precio | Probabilidad |
+|---|---|---|---|---|
+| Chico | 2 | 1 | $7 | 65 % |
+| Grande | 5 | 2 | $14 | 35 % |
+
+Valores provisionales hasta el ítem 7.
+
+- **Tabla:** `coin_packs` en `Shop.default_tables()`, en el perfil de validación y en guardados anteriores con tabla estándar (la migración `coins_v9` la agrega). Sin esa tabla los cuatro espacios son monedas sueltas, como necesitan los escenarios de prueba con tablas propias. `Shop.COIN_PACK_SIZES` define tamaños y mínimo de pasivas.
+- **Generación:** el paquete se sortea después de las sueltas con las mismas etapas (tipo, rareza, moneda). Sin repetidos, sin pasivas propias y sin pasivas iguales a las sueltas de la misma visita; el grande trae siempre al menos 2 pasivas. El contenido queda guardado en la oferta (`effect.items`), así que mirar o cambiar de pestaña no lo cambia. Las monedas de una vez por partida que salgan en un paquete cuentan en `once_coins_seen`.
+- **Compra:** `Purchases` entiende `coin_pack`; se puede comprar con el inventario lleno y con deuda (Moneda de oro). El descuento baja el precio y el recibo guarda lo pagado de verdad.
+- **Elección:** fase `coin_choice` con `pending_coin_pack` (`offer_id`, `size`, `picks`, `picks_left`, `items`, `received`, `received_instances`, `paid`). Bloquea vender, usar monedas, comprar, renovar y salir. `Game.coin_choice_options()` informa por moneda si entra directo, qué monedas propias se pueden reemplazar y cuáles no. `Game.choose_coin(id, replace_instance_id)` aplica elección y reemplazo juntos.
+- **Reemplazo:** `Coins.can_replace(inventario, instance_id, moneda_que_entra)` calcula la capacidad con la moneda que entra. Una pasiva reemplaza a una pasiva y una de un uso a una de un uso. La que sale paga su reventa. La recién recibida del mismo paquete no se puede reemplazar. Bolsillo y Bolsillo chico no salen si quedarían más monedas que ranuras.
+- **Sin salida:** con inventario lleno siempre hay una pasiva reemplazable (como mucho 2 monedas de ranura entre 5 o más) y una de un uso siempre puede reemplazar a otra de un uso; el grande trae 2 pasivas. Por si acaso, `_settle_coin_pack()` cierra el paquete si no queda ninguna elección legal.
+- **Guardado:** `pending_coin_pack` es no vacío si y solo si la fase es `coin_choice`; el validador revisa forma, elecciones restantes, candidatos y recibo. La fase se agregó a todas las listas de fases (`save_store.gd`, `save_validator.gd`, `save_migrations.gd`, `campaign.gd`, `game.gd`).
+- **Pruebas existentes:** los escenarios que asumían cuatro monedas sueltas se ajustaron (conteos, `offers` del paquete) y los recorridos naturales con semilla fija pasaron de la semilla 3 a la 9 porque el paquete consume azar de la tienda y cambia los dados siguientes.
+
+Evidencia: `tests/coin_pack_tests.gd` (tabla, 60 semillas de generación, sin tabla, mismo contenido por semilla, compra con descuento / deuda / inventario lleno, bloqueos, elección chica y grande, reemplazo, recién recibida, Bolsillos, 6 inventarios extremos × 30 semillas sin quedar trabado, guardar y continuar en cada momento).

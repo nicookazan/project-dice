@@ -80,7 +80,7 @@ static func _test_generation(check: Callable) -> void:
 		var stock := Shop.generate("coins", stock_tables, {}, ["even", "full"], rng.state, 0)
 		var seen: Array = []
 		for item in stock.section.slots:
-			if item.is_empty(): continue
+			if item.is_empty() or item.kind != "coin": continue
 			var id: String = item.effect.coin_id
 			if id in preload("res://scripts/coins.gd").PASSIVES:
 				if id in seen or id in ["even", "full"]: unique_passives = false

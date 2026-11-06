@@ -288,6 +288,29 @@ static func can_remove(inventory: Dictionary, id: String) -> bool:
 	var passives_after: int = remaining.size()
 	return passives_after <= limits.shared and inventory.consumables.size() <= limits.consumable
 
+## Reemplazo del paquete: sale la moneda `instance_id` y entra `incoming_id`, del mismo tipo (pasiva por pasiva, de un uso por de un uso).
+## La capacidad se calcula con la moneda que entra: Bolsillo y Bolsillo chico no salen si quedarían más monedas que ranuras.
+static func can_replace(inventory: Dictionary, instance_id: int, incoming_id: String) -> bool:
+	var incoming := definition(incoming_id)
+	if incoming.is_empty(): return false
+	var passive: bool = incoming.type in ["passive", "active"]
+	var equipped: Array = inventory.equipped.duplicate()
+	var consumables: Array = inventory.consumables.duplicate()
+	var source: Array = equipped if passive else consumables
+	var found := false
+	for i in range(source.size()):
+		if source[i].instance_id == instance_id:
+			source.remove_at(i)
+			found = true
+			break
+	if not found: return false
+	if passive:
+		if incoming_id in ids(equipped): return false
+		equipped.append(instance(incoming_id, 0))
+	else: consumables.append(instance(incoming_id, 0))
+	var limits := capacity(ids(equipped))
+	return equipped.size() <= limits.shared and consumables.size() <= limits.consumable
+
 static func can_use(id: String, context: String) -> bool:
 	var data := definition(id)
 	return not data.is_empty() and context in data.use_contexts

@@ -66,7 +66,7 @@ Versión 1 · 25 de octubre de 2026.
 | [MON4 — Mano extra](MON4-mano-extra.md) | Monedas | MON3 | Completado |
 | [MON5 — Monedas de un uso simples](MON5-uso-simples.md) | Monedas | MON1, MON2 | Completado |
 | [MON6 — Relanzo total, Voltear dado y Escudo de jefe](MON6-uso-complejas.md) | Monedas | MON5 | Completado |
-| [MON7 — Paquete de monedas: reglas](MON7-paquete-reglas.md) | Monedas | MON2 | Sin empezar |
+| [MON7 — Paquete de monedas: reglas](MON7-paquete-reglas.md) | Monedas | MON2 | Completado |
 | [MON8 — Paquete de monedas: interfaz](MON8-paquete-interfaz.md) | Monedas | MON1, MON7 | Sin empezar |
 | [MON9 — Cierre de la etapa de monedas](MON9-cierre-monedas.md) | Monedas | MON0–MON8 | Sin empezar |
 

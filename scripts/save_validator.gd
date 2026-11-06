@@ -7,7 +7,7 @@ const Shop = preload("res://scripts/shop.gd")
 const Stickers = preload("res://scripts/stickers.gd")
 const Numbers = preload("res://scripts/number_upgrades.gd")
 const Purchases = preload("res://scripts/purchases.gd")
-const PHASES = ["level_intro", "play", "hand_result", "reward", "repair", "shop", "purchase_target", "sticker_choice", "won", "lost"]
+const PHASES = ["level_intro", "play", "hand_result", "reward", "repair", "shop", "purchase_target", "sticker_choice", "coin_choice", "won", "lost"]
 const BossRules = preload("res://scripts/boss_rules.gd")
 const Campaign = preload("res://scripts/campaign.gd")
 
@@ -76,7 +76,7 @@ static func validate(data: Variant) -> String:
 	if not Campaign.valid_progress(g): return "progreso de campaña inconsistente"
 	if g.hand_mult_bonus < 0 or g.hand_mult_bonus > 1000 or g.hand_points_bonus < 0 or g.hand_points_bonus > 1000000 or g.visit_discount < 0.0 or g.visit_discount > 0.9: return "bonos de moneda fuera de rango"
 	if g.once_coins_seen.size() > 100 or not g.once_coins_seen.all(func(id): return id is String and Coins.DATA.has(id)): return "monedas de una vez inválidas"
-	if g.pending_coin_pack.size() > 0: return "paquete de monedas pendiente sin soporte"
+	if (g.phase == "coin_choice") != (not g.pending_coin_pack.is_empty()): return "paquete de monedas pendiente inconsistente"
 	if not BossRules.valid_state(g.boss_rule, g.boss_state, g.level_encounters[g.rival].kind == "boss"): return "estado del jefe inválido"
 	for key in ["event_sequence", "coin_instance_sequence", "shop_offer_sequence", "sticker_offer_sequence"]:
 		if g[key] < 0: return "secuencia negativa"
@@ -101,7 +101,7 @@ static func validate(data: Variant) -> String:
 			if die.face_index < 0 or die.face_index >= 6 or die.value < 1 or die.value > 6: return "resultado o índice de cara inválido"
 			# In the shop, a purchased face can replace the last rolled position.
 			# Keep its historic result/blue score; new faces apply to future rolls.
-			if g.phase not in ["shop", "purchase_target", "sticker_choice"] and die.value != die.faces[die.face_index]: return "resultado y cara no coinciden"
+			if g.phase not in ["shop", "purchase_target", "sticker_choice", "coin_choice"] and die.value != die.faces[die.face_index]: return "resultado y cara no coinciden"
 		for effects in [die.encounter_effects, die.hand_effects]:
 			for key in effects:
 				if not key is String or not (effects[key] is int or effects[key] is float) or effects[key] < 0: return "efecto inválido"
@@ -144,10 +144,10 @@ static func validate(data: Variant) -> String:
 	if g.phase in ["play", "hand_result", "lost"] and g.hand > hand_limit: return "mano fuera del límite"
 	if not g.last_score.is_empty() and not score(g.last_score): return "resultado incompleto"
 	if g.phase in ["hand_result", "reward", "repair", "won", "lost"] and g.last_score.is_empty(): return "falta resultado anotado"
-	if g.phase in ["reward", "repair", "won", "shop", "purchase_target", "sticker_choice"] and g.points < g.level_encounters[g.rival].target: return "cobro sin objetivo cumplido"
+	if g.phase in ["reward", "repair", "won", "shop", "purchase_target", "sticker_choice", "coin_choice"] and g.points < g.level_encounters[g.rival].target: return "cobro sin objetivo cumplido"
 	var has_next: bool = g.rival + 1 < g.level_encounters.size() or (not g.campaign.is_empty() and g.level_index + 1 < g.campaign.size())
 	if (g.phase == "won" and has_next) or (g.phase == "reward" and not has_next) or (g.phase == "lost" and (g.hand != hand_limit or g.points >= g.level_encounters[g.rival].target)): return "final inconsistente"
-	if g.phase in ["reward", "repair", "won", "shop", "purchase_target", "sticker_choice"]:
+	if g.phase in ["reward", "repair", "won", "shop", "purchase_target", "sticker_choice", "coin_choice"]:
 		for key in ["base", "hands", "excess", "interest", "total"]:
 			if not g.payout.get(key) is int: return "cobro incompleto"
 	if not g.shop_state.is_empty():
@@ -160,7 +160,7 @@ static func validate(data: Variant) -> String:
 				if offer.is_empty(): continue
 				if not offer.get("offer_id") is String or offer.offer_id in offer_ids or not Purchases.valid_offer(section, offer, g.sticker_catalog): return "oferta inconsistente"
 				offer_ids.append(offer.offer_id)
-	if g.phase in ["shop", "purchase_target", "sticker_choice"] and g.shop_state.is_empty(): return "falta tienda"
+	if g.phase in ["shop", "purchase_target", "sticker_choice", "coin_choice"] and g.shop_state.is_empty(): return "falta tienda"
 	if g.phase == "purchase_target":
 		var p: Dictionary = g.pending_purchase
 		if not p.get("section") is String or not p.get("offer_id") is String or not p.get("offer") is Dictionary or not p.get("target") is Dictionary or not g.shop_state.has(p.section): return "compra pendiente incompleta"
@@ -176,6 +176,15 @@ static func validate(data: Variant) -> String:
 		if Stickers.offer("choose_one", p.items, p.paid, g.sticker_catalog).is_empty(): return "candidatos de paquete inválidos"
 		var receipts: Dictionary = g.purchase_receipts if p.get("source") == "shop" else g.sticker_offers
 		if not receipts.get(p.offer_id) is Dictionary: return "paquete sin recibo"
+	if g.phase == "coin_choice":
+		var c: Dictionary = g.pending_coin_pack
+		if c.size() != 8 or c.get("size") not in Shop.COIN_PACK_SIZES or not c.get("offer_id") is String or not c.get("paid") is int or not c.get("items") is Array or not c.get("received") is Array or not c.get("received_instances") is Array or not c.get("picks") is int or not c.get("picks_left") is int: return "paquete de monedas pendiente inválido"
+		if c.picks != Shop.COIN_PACK_SIZES[c.size].picks or c.picks_left < 1 or c.picks_left > c.picks or c.received.size() + c.picks_left != c.picks or c.received_instances.size() != c.received.size(): return "elecciones del paquete inconsistentes"
+		if not Shop.valid_coin_pack_offer({"kind": "coin_pack", "price": c.paid, "effect": {"size": c.size, "picks": c.picks, "items": c.items}}): return "candidatos del paquete inválidos"
+		for id in c.received:
+			if id not in c.items: return "moneda recibida fuera del paquete"
+		var bought = g.purchase_receipts.get(c.offer_id)
+		if not bought is Dictionary or bought.get("offer", {}).get("kind") != "coin_pack": return "paquete de monedas sin recibo"
 	if g.phase == "repair":
 		var r: Dictionary = g.repair_resolution
 		if r.get("status") != "pending" or not ids(r.get("available_ids")) or r.available_ids.is_empty() or r.get("next_phase") not in ["reward", "won"]: return "reparación pendiente inválida"

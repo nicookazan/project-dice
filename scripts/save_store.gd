@@ -5,7 +5,7 @@ const VERSION := 9
 const BossRules = preload("res://scripts/boss_rules.gd")
 const Game = preload("res://scripts/game.gd")
 const Validator = preload("res://scripts/save_validator.gd")
-const ACTIVE = ["level_intro", "play", "hand_result", "reward", "repair", "shop", "purchase_target", "sticker_choice"]
+const ACTIVE = ["level_intro", "play", "hand_result", "reward", "repair", "shop", "purchase_target", "sticker_choice", "coin_choice"]
 var path: String
 var fail_at := "" # Fault injection for filesystem tests only.
 

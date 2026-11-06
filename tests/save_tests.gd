@@ -305,7 +305,7 @@ static func _test_ui(scene, check: Callable) -> void:
 	Flow.click(scene, "Elegir sticker pendiente")
 	scene.ui.get_node("StickerChoice/Sticker_trio").pressed.emit()
 	check.call(scene.save_store.inspect().data.game.cup.stickers == {"trio": 1} and scene.game.cash == 95, "Save UI: loaded pack choice is saved once")
-	scene.start_new_run(3)
+	scene.start_new_run(9)
 	Flow.click(scene, "Empezar primer encuentro")
 	Flow.play_run(scene.game, scene)
 	check.call(scene.game.phase == "won" and scene.save_error == "" and not scene.save_store.inspect().active, "Save UI: natural full run autosaves each transition and closes save at victory")

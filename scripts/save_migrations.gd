@@ -65,7 +65,9 @@ static func coins_v9(game: Dictionary) -> String:
 		var standard := true
 		for entry in game.shop_tables.coins:
 			if not entry is Dictionary or entry.get("kind") != "coin" or entry.get("weight") != 1.0: standard = false
-		if standard: game.shop_tables["coins"] = Shop.default_tables().coins
+		if standard:
+			game.shop_tables["coins"] = Shop.default_tables().coins
+			if not game.shop_tables.has("coin_packs"): game.shop_tables["coin_packs"] = Shop.coin_pack_table()
 	return ""
 
 ## v7 -> v8: los ids de prueba pasan al catálogo de jefes (por nivel y posición) y aparece `boss_state`.
@@ -98,7 +100,7 @@ static func bosses_v8(game: Dictionary) -> String:
 	game.level_encounters = Campaign.encounters(levels[game.level_index], chosen)
 	game.boss_rule = chosen.rule.duplicate(true)
 	# El objetivo del jefe cambia con el catálogo: un cobro ya acreditado no se invalida.
-	if game.get("phase") in ["reward", "repair", "won", "shop", "purchase_target", "sticker_choice"] and game.get("points") is int and game.get("rival") is int and game.rival < game.level_encounters.size():
+	if game.get("phase") in ["reward", "repair", "won", "shop", "purchase_target", "sticker_choice", "coin_choice"] and game.get("points") is int and game.get("rival") is int and game.rival < game.level_encounters.size():
 		game.points = maxi(game.points, game.level_encounters[game.rival].target)
 	if game.get("rival") is int and game.rival >= 0 and game.rival < game.level_encounters.size() and game.level_encounters[game.rival].kind == "boss":
 		var ids: Array = []

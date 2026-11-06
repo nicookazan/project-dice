@@ -334,6 +334,7 @@ static func _test_shop_and_save(check: Callable) -> void:
 		rng_state = generated.rng_state
 		sequence = generated.sequence
 		for offer in generated.section.slots:
+			if offer.get("kind") != "coin": continue
 			var def := Coins.definition(offer.effect.coin_id)
 			if def.type == "consumable": consumable += 1
 			else:
@@ -344,7 +345,7 @@ static func _test_shop_and_save(check: Callable) -> void:
 	check.call(commons / float(passive_offers) > 0.52 and commons / float(passive_offers) < 0.68, "shop: about 60%% common passives (got %.3f)" % (commons / float(passive_offers)))
 	var owned: Array = Coins.PASSIVES.filter(func(id): return id != "full")
 	var only := Shop.generate("coins", tables, {}, owned, 5, 0)
-	check.call(only.valid and only.section.slots.all(func(offer): return offer.is_empty() or offer.effect.coin_id not in owned), "shop: owned passives are never offered again")
+	check.call(only.valid and only.section.slots.all(func(offer): return offer.is_empty() or (offer.kind == "coin" and offer.effect.coin_id not in owned) or (offer.kind == "coin_pack" and offer.effect.items.all(func(id): return id not in owned))), "shop: owned passives are never offered again")
 	var bad := tables.duplicate(true)
 	bad.coin_rarity_weights = 3
 	check.call(not Shop.generate("coins", bad, {}, [], 1, 0).valid, "shop: invalid rarity data is rejected")

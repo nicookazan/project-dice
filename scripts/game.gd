@@ -426,7 +426,7 @@ func route() -> Array:
 		if i < rival or phase == "won": status = "Superado"
 		elif i == rival:
 			status = "Derrota" if phase == "lost" else "Actual"
-			if phase in ["reward", "repair", "shop", "purchase_target", "sticker_choice"]: status = "Superado"
+			if phase in ["reward", "repair", "shop", "purchase_target", "sticker_choice", "coin_choice"]: status = "Superado"
 		result.append({"index": i, "name": "Jefe" if is_boss(i) else "Rival %d" % (i + 1), "target": level_encounters[i].target, "status": status, "rule": boss_rule.name if is_boss(i) else "Sin regla especial"})
 	return result
 
@@ -881,9 +881,70 @@ func _commit_purchase(section: String, offer: Dictionary, plan: Dictionary) -> D
 	if updates.has("pending_pack"):
 		pending_sticker_pack = updates.pending_pack.duplicate(true)
 		phase = "sticker_choice"
+	if updates.has("pending_coin_pack"):
+		pending_coin_pack = updates.pending_coin_pack.duplicate(true)
+		phase = "coin_choice"
+		_settle_coin_pack()
 	message = plan.message
 	last_purchase_result = plan.duplicate(true)
 	return plan.duplicate(true)
+
+## Paquete de monedas (D15). Para cada moneda que falta elegir: si entra directo, o qué monedas propias del mismo tipo
+## se pueden reemplazar (`replace`, ids de instancia) y cuáles se ven pero no se pueden sacar (`blocked`).
+func coin_choice_options() -> Array:
+	var result: Array = []
+	if pending_coin_pack.is_empty(): return result
+	for id in pending_coin_pack.items:
+		if id in pending_coin_pack.received: continue
+		var data := Coins.definition(id)
+		var same_type: Array = coin_inventory.equipped if data.type == "passive" else coin_inventory.consumables
+		var direct := Coins.can_store(coin_inventory, id)
+		var replace: Array = []
+		var blocked: Array = []
+		for item in same_type:
+			if item.instance_id in pending_coin_pack.received_instances: continue
+			if Coins.can_replace(coin_inventory, item.instance_id, id): replace.append(item.instance_id)
+			else: blocked.append(item.instance_id)
+		result.append({"id": id, "direct": direct, "replace": replace, "blocked": blocked})
+	return result
+
+## Elige una moneda del paquete. Si no hay lugar hay que decir cuál se reemplaza (por instancia): una sola operación
+## que aplica la elección y el reemplazo juntos, y la que sale paga su reventa.
+func choose_coin(id: String, replace_instance_id: int = 0) -> bool:
+	if phase != "coin_choice" or pending_coin_pack.is_empty() or id not in pending_coin_pack.items or id in pending_coin_pack.received: return false
+	var data := Coins.definition(id)
+	var direct := Coins.can_store(coin_inventory, id)
+	if not direct:
+		if replace_instance_id == 0 or replace_instance_id in pending_coin_pack.received_instances or not Coins.can_replace(coin_inventory, replace_instance_id, id):
+			message = "No hay lugar para esa moneda: elegí cuál de las tuyas reemplazar."
+			return false
+		var list: Array = coin_inventory.equipped if data.type == "passive" else coin_inventory.consumables
+		for i in range(list.size()):
+			if list[i].instance_id == replace_instance_id:
+				cash += Coins.definition(list[i].coin_id).resale
+				list.remove_at(i)
+				break
+	coin_instance_sequence += 1
+	var item := Coins.instance(id, coin_instance_sequence)
+	if data.type == "passive": coin_inventory.equipped.append(item)
+	else: coin_inventory.consumables.append(item)
+	Coins.refresh_capacity(coin_inventory)
+	pending_coin_pack.received.append(id)
+	pending_coin_pack.received_instances.append(item.instance_id)
+	pending_coin_pack.picks_left -= 1
+	message = "Recibiste %s." % data.name
+	_settle_coin_pack()
+	return true
+
+## Cierra el paquete cuando se eligió todo o cuando ya no queda ninguna elección legal (nunca deja la partida trabada).
+func _settle_coin_pack() -> void:
+	if pending_coin_pack.is_empty(): return
+	var legal := coin_choice_options().filter(func(option): return option.direct or not option.replace.is_empty())
+	if pending_coin_pack.picks_left > 0 and not legal.is_empty(): return
+	if purchase_receipts.has(pending_coin_pack.offer_id): purchase_receipts[pending_coin_pack.offer_id]["selected"] = pending_coin_pack.received.duplicate()
+	if pending_coin_pack.picks_left > 0: message = "No quedan elecciones posibles: el paquete se cierra."
+	pending_coin_pack = {}
+	phase = "shop"
 
 func buy(slot: int, expected_offer_id: String = "") -> bool:
 	if phase != "shop" or slot < 0 or slot >= offers.size(): return false

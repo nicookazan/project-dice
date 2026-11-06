@@ -45,7 +45,7 @@ static func run(scene, check: Callable) -> Dictionary:
 	check.call(service.load_values() == Preferences.DEFAULTS and service.last_error != "" and FileAccess.get_file_as_string(service.path) == future, "Presentation: future/corrupt preferences preserved with readable fallback")
 	service.save_values(saved)
 	scene.preferences = saved.duplicate()
-	scene.game = Game.new(3)
+	scene.game = Game.new(9)
 	scene.render()
 	var before: Dictionary = scene.game.snapshot()
 	scene.show_options()
@@ -70,7 +70,7 @@ static func run(scene, check: Callable) -> Dictionary:
 		scene.preferences.speed = mode
 		scene.preferences.reduced_motion = mode == 0
 		scene.preferences.high_contrast = mode == 0
-		scene.game = Game.new(3)
+		scene.game = Game.new(9)
 		scene.selected.clear()
 		scene.render()
 		var trace := Flow.play_run(scene.game, scene)
