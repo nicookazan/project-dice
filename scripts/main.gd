@@ -1449,7 +1449,7 @@ func add_coin(parent: Node, coin: String, rect: Rect2) -> void:
 func inspect_coin(coin: String) -> void:
 	var data := Coins.definition(coin)
 	if data.is_empty(): return
-	var duration: String = {"equipped": "Mientras está equipada", "hand": "Mano actual", "encounter": "Encuentro actual"}[data.duration]
+	var duration: String = {"equipped": "Mientras está equipada", "hand": "Mano actual", "encounter": "Encuentro actual", "instant": "Inmediata", "visit": "Visita actual a la tienda"}[data.duration]
 	var windows := {"play": "durante la jugada", "shop": "en la tienda", "repair": "en la fase de reparación"}
 	var use_windows: Array = data.use_contexts.map(func(window): return windows.get(window, window))
 	var context := "Pasiva al puntuar; no se consume." if data.type == "passive" else "Se usa " + ", ".join(use_windows) + "."
@@ -1946,12 +1946,19 @@ func render_encounter_choice() -> void:
 func render_repairs() -> void:
 	var modal := panel(ui, Rect2(350, 160, 740, 580), Color("263c3d"), gold)
 	label(modal, "REPARAR CARCASAS", Vector2(30, 24), 30, gold)
+	# Las monedas de reparación usables van en fila, una al lado de la otra.
+	var repair_slots: Array = []
 	for slot in range(game.coin_inventory.consumables.size()):
 		var stored: Dictionary = game.coin_inventory.consumables[slot]
-		if Coins.can_use(stored.coin_id, "repair") and not game.repair_resolution.get("free_one", false):
-			var slot_index := slot
-			var use_button := button(modal, "Usar " + Coins.definition(stored.coin_id).name, Rect2(430, 18, 280, 40), func(): act(func(): game.use_consumable(slot_index)))
-			use_button.name = "UseRepairCoin"
+		var is_free_one: bool = Coins.effects(stored.coin_id)[0].kind == "use_repair_free"
+		if Coins.can_use(stored.coin_id, "repair") and not (is_free_one and game.repair_resolution.get("free_one", false)):
+			repair_slots.append(slot)
+	var button_width := 280.0 if repair_slots.size() <= 1 else 160.0
+	for i in range(repair_slots.size()):
+		var slot_index: int = repair_slots[i]
+		var use_button := button(modal, ("Usar " if repair_slots.size() <= 1 else "") + Coins.definition(game.coin_inventory.consumables[slot_index].coin_id).name, Rect2(710 - button_width * (repair_slots.size() - i) - 8.0 * (repair_slots.size() - i - 1), 18, button_width, 40), func(): act(func(): game.use_consumable(slot_index)))
+		use_button.name = "UseRepairCoin"
+		if repair_slots.size() > 1: use_button.add_theme_font_size_override("font_size", 14)
 	label(modal, "Ya cobraste $%d · Saldo: %s\nElegí cuáles reparar o continuá sin reparar." % [game.payout.total, money_text(game.cash)], Vector2(30, 78), 21, cream, 680)
 	var y := 150.0
 	for id in game.repair_resolution.available_ids:

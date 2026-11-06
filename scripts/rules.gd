@@ -278,6 +278,9 @@ static func score(dice: Array, groups: Array, passives: Array, boost: Variant, s
 				multiplier_additions.append_array(CoinEffects.die_mult(effective_passives, dice[index], numbers[index]))
 			multiplier_additions.append_array(CoinEffects.group_mult(effective_passives, cat, rules, context))
 			coin_points = CoinEffects.group_points(effective_passives, cat, rules)
+			# Mult +2 (U10) se suma antes de Doble mult; solo combinaciones, nunca los sobrantes.
+			var mult_bonus: int = 0 if BossRules.suspended(boss_context, "coin", "mult_plus2") else int(context.get("hand_mult_bonus", 0))
+			if mult_bonus > 0: multiplier_additions.append({"source": "consumable:mult_plus2", "amount": float(mult_bonus)})
 			if double_mult: multiplier_factors.append({"source": "consumable:double_mult", "amount": 2.0})
 		var repeat_factor := BossRules.repeat_factor(boss_context, cat)
 		if repeat_factor != 1.0: multiplier_factors.append({"source": "boss:repeat", "amount": repeat_factor})
@@ -300,6 +303,13 @@ static func score(dice: Array, groups: Array, passives: Array, boost: Variant, s
 		flat.merge({"category": "Moneda · " + COINS[item.source.trim_prefix("coin:")].name, "category_base": 0,
 			"served_bonus": 0, "ids": [], "die_rows": [], "source": item.source})
 		rows.append(flat)
+	# Bolsa de puntos (U11): fila plana fuera de todo multiplicador.
+	var bag_points := 0 if BossRules.suspended(boss_context, "coin", "points_bag") else int(context.get("hand_points_bonus", 0))
+	if bag_points > 0:
+		var bag := resolve_group(0, 0.0, float(bag_points))
+		bag.merge({"category": "Moneda · " + COINS["points_bag"].name, "category_base": 0,
+			"served_bonus": 0, "ids": [], "die_rows": [], "source": "consumable:points_bag"})
+		rows.append(bag)
 	# Historical pure-scoring fixtures only: a five-die game cannot repeat trios.
 	for cat in counts:
 		if counts[cat] > 1:

@@ -37,7 +37,7 @@ static func _test_catalog(check: Callable) -> void:
 		var data := Coins.definition(id)
 		codes[data.code] = id
 		check.call(not data.effects.is_empty() and data.rarity in Coins.RARITIES and Coins.initial_state(id) is Dictionary, "batch: data-driven definition " + id)
-	check.call(codes.size() == 65 and codes.has("C51") and codes.has("C52") and codes.has("C57") and codes.has("U08") and codes.has("C07"), "batch: C01-C57 and U01-U08 all defined with unique codes")
+	check.call(codes.size() == 72 and codes.has("C51") and codes.has("C52") and codes.has("C57") and codes.has("U08") and codes.has("U18") and codes.has("C07"), "batch: C01-C57 and U01-U08 all defined with unique codes")
 	check.call(Coins.definition("gold").price == 10 and Coins.definition("gold").resale == 1, "batch: gold coin costs ten and sells for one")
 	check.call(Coins.definition("flat_mult").rarity == "rare" and Coins.definition("extra_roll_perm").rarity == "legendary", "batch: rarities follow the catalog")
 	check.call(Coins.definition("boost").name == "Impulso 1 y 4" and Coins.definition("boost_25").effects[0].numbers == [2, 5] and Coins.definition("boost_36").effects[0].numbers == [3, 6], "batch: impulses cover 1/4, 2/5 and 3/6")

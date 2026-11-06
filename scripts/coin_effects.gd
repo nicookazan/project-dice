@@ -106,6 +106,8 @@ static func gem_rule(equipped: Array, rule: String) -> bool:
 		if item.effect.rule == rule: return true
 	return false
 
-static func discounted(price: int, equipped: Array) -> int:
+## `visit_rate` (U16) se multiplica con el Descuento (C45) y se redondea una sola vez: precio × 0,8 × 0,5.
+static func discounted(price: int, equipped: Array, visit_rate := 0.0) -> int:
 	var rate := minf(sum_of(equipped, "discount"), 0.9)
-	return price if rate <= 0 else int(floor(price * (1.0 - rate) + 0.5))
+	var factor := (1.0 - rate) * (1.0 - clampf(visit_rate, 0.0, 0.9))
+	return price if factor >= 1.0 else int(floor(price * factor + 0.5))

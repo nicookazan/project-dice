@@ -268,13 +268,14 @@ func coin_context() -> Dictionary:
 	for level in cup.stickers.values(): sticker_total += int(level)
 	return {"hand": hand, "level": level_index + 1, "rolls_made": rolls_made, "rolls_left": rolls_left, "cash": cash,
 		"equipped_count": coin_inventory.equipped.size(), "sticker_total": sticker_total,
-		"states": Coins.state_of(coin_inventory.equipped), "double_mult": double_mult}
+		"states": Coins.state_of(coin_inventory.equipped), "double_mult": double_mult,
+		"hand_mult_bonus": hand_mult_bonus, "hand_points_bonus": hand_points_bonus}
 
 func credit_limit() -> int:
 	return int(CoinEffects.sum_of(passives, "credit"))
 
 func offer_price(price: int) -> int:
-	return CoinEffects.discounted(price, passives)
+	return CoinEffects.discounted(price, passives, visit_discount)
 
 func free_reroll_ready() -> bool:
 	if rolls_made == 0: return false
@@ -650,6 +651,8 @@ func score_hand() -> bool:
 	Coins.advance(coin_inventory.equipped, "hand_scored")
 	Coins.advance(coin_inventory.equipped, "hand_combo" if combined else "hand_plain")
 	double_mult = false
+	hand_mult_bonus = 0
+	hand_points_bonus = 0
 	_collect_kiosk_tax()
 	if points < target() and hand >= hand_limit():
 		phase = "lost"
@@ -912,10 +915,34 @@ func use_consumable(index: int = 0) -> bool:
 		"impulse":
 			if id not in impulses: impulses.append(id)
 			var shown: Array = effect.numbers.map(func(n): return str(n))
-			message = "Impulso activo: cada %s suma +%d hasta terminar este encuentro." % [" y ".join(shown), effect.amount]
+			var listed: String = shown[0] if shown.size() == 1 else ", ".join(shown.slice(0, shown.size() - 1)) + " y " + shown[shown.size() - 1]
+			message = "Impulso activo: cada %s suma +%d hasta terminar este encuentro." % [listed, effect.amount]
 		"use_extra_roll":
 			rolls_left += int(effect.amount)
-			message = "Una tirada adicional disponible en esta mano."
+			message = "Una tirada adicional disponible en esta mano." if int(effect.amount) == 1 else "%d tiradas adicionales disponibles en esta mano." % int(effect.amount)
+		"use_hand_mult":
+			hand_mult_bonus += int(effect.amount)
+			message = "Mult +%d activo: se suma al multiplicador de cada combinación de esta mano." % int(effect.amount)
+		"use_hand_points":
+			hand_points_bonus += int(effect.amount)
+			message = "Bolsa de puntos: +%d puntos planos en esta mano." % int(effect.amount)
+		"use_cash":
+			cash += int(effect.amount)
+			message = "Plata rápida: +$%d." % int(effect.amount)
+		"use_visit_discount":
+			if visit_discount > 0.0: return false
+			visit_discount = float(effect.amount)
+			message = "Descuento de visita activo: -%d %% hasta salir de la tienda." % int(round(float(effect.amount) * 100.0))
+		"use_repair_all":
+			if phase != "repair" or repair_resolution.get("status", "") != "pending": return false
+			var fixed: Array = repair_resolution.available_ids.duplicate()
+			for die_id in fixed: dice[die_id].shell_broken = false
+			repair_resolution.status = "repaired"
+			repair_resolution.selected_ids = fixed
+			repair_resolution.cost = 0
+			repair_resolution["cash_after"] = cash
+			phase = repair_resolution.next_phase
+			message = "Reparar todas: carcasas reparadas gratis."
 		"use_double_mult":
 			if double_mult: return false
 			double_mult = true

@@ -12,7 +12,8 @@ const PASSIVES = [
 	"pocket", "pocket_small", "discount", "tempered_gem", "jeweler",
 	"veteran", "accumulated", "streak", "bosshunter",
 	"reserve_roll", "collector", "level_veteran", "served", "leftovers", "extra_hand"]
-const CONSUMABLES = ["boost", "roll", "boost_25", "boost_36", "double_mult", "free_renewal_use", "repair_gem", "free_reroll_use"]
+const CONSUMABLES = ["boost", "roll", "boost_25", "boost_36", "double_mult", "free_renewal_use", "repair_gem", "free_reroll_use",
+	"mult_plus2", "points_bag", "two_rolls", "quick_cash", "visit_discount", "repair_all", "even_boost"]
 const RARITIES = ["common", "rare", "epic", "legendary"]
 const RARITY_NAMES = {"common": "Común", "rare": "Rara", "epic": "Épica", "legendary": "Legendaria"}
 ## [price, resale] by rarity.
@@ -31,7 +32,8 @@ const SHORT = {
 	"pocket": "B+", "pocket_small": "b+", "discount": "-%", "tempered_gem": "GT", "jeweler": "Jo",
 	"veteran": "Ve", "accumulated": "Ac", "streak": "Ra", "bosshunter": "Cz",
 	"reserve_roll": "TR", "collector": "Cb", "level_veteran": "VN", "served": "Sv", "leftovers": "So", "extra_hand": "M3",
-	"boost_25": "25", "boost_36": "36", "double_mult": "x2", "free_renewal_use": "R0", "repair_gem": "Rp", "free_reroll_use": "R1"}
+	"boost_25": "25", "boost_36": "36", "double_mult": "x2", "free_renewal_use": "R0", "repair_gem": "Rp", "free_reroll_use": "R1",
+	"mult_plus2": "+2", "points_bag": "Bp", "two_rolls": "T2", "quick_cash": "$5", "visit_discount": "-V", "repair_all": "RT", "even_boost": "246"}
 
 ## Per coin: code, name, description, rarity, family, effects (+ optional overrides).
 const DATA = {
@@ -169,7 +171,21 @@ const DATA = {
 	"repair_gem": {"code": "U07", "name": "Reparar gema", "description": "Repara gratis la gema de mayor costo que elijas en la fase de reparación. Se consume.", "rarity": "common", "family": "use", "scope": "gem", "effect": "repair_gem", "amount": 1, "duration": "encounter", "contexts": ["repair"],
 		"effects": [{"kind": "use_repair_free", "amount": 1}]},
 	"free_reroll_use": {"code": "U08", "name": "Relanzo libre", "description": "Relanzar un solo dado no gasta tirada (una vez). Se consume.", "rarity": "common", "family": "use", "scope": "roll_budget", "effect": "free_reroll", "amount": 1, "duration": "hand", "contexts": ["play"],
-		"effects": [{"kind": "use_free_reroll", "amount": 1}]}
+		"effects": [{"kind": "use_free_reroll", "amount": 1}]},
+	"mult_plus2": {"code": "U10", "name": "Mult +2", "description": "+2 al multiplicador de cada combinación de la mano actual, antes de Doble mult. Se acumula. Se consume.", "rarity": "rare", "family": "use", "scope": "multiplier", "duration": "hand", "contexts": ["play"],
+		"effects": [{"kind": "use_hand_mult", "amount": 2}]},
+	"points_bag": {"code": "U11", "name": "Bolsa de puntos", "description": "+20 puntos planos a la mano actual, fuera de todo multiplicador. Se acumula. Se consume.", "rarity": "common", "family": "use", "scope": "hand", "duration": "hand", "contexts": ["play"],
+		"effects": [{"kind": "use_hand_points", "amount": 20}]},
+	"two_rolls": {"code": "U13", "name": "Dos tiradas más", "description": "+2 tiradas disponibles en la mano actual. Se consume.", "rarity": "epic", "family": "use", "scope": "roll_budget", "duration": "hand", "contexts": ["play"],
+		"effects": [{"kind": "use_extra_roll", "amount": 2}]},
+	"quick_cash": {"code": "U15", "name": "Plata rápida", "description": "+$5 al instante. Solo se usa durante el encuentro, no en la tienda. Se consume.", "rarity": "common", "family": "use", "scope": "economy", "duration": "instant", "contexts": ["play"],
+		"effects": [{"kind": "use_cash", "amount": 5}]},
+	"visit_discount": {"code": "U16", "name": "Descuento de visita", "description": "Ofertas, renovaciones y paquetes -50 % hasta salir de esta visita; se multiplica con Descuento. No aplica a reparaciones. Se consume.", "rarity": "rare", "family": "use", "scope": "economy", "duration": "visit", "contexts": ["shop"],
+		"effects": [{"kind": "use_visit_discount", "amount": 0.5}]},
+	"repair_all": {"code": "U17", "name": "Reparar todas", "description": "Repara gratis todas las carcasas rotas en la fase de reparación. Se consume.", "rarity": "epic", "family": "use", "scope": "gem", "duration": "encounter", "contexts": ["repair"],
+		"effects": [{"kind": "use_repair_all", "amount": 1}]},
+	"even_boost": {"code": "U18", "name": "Impulso par", "description": "+2 puntos por cada 2, 4 y 6 hasta terminar este encuentro. Se acumula con otros impulsos. Se consume.", "rarity": "common", "family": "use", "scope": "own_points", "duration": "encounter", "contexts": ["play"],
+		"effects": [{"kind": "impulse", "numbers": [2, 4, 6], "amount": 2}]}
 }
 
 static func definition(id: String) -> Dictionary:

@@ -2,7 +2,7 @@
 
 Etapa de monedas · 5 de noviembre de 2026.
 
-**Rama:** `feature/monedas-uso-simples`. **Depende de:** MON1, MON2. **Estado actual:** Sin empezar. **Decisiones vinculadas:** D15 (puntos 5, 6 y 9).
+**Rama:** `feature/monedas-uso-simples`. **Depende de:** MON1, MON2. **Estado actual:** Completado (suite: 3875 comprobaciones, cero fallos). **Decisiones vinculadas:** D15 (puntos 5, 6 y 9).
 
 ## Objetivo
 Agregar siete monedas de un uso que no necesitan elegir objetivo.

@@ -243,3 +243,27 @@ Evidencia: `tests/coin_batch2_tests.gd` (catálogo, cada moneda, previsión igua
 - **Guardado:** la mano 3 solo es válida durante el encuentro si el límite es 3. Una vez cerrado el encuentro (cobro, reparación, tienda) la mano es solo un recuerdo, así que vender la moneda en la tienda no invalida el guardado.
 
 Evidencia: `tests/coin_hands_tests.gd`.
+
+## Actualización: monedas de un uso simples (MON5, 6 de noviembre de 2026)
+
+Siete monedas de un uso que no piden elegir objetivo. El catálogo pasa a 72 monedas (57 pasivas y 15 de un uso). Precios por rareza: Común $2 / $1, Rara $3 / $1, Épica $5 / $2.
+
+| Código | Moneda | Rareza | Se usa en | Efecto |
+|---|---|---|---|---|
+| U10 | Mult +2 | Rara | mesa | +2 al multiplicador de cada combinación de la mano; se acumula; se suma antes de Doble mult; no toca los sobrantes |
+| U11 | Bolsa de puntos | Común | mesa | +20 puntos planos a la mano, en su propia fila, fuera de todo multiplicador; se acumula |
+| U13 | Dos tiradas más | Épica | mesa | +2 tiradas en la mano actual (reutiliza `use_extra_roll`) |
+| U15 | Plata rápida | Común | mesa | +$5 al instante; no se usa en la tienda |
+| U16 | Descuento de visita | Rara | tienda | −50 % en ofertas, renovaciones y paquetes hasta salir de la visita; no aplica a reparaciones |
+| U17 | Reparar todas | Épica | reparación | repara gratis todas las carcasas rotas y deja la fase resuelta |
+| U18 | Impulso par | Común | mesa | +2 por cada 2, 4 y 6 hasta terminar el encuentro; se acumula con otros impulsos |
+
+- **Estado:** reutiliza `hand_mult_bonus`, `hand_points_bonus` y `visit_discount` del guardado v9 (MON2). Los dos bonos de mano se limpian al anotar y en `start_hand()`; `visit_discount`, en `open_shop()`. U17 no necesita estado nuevo.
+- **Puntaje:** `Game.coin_context()` pasa los dos bonos a `Rules.score`, el mismo camino que usa la previsión, así que previsión y anotación coinciden. Mult +2 entra como suma de multiplicador (fuente `consumable:mult_plus2`) antes de la duplicación de Doble mult; Bolsa de puntos es una fila plana (`consumable:points_bag`).
+- **Descuento de visita:** `CoinEffects.discounted(precio, pasivas, visita)` multiplica los factores y redondea una sola vez: con Descuento (C45) queda precio × 0,8 × 0,5; un precio de 6 pasa a 2 (con dos redondeos daría 3). No se apila con otra moneda igual en la misma visita.
+- **Valor provisional:** Bolsa de puntos (+20) es un valor de prueba, no balance aprobado; el −50 % del Descuento de visita sale de D15 (punto 6).
+- **Mensajes:** el de `use_extra_roll` sale del valor ("2 tiradas adicionales…") y el de impulso lista "2, 4 y 6" sin repetir la "y".
+- **Pantalla de reparación:** las monedas de reparación usables se ubican en fila (con dos, sin "Usar" para que entren). La ficha de moneda entiende las duraciones nuevas "Inmediata" y "Visita actual a la tienda".
+- **Arte:** los siete ids ya tienen arte en `coins-nuevas-v3.png` (MON1).
+
+Evidencia: `tests/coin_simple_tests.gd` (catálogo, cada moneda, acumulación, orden con Doble mult, previsión igual a anotación, limpieza, redondeo único del descuento, reparación sin cobro, guardado y continuación con cada efecto activo, y pantalla de reparación con la escena real).
