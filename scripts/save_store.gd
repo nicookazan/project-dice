@@ -69,7 +69,7 @@ func read_file(file_path: String) -> Dictionary:
 		data = data.duplicate(true)
 		var boss_error: String = preload("res://scripts/save_migrations.gd").bosses_v8(data.game)
 		if boss_error != "": return error("state", boss_error)
-	if envelope.version < 9 and data is Dictionary and data.get("game") is Dictionary:
+	if envelope.version <= 9 and data is Dictionary and data.get("game") is Dictionary:
 		data = data.duplicate(true)
 		var coin_error: String = preload("res://scripts/save_migrations.gd").coins_v9(data.game)
 		if coin_error != "": return error("state", coin_error)

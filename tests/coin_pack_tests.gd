@@ -348,3 +348,20 @@ static func run_ui(scene, check: Callable) -> void:
 	check.call(small.phase == "shop" and scene.ui.get_node_or_null("CoinChoice") == null, "MON8: elegir en el chico lo cierra y vuelve a la tienda")
 	scene.game = previous
 	scene.render()
+
+## Un guardado v9 hecho antes del paquete (sin `coin_packs` y con monedas de menos) se actualiza al continuar.
+static func run_old_save(check: Callable) -> void:
+	var game = _shop_game(19)
+	var legacy: Dictionary = game.snapshot()
+	legacy.shop_tables.erase("coin_packs")
+	legacy.shop_tables["coins"] = legacy.shop_tables.coins.slice(0, 40)
+	var payload := {"game": legacy, "ui": UI_STATE.duplicate(true)}
+	var store := SaveStore.new("user://saves/mon7-old-v9.json")
+	var bytes := var_to_bytes(payload)
+	DirAccess.make_dir_recursive_absolute(store.path.get_base_dir())
+	store.write_text(store.path, JSON.stringify({"format": SaveStore.FORMAT, "version": 9, "sha256": bytes.hex_encode().sha256_text(), "payload": Marshalls.raw_to_base64(bytes)}))
+	var loaded: Dictionary = store.read_file(store.path)
+	check.call(loaded.ok, "MON7: un guardado v9 anterior al paquete carga (%s)" % loaded.get("message", ""))
+	if not loaded.ok: return
+	var tables: Dictionary = loaded.data.game.shop_tables
+	check.call(tables.has("coin_packs") and tables.coins.size() == Coins.catalog().size(), "MON7: al continuar un guardado v9 viejo la tienda recibe el paquete y el catálogo completo")

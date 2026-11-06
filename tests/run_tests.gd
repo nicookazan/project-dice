@@ -94,6 +94,7 @@ func _initialize() -> void:
 	CoinSimpleTests.run(check)
 	CoinComplexTests.run(check)
 	CoinPackTests.run(check)
+	CoinPackTests.run_old_save(check)
 	var shop_demo: Dictionary = ShopTests.run(check)
 	var purchases_demo: Dictionary = PurchaseTests.run(check)
 	check(Rules.category([1, 1]) == "Par", "exact pair")
