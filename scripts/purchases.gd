@@ -1,4 +1,5 @@
 extends RefCounted
+const Materials = preload("res://scripts/materials.gd")
 ## Pure transaction preparation. Game commits a fully validated plan once.
 const Shop = preload("res://scripts/shop.gd")
 const Coins = preload("res://scripts/coins.gd")
@@ -47,7 +48,7 @@ static func prepare(section: String, offer: Dictionary, target: Dictionary, dice
 				counters.erase("steel_points")
 				counters.erase("copper_multiplier")
 				updates = {"material": effect.id, "encounter_effects": counters}
-				label = "material " + ("Acero" if effect.id == "steel" else "Cobre")
+				label = "material " + Materials.display_name(effect.id)
 			"element":
 				var counters: Dictionary = dice[id].hand_effects.duplicate(true)
 				counters.erase("earth_points")

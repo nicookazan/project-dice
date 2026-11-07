@@ -229,7 +229,7 @@ static func score(dice: Array, groups: Array, passives: Array, boost: Variant, s
 				additions.append({"source": "number:global:" + str(number), "amount": global_bonus})
 			var face_loss: float = number - number * BossRules.face_scale(boss_context, number)
 			if face_loss > 0: additions.append({"source": "boss:face:" + str(number), "amount": -face_loss})
-			var steel_bonus := 0.0 if BossRules.suspended(boss_context, "material", die.material) else Materials.steel_points(die)
+			var steel_bonus := 0.0 if BossRules.suspended(boss_context, "material", Materials.base_of(die.material)) else Materials.steel_points(die)
 			if steel_bonus > 0:
 				additions.append({"source": "material:steel:" + str(die.id), "amount": steel_bonus})
 			var element_effect := {} if BossRules.suspended(boss_context, "element", die.get("element", "")) else Elements.evaluate(die, dice, group.ids, cat)
@@ -269,7 +269,7 @@ static func score(dice: Array, groups: Array, passives: Array, boost: Variant, s
 		var coin_points: Array = []
 		if cat != "Sin combinación":
 			for index in group.ids:
-				var copper_bonus := 0.0 if BossRules.suspended(boss_context, "material", dice[index].material) else Materials.copper_multiplier(dice[index])
+				var copper_bonus := 0.0 if BossRules.suspended(boss_context, "material", Materials.base_of(dice[index].material)) else Materials.copper_multiplier(dice[index])
 				var wind_bonus := Elements.wind_multiplier(dice[index])
 				if wind_bonus > 0:
 					multiplier_additions.append({"source": "element:wind:" + str(dice[index].id), "amount": wind_bonus})

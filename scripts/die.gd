@@ -46,7 +46,7 @@ func configure_appearance(state: Dictionary, context: Dictionary = {}) -> void:
 	shell_broken = state.shell_broken
 	var bosses = preload("res://scripts/boss_rules.gd")
 	pip_suspended = bosses.suspended(context, "shell", pip_material)
-	body_suspended = bosses.suspended(context, "material", body_material)
+	body_suspended = bosses.suspended(context, "material", Materials.base_of(body_material))
 	element_suspended = bosses.suspended(context, "element", element)
 	queue_redraw()
 

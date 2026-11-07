@@ -5,6 +5,7 @@ const Stickers = preload("res://scripts/stickers.gd")
 const Gems = preload("res://scripts/gems.gd")
 const Elements = preload("res://scripts/elements.gd")
 const Numbers = preload("res://scripts/number_upgrades.gd")
+const Materials = preload("res://scripts/materials.gd")
 const SIZES = {"coins": 4, "components": 2, "numbers": 2, "stickers": 2, "cup": 0}
 ## Tamaños del paquete de monedas (D15): se muestran `shown`, se eligen `picks` y el grande trae al menos 2 pasivas.
 const COIN_PACK_SIZES = {"small": {"shown": 2, "picks": 1, "min_passives": 0}, "large": {"shown": 5, "picks": 2, "min_passives": 2}}
@@ -36,7 +37,7 @@ static func valid_candidate(section: String, data: Variant, stickers: Dictionary
 		"coins": return data.get("kind") == "coin" and not Coins.definition(effect.get("coin_id", "")).is_empty()
 		"components":
 			match data.get("kind"):
-				"material": return effect.get("id") in ["steel", "copper"]
+				"material": return effect.get("id") in Materials.METALS
 				"shell": return not Gems.definition(effect.get("id", "")).is_empty() and effect.get("intact") == true
 				"element": return not Elements.definition(effect.get("id", "")).is_empty()
 		"numbers":

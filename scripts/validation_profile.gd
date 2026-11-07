@@ -1,4 +1,5 @@
 extends RefCounted
+const Materials = preload("res://scripts/materials.gd")
 ## Explicit provisional data for step 16, opt-in only. Not approved commercial balance.
 const ID := "nivel-corto-prueba-v1"
 const SAVE_PATH := "user://saves/validacion-nivel-v1.json"
@@ -22,7 +23,7 @@ static func tables() -> Dictionary:
 	result["coin_rarity_weights"] = staged.coin_rarity_weights
 	result["coin_packs"] = staged.coin_packs
 	for id in Coins.catalog(): result.coins.append({"kind": "coin", "price": Coins.definition(id).price, "weight": 1.0, "effect": {"coin_id": id}})
-	for id in ["steel", "copper"]: result.components.append({"kind": "material", "price": 3, "weight": 1.0, "effect": {"id": id}})
+	for id in Materials.METALS: result.components.append({"kind": "material", "price": 3, "weight": 1.0, "effect": {"id": id}})
 	for id in ["fire", "water", "electricity", "earth", "wind"]: result.components.append({"kind": "element", "price": 3, "weight": 1.0, "effect": {"id": id}})
 	for id in ["emerald", "sapphire", "ruby", "diamond"]: result.components.append({"kind": "shell", "price": 4, "weight": 1.0, "effect": {"id": id, "intact": true}})
 	var rarities := ["common", "rare", "epic", "legendary"]

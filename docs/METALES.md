@@ -78,3 +78,13 @@ Al cierre del paso 04, el antiguo fixture de estado del paso 01 acreditaba 43 y 
 Capturas revisadas: test-results/metales.png, acero.png y cobre.png. La UI también se prueba con un par acero/cobre de 24 puntos y multiplicador 1,5.
 
 Los estados controlados solo se crean desde tests; la partida normal sigue empezando con cinco dados básicos. Fuego/agua/electricidad se incorporaron en el paso 05; tierra/viento se incorporaron en el 06 con contadores independientes de mano. Los poderes de gemas se incorporaron en el 07; rotura, compra de materiales y sinergias especiales siguen en sus pasos.
+
+## Metales nuevos (TX3 y TX4, 07/11/2026)
+
+El nombre «Hierro» reemplaza a «Acero» en toda la interfaz; el id interno sigue siendo `steel`, así que los guardados no migran. Se suman `rust_iron` (hierro oxidado), `rust_copper` (cobre oxidado) y `gold` (oro), definidos en la tabla `Materials.TABLE`, donde cada metal indica su nombre, su cuerpo del shader y su **metal base**.
+
+**Mecánicas provisionales (decisión del autor, 06/11/2026):** hierro oxidado funciona como hierro, cobre oxidado como cobre y oro como hierro. Mismos puntos, mismos reinicios, mismos contadores (`steel_points` y `copper_multiplier`), que se guardan por base. Para los jefes que suspenden metales y para la moneda «Dados de metal» (C22) cada metal nuevo cuenta como su base o como metal, respectivamente. Los dados oxidados se compran ya oxidados: el óxido no avanza en la partida.
+
+**Tienda y guardado:** los cinco metales entran a las ofertas de componentes con el mismo precio y peso que su base (tabla provisional hasta el ítem 7). El guardado solo amplía la lista de materiales válidos; el formato no cambia y las partidas viejas cargan.
+
+**Pendiente del autor:** mecánicas propias de los oxidados y del oro. La del oro («da dinero si no se usa para hacer puntos») necesita definir qué significa «no se usa», porque hoy los sobrantes suman puntos. Si cambian el formato del guardado, llevan su migración. Arte: [TX3](pasos/TX3-metales-arte.md); código: [TX4](pasos/TX4-metales-juego.md).

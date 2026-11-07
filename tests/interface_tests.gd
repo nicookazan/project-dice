@@ -141,7 +141,7 @@ static func run(scene, check: Callable) -> Dictionary:
 			break
 	check.call("Cara 2: 4" in scene.detail_text and "4: 2/6 (33.33%)" in scene.detail_text and "2: 0/6" in scene.detail_text, "UI: die inspection shows six positions and exact changed-face probabilities")
 	check.call("Puntos numéricos del resultado: 19" in scene.detail_text and "Número visible: 4" in scene.detail_text, "UI: inspection distinguishes result number from upgraded points")
-	check.call("RESQUEBRAJADA" in scene.detail_text and "acero +6" in scene.detail_text and "tierra +12" in scene.detail_text, "UI: inspection separates shell damage and encounter/hand counters")
+	check.call("RESQUEBRAJADA" in scene.detail_text and "hierro +6" in scene.detail_text and "tierra +12" in scene.detail_text, "UI: inspection separates shell damage and encounter/hand counters")
 	check.call(scene.detail_body.text == scene.detail_text and scene.detail_body.scroll_active, "UI: long inspection is fully available in scrollable detail")
 	find_button(scene, "TIRAR (1)").pressed.emit()
 	key(scene, KEY_SPACE)

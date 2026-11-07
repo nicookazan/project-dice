@@ -262,7 +262,7 @@ func inspect_die(id: int) -> void:
 	if die.value > 0: lines.append("Puntos numéricos del resultado: %s (antes de material, elemento, monedas y gema)" % number(die.value + game.global_points.get(str(die.value), 0)))
 	var material := Materials.inspect(die)
 	lines.append("\nMaterial: " + material.name)
-	if die.material in ["steel", "copper"]:
+	if Materials.is_metal(die.material):
 		var material_text := shop_offer_text({"kind": "material", "effect": {"id": die.material}})
 		lines.append(material_text[1])
 	var shell := Gems.definition(die.shell)
@@ -271,9 +271,9 @@ func inspect_die(id: int) -> void:
 	var element := Elements.definition(die.element)
 	lines.append("Elemento: " + element.get("name", "Sin elemento"))
 	if not element.is_empty(): lines.append(element.condition + " Permanece durante la partida; no se gasta.")
-	lines.append("\nAcumulación de encuentro: acero +%s puntos; cobre +%s al multiplicador." % [number(Materials.steel_points(die)), number(Materials.copper_multiplier(die))])
+	lines.append("\nAcumulación de encuentro: hierro +%s puntos; cobre +%s al multiplicador." % [number(Materials.steel_points(die)), number(Materials.copper_multiplier(die))])
 	lines.append("Acumulación de mano: tierra +%s puntos; viento +%s al multiplicador." % [number(Elements.earth_points(die)), number(Elements.wind_multiplier(die))])
-	lines.append("Acero/cobre duran el encuentro; tierra/viento se reinician cada mano.")
+	lines.append("Hierro/cobre (y sus variantes) duran el encuentro; tierra/viento se reinician cada mano.")
 	present_detail("Dado %d · ficha" % [id + 1], "\n".join(lines))
 
 func point_upgrades(points: Dictionary) -> String:
@@ -1161,7 +1161,7 @@ func source_name(source: String) -> String:
 		if not element.is_empty():
 			return "%s · dado %d" % [element.name, source.get_slice(":", 2).to_int() + 1]
 	if source.begins_with("material:"):
-		var material := "Acero" if source.get_slice(":", 1) == "steel" else "Cobre"
+		var material := Materials.display_name(source.get_slice(":", 1))
 		return "%s · dado %d" % [material, source.get_slice(":", 2).to_int() + 1]
 	if source.begins_with("number:global:"):
 		return "Mejora global del " + source.get_slice(":", 2)
@@ -1492,7 +1492,7 @@ func shop_offer_text(offer: Dictionary) -> Array:
 	match offer.kind:
 		"coin": return [Coins.definition(effect.coin_id).name, "%s · %s
 %s" % [Coins.definition(effect.coin_id).code, Coins.RARITY_NAMES[Coins.definition(effect.coin_id).rarity], Coins.definition(effect.coin_id).description]]
-		"material": return ["Acero" if effect.id == "steel" else "Cobre", "+3 puntos propios al conservarlo en un relanzamiento ajeno; relanzarlo borra el bono. Dura el encuentro." if effect.id == "steel" else "+0.5 al multiplicador de su grupo por relanzamiento propio. Dura el encuentro."]
+		"material": return [Materials.display_name(effect.id), "+3 puntos propios al conservarlo en un relanzamiento ajeno; relanzarlo borra el bono. Dura el encuentro." if Materials.base_of(effect.id) == "steel" else "+0.5 al multiplicador de su grupo por relanzamiento propio. Dura el encuentro."]
 		"shell":
 			var shell: Dictionary = Gems.definition(effect.id)
 			return ["Puntos · " + shell.name, "%s\nRotura: %d%% · Reparación: $%d" % [shell.description, int(shell.break_risk * 100), shell.repair_cost]]
@@ -1808,7 +1808,7 @@ func render_purchase_target() -> void:
 	var description := "Elegí el dado que recibirá la mejora."
 	if target.has("die_id"):
 		var die: Dictionary = game.dice[target.die_id]
-		var material := "Acero" if die.material == "steel" else ("Cobre" if die.material == "copper" else "Base")
+		var material := Materials.display_name(die.material)
 		var shell: String = Gems.definition(die.shell).get("name", "Sin carcasa")
 		var element: String = Elements.definition(die.element).get("name", "Sin elemento")
 		description = "Dado %d · %s · %s%s · %s" % [die.id + 1, material, shell, " (rota)" if die.shell_broken else "", element]
