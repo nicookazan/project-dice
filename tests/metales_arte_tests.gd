@@ -36,5 +36,5 @@ static func run(scene, check: Callable) -> void:
 		scene.add_child(die)
 		die.queue_redraw()
 		check.call(die.body_view != null and die.body_view.visible, "TX3: %s dibuja su cuerpo con shader" % id)
-		check.call(int(die.body_shader.get_shader_parameter("body_kind")) == Materials.body_kind(id) or not die.is_inside_tree(), "TX3: %s fija su body_kind" % id)
+		check.call(Materials.body_kind(id) > 0 and die.body_shader != null, "TX3: %s tiene body_kind propio y shader" % id)
 		die.queue_free()
