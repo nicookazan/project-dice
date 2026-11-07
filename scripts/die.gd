@@ -2,6 +2,8 @@ extends Button
 ## Front-facing ivory die, with an orthogonal pip grid for readable results.
 const Art = preload("res://scripts/dice_art.gd")
 const BODY_SHADER = preload("res://scripts/die_body.gdshader")
+const BODY_MASK = preload("res://assets/art/pixel-v3/metales-mascaras-v3.png")
+const Materials = preload("res://scripts/materials.gd")
 signal inspect_requested(index: int)
 const PIPS = {
 	1: [[1, 1]],
@@ -58,6 +60,7 @@ func _ready() -> void:
 	body_view.show_behind_parent = true
 	body_shader = ShaderMaterial.new()
 	body_shader.shader = BODY_SHADER
+	body_shader.set_shader_parameter("body_mask", BODY_MASK)
 	body_view.material = body_shader
 	add_child(body_view)
 	custom_minimum_size = Vector2(62, 62)
@@ -88,12 +91,12 @@ func face_point(u: float, v: float) -> Vector2:
 	return Vector2(0.14 + 0.72 * u, 0.24 + 0.64 * v) * 62.0
 
 func _draw() -> void:
-	var metal := body_material in ["steel", "copper"]
+	var metal := Materials.is_metal(body_material)
 	if is_instance_valid(body_view):
 		body_view.visible = metal
 		if metal:
 			body_view.texture = Art.face(pip_material, value)
-			body_shader.set_shader_parameter("body_kind", 1 if body_material == "steel" else 2)
+			body_shader.set_shader_parameter("body_kind", Materials.body_kind(body_material))
 			var boxes := PackedVector4Array()
 			var bounds: Array = Art.pip_bounds(pip_material, value)
 			for box in bounds:

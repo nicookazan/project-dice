@@ -820,9 +820,9 @@ func show_component_gallery() -> void:
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	dice_gallery.add_child(scroll)
 	var sheet := Control.new()
-	sheet.custom_minimum_size = Vector2(1080, 850)
+	sheet.custom_minimum_size = Vector2(1080, 1160)
 	scroll.add_child(sheet)
-	var variants := [["ACERO", "steel", "", ""], ["COBRE", "copper", "", ""], ["FUEGO", "basic", "fire", ""], ["AGUA", "basic", "water", ""], ["ELECTRICIDAD", "basic", "electricity", ""], ["TIERRA", "basic", "earth", ""], ["VIENTO", "basic", "wind", ""], ["COMBINADO", "steel", "electricity", "diamond"]]
+	var variants := [["HIERRO", "steel", "", ""], ["COBRE", "copper", "", ""], ["HIERRO OXIDADO", "rust_iron", "", ""], ["COBRE OXIDADO", "rust_copper", "", ""], ["ORO", "gold", "", ""], ["FUEGO", "basic", "fire", ""], ["AGUA", "basic", "water", ""], ["ELECTRICIDAD", "basic", "electricity", ""], ["TIERRA", "basic", "earth", ""], ["VIENTO", "basic", "wind", ""], ["COMBINADO", "steel", "electricity", "diamond"]]
 	for row in range(variants.size()):
 		var variant: Array = variants[row]
 		label(sheet, variant[0], Vector2(12, 42 + row * 103), 17, cream, 180)

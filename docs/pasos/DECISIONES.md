@@ -225,7 +225,7 @@ Versión 1 · 25 de octubre de 2026. Este registro evita bloquear todo el proyec
 
 **Estado:** Confirmada por el autor el 5 de noviembre de 2026 al elegir entre bocetos A/B. Es arte y presentación; los efectos de los metales nuevos no están definidos.
 
-**Pasos afectados:** TX1–TX3.
+**Pasos afectados:** TX1–TX5 (TX3 y TX4 integrados el 07/11/2026; ver la ficha de cada uno).
 
 **Decisiones:**
 
@@ -239,7 +239,8 @@ Versión 1 · 25 de octubre de 2026. Este registro evita bloquear todo el proyec
    - Cielo: A (rayos y nubes).
 2. **Elementos de los dados:** A para los cinco. Marcas grandes sobre el borde del dado, sin tapar los puntos.
 3. **Metales nuevos (solo arte):** hierro oxidado B (goteos y costra), cobre oxidado A (pátina en manchas), oro A (pulido).
-4. **Sin definir (bloquea cablearlos):** si "acero" pasa a llamarse "hierro"; efecto de los oxidados y del oro (el oro "da dinero si no se usa para hacer puntos": cuánto, cuándo, cómo se compra); si entran a la tienda y al guardado.
+4. **Metales nuevos en el juego (06/11/2026):** los tres entran a la tienda y al guardado con el mismo precio y peso que su metal base, en tabla y provisionales hasta el ítem 7. Por ahora **no tienen mecánica propia**: hierro oxidado funciona como acero, cobre oxidado como cobre y oro como acero (decisión 8 del plan: el oro no tiene metal base; imita al acero). Las reglas propias y la del oro ("da dinero si no se usa para hacer puntos": cuánto, cuándo, cómo se compra, y qué significa "no se usa" si hoy los sobrantes suman) las define el autor más adelante; si cambian el formato del guardado llevan su migración.
+4b. **Nombre:** se muestra «Hierro» en todo el juego. El id interno sigue siendo `steel` para no migrar partidas.
 5. **Reglas de las animaciones:** respetan "Reducir movimiento" y la velocidad, usan un azar aparte y no tocan semilla ni guardado.
 
 **Fuente:** [bocetos del 5 de noviembre](https://claude.ai/artifact/F6gWSJHa3X4ubawQ1SFUMo) y la página «4. Texturas» de Notion.
