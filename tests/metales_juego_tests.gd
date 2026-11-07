@@ -51,3 +51,10 @@ static func run(check: Callable) -> void:
 	# Jefes: suspender el metal base suspende también a sus variantes.
 	var boss := {"kind": "suspend_material", "target": "steel"}
 	check.call(BossRules.suspended(boss, "material", Materials.base_of("rust_iron")) and BossRules.suspended(boss, "material", Materials.base_of("gold")) and not BossRules.suspended(boss, "material", Materials.base_of("rust_copper")), "TX4: el jefe que suspende hierro alcanza al oxidado y al oro, no al cobre oxidado")
+	# Guardados con la tabla vieja (solo hierro y cobre): al continuar se suman los metales nuevos, una sola vez.
+	var old := {"shop_tables": {"coins": [], "components": [{"kind": "material", "price": 3, "weight": 1.0, "effect": {"id": "steel"}}, {"kind": "material", "price": 5, "weight": 2.0, "effect": {"id": "copper"}}, {"kind": "element", "price": 3, "weight": 1.0, "effect": {"id": "fire"}}]}}
+	preload("res://scripts/save_migrations.gd").coins_v9(old)
+	preload("res://scripts/save_migrations.gd").coins_v9(old)
+	var materials: Array = old.shop_tables.components.filter(func(entry): return entry.kind == "material")
+	check.call(materials.size() == 5, "TX4: la migración suma los tres metales nuevos a una tienda guardada, sin duplicar (%d)" % materials.size())
+	check.call(materials.any(func(entry): return entry.effect.id == "rust_copper" and entry.price == 5 and entry.weight == 2.0), "TX4: el metal nuevo hereda precio y peso de su base en la tabla guardada")

@@ -68,6 +68,17 @@ static func coins_v9(game: Dictionary) -> String:
 		if standard:
 			game.shop_tables["coins"] = Shop.default_tables().coins
 			if not game.shop_tables.has("coin_packs"): game.shop_tables["coin_packs"] = Shop.coin_pack_table()
+	# TX4: las tablas guardadas antes de los metales nuevos traen solo hierro y cobre. Se suman los que faltan con el
+	# precio y el peso de su metal base. Idempotente; no toca las ofertas ya generadas.
+	if game.get("shop_tables") is Dictionary and game.shop_tables.get("components") is Array:
+		const Materials = preload("res://scripts/materials.gd")
+		var by_id := {}
+		for entry in game.shop_tables.components:
+			if entry is Dictionary and entry.get("kind") == "material" and entry.get("effect") is Dictionary: by_id[entry.effect.get("id", "")] = entry
+		for id in Materials.METALS:
+			var base_entry = by_id.get(Materials.base_of(id))
+			if not by_id.has(id) and base_entry != null and (by_id.has("steel") or by_id.has("copper")):
+				game.shop_tables.components.append({"kind": "material", "price": base_entry.price, "weight": base_entry.weight, "effect": {"id": id}})
 	return ""
 
 ## v7 -> v8: los ids de prueba pasan al catálogo de jefes (por nivel y posición) y aparece `boss_state`.
