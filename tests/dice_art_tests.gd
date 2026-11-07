@@ -103,7 +103,7 @@ static func run(scene, check: Callable) -> Dictionary:
 	var snapshot: Dictionary = scene.game.snapshot()
 	scene.show_component_gallery()
 	var components := UI.dice_in(scene.dice_gallery)
-	check.call(components.size() == 48 and scene.game.snapshot() == snapshot, "Components: 48 reference faces without state/RNG mutation")
+	check.call(components.size() == 66 and scene.game.snapshot() == snapshot, "Components: 66 reference faces without state/RNG mutation")
 	check.call(components.filter(func(die): return die.body_material == "steel" and die.element == "electricity" and die.pip_material == "diamond").map(func(die): return die.value) == [1, 2, 3, 4, 5, 6], "Components: steel/electricity/diamond coexists across all six faces")
 	scene.detail.hide()
 	return {"source_pixel_counts": counts, "individual_faces": 30, "gallery_faces": 30, "pure_render": true}

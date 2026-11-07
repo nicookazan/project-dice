@@ -1,4 +1,5 @@
 extends RefCounted
+const Materials = preload("res://scripts/materials.gd")
 const Game = preload("res://scripts/game.gd")
 const Rules = preload("res://scripts/rules.gd")
 const Coins = preload("res://scripts/coins.gd")
@@ -91,7 +92,7 @@ static func validate(data: Variant) -> String:
 		var base: Dictionary = preload("res://scripts/dice_state.gd").create_die(i)
 		for key in base:
 			if not die.has(key) or typeof(die[key]) != typeof(base[key]): return "campos de dado inválidos"
-		if die.id != i or die.faces.size() != 6 or die.material not in ["basic", "steel", "copper"] or die.shell not in ["", "emerald", "sapphire", "ruby", "diamond"] or die.element not in ["", "fire", "water", "electricity", "earth", "wind"] or die.zone not in ["cup", "reserve"]: return "identidad o componente de dado inválido"
+		if die.id != i or die.faces.size() != 6 or die.material not in ["basic"] + Materials.METALS or die.shell not in ["", "emerald", "sapphire", "ruby", "diamond"] or die.element not in ["", "fire", "water", "electricity", "earth", "wind"] or die.zone not in ["cup", "reserve"]: return "identidad o componente de dado inválido"
 		for face in die.faces:
 			if not face is int or face < 1 or face > 6: return "cara inválida"
 		if die.has("local_points"): return "mecánica numérica anterior sin migrar"

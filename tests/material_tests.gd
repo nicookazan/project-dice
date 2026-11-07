@@ -44,7 +44,7 @@ static func _test_steel_triggers(check: Callable) -> void:
 		Materials.inspect(game.dice[0])
 	check.call(game.snapshot() == before, "materials: repeated previews and inspection do not earn points or mutate events/RNG")
 	var info := Materials.inspect(game.dice[0])
-	check.call(info.name == "Acero" and info.duration == "encounter" and info.points == 6 and info.applies_to_leftovers and info.resets_on_own_reroll, "steel: inspection exposes its power, duration and reset")
+	check.call(info.name == "Hierro" and info.duration == "encounter" and info.points == 6 and info.applies_to_leftovers and info.resets_on_own_reroll, "steel: inspection exposes its power, duration and reset")
 	info.points = 999
 	check.call(Materials.steel_points(game.dice[0]) == 6, "materials: inspection data is detached")
 	var one = Game.new(7)

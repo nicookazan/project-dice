@@ -5,7 +5,7 @@ Juego de dados roguelike basado en la generala. Godot 4.7.1 / GDScript, renderer
 ## Qué es (resumen del PRD)
 
 - Se tiran 5 dados (siempre cinco, sin compra de dados). 2 manos por encuentro, 3 tiradas por mano. Se arman grupos (par, doble par, trío, escalera, full, póker, generala), se anota y se acumulan puntos hasta el objetivo del encuentro.
-- Los dados se mejoran con: material del cuerpo (acero, cobre), elemento (fuego, agua, electricidad, tierra, viento), material de los puntos (antes "carcasa": esmeralda, rubí, zafiro, diamante; se resquebrajan y se reparan), mejoras numéricas globales por número, cambio de caras.
+- Los dados se mejoran con: material del cuerpo (hierro —id `steel`—, cobre, y los provisionales hierro oxidado, cobre oxidado y oro, que copian la mecánica de su base), elemento (fuego, agua, electricidad, tierra, viento), material de los puntos (antes "carcasa": esmeralda, rubí, zafiro, diamante; se resquebrajan y se reparan), mejoras numéricas globales por número, cambio de caras.
 - Stickers sobre el **termo** (antes en el vaso) potencian categorías; monedas (5 pasivas + 1 ranura de un uso); tienda de cuatro secciones con vendedor y maletín.
 - Campaña: 7 niveles, 2 rivales + 1 jefe por nivel = 21 encuentros hasta Dios. Mate siempre (nunca cerveza). Nivel 8/CMD, vasos y metaprogreso están **diferidos** (F01–F04).
 

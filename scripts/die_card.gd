@@ -13,12 +13,12 @@ enum Style { FELT, SHOP }
 
 ## Colores aprobados en los bocetos.
 const COLORS := {
-	"steel": "b8c4d4", "copper": "e89a5c",
+	"steel": "b8c4d4", "copper": "e89a5c", "rust_iron": "c0703c", "rust_copper": "5fb88c",
 	"emerald": "55d890", "ruby": "ff5f70", "sapphire": "74a4f0", "diamond": "cdf2ff",
 	"fire": "ff8e30", "water": "52bcf2", "electric": "ffe24f", "earth": "c4955a", "wind": "a4e6c6",
 	"gold": "f0c850", "dim": "8f8676", "text": "fff0c7"}
 const NAMES := {
-	"steel": "Acero", "copper": "Cobre",
+	"steel": "Hierro", "copper": "Cobre", "rust_iron": "Hierro oxidado", "rust_copper": "Cobre oxidado", "gold": "Oro",
 	"emerald": "Esmeralda", "ruby": "Rubí", "sapphire": "Zafiro", "diamond": "Diamante",
 	"fire": "Fuego", "water": "Agua", "electric": "Electricidad", "earth": "Tierra", "wind": "Viento"}
 const FELT_TOP := 322.0
@@ -96,7 +96,7 @@ static func color_text(color: String, text: String) -> String:
 static func part(family: String, id: String, die: Dictionary, boss_context: Dictionary) -> String:
 	if not NAMES.has(id): return ""   # sin material/gema/elemento ("" o "basic")
 	var name: String = NAMES[id]
-	if BossRules.suspended(boss_context, family, id): return color_text("dim", "[s]%s[/s] suspendido por el jefe" % name)
+	if BossRules.suspended(boss_context, family, Materials.base_of(id) if family == "material" else id): return color_text("dim", "[s]%s[/s] suspendido por el jefe" % name)
 	if family == "shell" and die.get("shell_broken", false): return color_text("dim", "[s]%s[/s] rota" % name)
 	return color_text(id, name)
 
@@ -122,7 +122,7 @@ static func worth(die: Dictionary, global_points: Dictionary, boss_context: Dict
 	if global_bonus > 0: additions.append({"source": "number:global:" + str(die.value), "amount": global_bonus})
 	var face_loss: float = die.value - die.value * BossRules.face_scale(boss_context, die.value)
 	if face_loss > 0: additions.append({"source": "boss:face:" + str(die.value), "amount": -face_loss})
-	var steel_bonus := 0.0 if BossRules.suspended(boss_context, "material", die.material) else Materials.steel_points(die)
+	var steel_bonus := 0.0 if BossRules.suspended(boss_context, "material", Materials.base_of(die.material)) else Materials.steel_points(die)
 	if steel_bonus > 0: additions.append({"source": "material:steel:" + str(die.id), "amount": steel_bonus})
 	return int(round(Rules.resolve_die(die, additions, []).points))
 

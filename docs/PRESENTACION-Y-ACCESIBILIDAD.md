@@ -58,3 +58,16 @@ Prioridades artísticas pendientes: producir variantes de manos y objetos a part
 
 La revisión visual verifica ventanas cubiertas, espacio/disco distinguibles, triángulo/ojo, mate conservado, diálogo separado de cifras, ayuda larga y opciones dentro de ambas resoluciones. No sustituye una sesión humana de accesibilidad, escucha, diversión o aprobación de arte. El paso 20 conserva balance, mediciones humanas y exportación del ejecutable.
 
+
+## Fondos animados de las ventanas (TX2, D16)
+
+Los seis ambientes de `pixel-v3/exteriores-v3.png` se animan con `scripts/window_fx.gd` (capas dibujadas en una textura aparte) y `window_swirl.gdshader` (ondas de la galaxia y del agujero negro), integrados en `backdrop.gd`: día (nubes y pájaros), tarde (ventanas que se encienden y murciélagos), noche (luces, estrellas y fugaz; la luna queda fija), espacio (rocas a la deriva y galaxia con ondas), agujero negro (el disco se retuerce) y cielo (rayos y nubes). Con **El Gótico** como jefe del encuentro aparece la batiseñal (guiño de presentación, sin efecto de juego).
+
+- Con «Reducir movimiento», velocidad cero («sin animación») o ventanas tapadas (tienda) se ve el cuadro fijo de siempre.
+- Usan un azar propio de presentación: no tocan la semilla de la partida ni el guardado.
+- Las nubes y rocas animadas se suman sobre las pintadas en el panorama (decisión 3 del plan); las ventanas muestran solo parte del panorama, y por eso la batiseñal va en la ventana grande.
+- Procedencia: se dibujan por código sobre el panorama aprobado; boceto en la página de bocetos del 5/11/2026. Sin aprobación del autor dentro del juego todavía; falta probarlo en una PC con gráficos integrados a 1280×800 y 1440×900.
+
+## Elementos grandes de los dados (TX1, D16)
+
+La opción A (marcas grandes sobre el borde, sin tapar puntos) sale de `assets/art/pixel-v3/elementos-v3.png`, generada con `tools/art/make_elementos.py`, y se dibuja en `Die.draw_element_edges()`.
