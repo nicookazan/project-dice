@@ -138,7 +138,7 @@ static func draw_thermos(canvas: CanvasItem, center: Vector2, degrees: float, st
 	canvas.draw_set_transform(center, deg_to_rad(degrees), Vector2.ONE)
 	canvas.draw_texture_rect(THERMOS, Rect2(-THERMOS_SIZE / 2.0, THERMOS_SIZE), false)
 	for id in StickerDefinitions.NAMES:
-		if stickers.has(id): StickerArt.draw_on_thermos(canvas, -THERMOS_SIZE / 2.0, id)
+		if stickers.has(id): StickerArt.draw_on_thermos(canvas, -THERMOS_SIZE / 2.0, id, 86.0, 46.0, int(stickers[id]))
 	canvas.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 static func snap(value: float) -> float:

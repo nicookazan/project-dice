@@ -2,7 +2,7 @@
 
 Ítem 4 (texturas) · 7 de noviembre de 2026.
 
-**Rama:** `feature/stickers-nivel`. **Depende de:** Ninguna. **Estado actual:** En curso (PR abierto, sin mergear). **Decisiones vinculadas:** D17.
+**Rama:** `feature/stickers-nivel`. **Depende de:** Ninguna. **Estado actual:** Hecho el 07/11/2026 (PR abierto, sin mergear); falta la aprobación del autor en el juego. **Decisiones vinculadas:** D17.
 
 ## Objetivo
 Que los seis stickers se vean como el resto del juego: calcomanía brillante hasta el nivel 9 y medallón dorado desde el nivel 10, con el dado modelo del autor.

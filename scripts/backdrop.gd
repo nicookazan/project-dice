@@ -213,7 +213,7 @@ func _draw() -> void:
 		draw_texture_rect(THERMOS_TABLE_V3, Rect2(Vector2.ZERO, Vector2(144, 350)), false)
 		# Every sticker sits on its own fixed spot of the thermos (same layout as the shop).
 		for id in StickerDefinitions.NAMES:
-			if stickers.has(id): StickerArt.draw_on_thermos(self, Vector2.ZERO, id)
+			if stickers.has(id): StickerArt.draw_on_thermos(self, Vector2.ZERO, id, 86.0, 46.0, int(stickers[id]))
 		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 	draw_texture_rect(MATE_V3, Rect2(1088, 310, 136, 236), false)
 	if not cup_hidden: draw_texture_rect(CUP_V3, Rect2(1280, 426, 144, 188), false)

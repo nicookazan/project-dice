@@ -26,4 +26,4 @@ func _draw() -> void:
 	draw_texture_rect(ART, Rect2(0, 0, 144, 330), false)
 	for id in Stickers.NAMES:
 		if not stickers.has(id): continue
-		StickerArt.draw_on_thermos(self, Vector2.ZERO, id, AXIS, RADIUS)
+		StickerArt.draw_on_thermos(self, Vector2.ZERO, id, AXIS, RADIUS, int(stickers[id]))

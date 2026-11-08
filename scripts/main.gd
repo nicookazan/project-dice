@@ -1534,6 +1534,7 @@ func shop_icon(parent: Node, offer: Dictionary, rect: Rect2) -> void:
 	if offer.kind == "sticker":
 		var sticker := preload("res://scripts/sticker_art.gd").new()
 		sticker.sticker_id = offer.effect.id
+		sticker.level = game.cup.stickers.get(offer.effect.id, 0) + 1  # the offer shows the style it will have once bought
 		sticker.position = rect.position
 		sticker.size = rect.size
 		parent.add_child(sticker)
