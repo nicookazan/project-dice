@@ -76,3 +76,7 @@ El cuerpo del dado ahora usa el sprite transparente `assets/art/ivory-die-v3.png
 ## Stickers por nivel — TX8, 07/11/2026
 
 `assets/art/pixel-v3/stickers-grande-v4.png` (312×104: 6 stickers × 2 estilos, celdas de 52×52) y `stickers-termo-v4.png` (150×50: celdas de 25×25, versión chica de 19×19 girada en el ángulo fijo de cada sticker) los genera por código `py -3.13 tools/art/make_stickers_v4.py`, sin imagen generativa. Fila 0: calcomanía brillante (niveles 1 a 9); fila 1: medallón dorado (nivel 10 en adelante). Los dados son el dado modelo del autor y la escalera son cinco barras, como la moneda «Acumulada». El generador comprueba que ningún dado ni destello toque el aro. `stickers-v3.png` y `stickers-termo-v3.png` ya no se cargan y quedan hasta que el autor apruebe TX8 en el juego.
+
+## Elementos animados en la cara de arriba — TX10, 07/11/2026
+
+`assets/art/pixel-v3/elementos-v4.png` (744×80: 5 elementos × 12 cuadros de 62×16) lo genera por código `py -3.13 tools/art/make_elementos_v4.py`, sin imagen generativa. Cada emblema (llama, gota con onda, rayo, brote, remolino) se define visto desde arriba y se proyecta sobre la cara de arriba real del dado (`tools/art/bocetos-arte/make_bocetos_elementos_persp.py`), con contorno de tinta del color del elemento. Se dibuja en la franja de arriba del dado, sin tapar nunca un punto. El cuadro 0 es un paso calmo del rayo y los destellos caen en los cuadros 10 y 11. `elementos-v3.png` (marcas laterales de TX1) ya no se carga y queda hasta que el autor apruebe TX10 en el juego.

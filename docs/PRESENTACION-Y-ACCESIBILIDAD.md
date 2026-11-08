@@ -70,4 +70,8 @@ Los seis ambientes de `pixel-v3/exteriores-v3.png` se animan con `scripts/window
 
 ## Elementos grandes de los dados (TX1, D16)
 
-La opción A (marcas grandes sobre el borde, sin tapar puntos) sale de `assets/art/pixel-v3/elementos-v3.png`, generada con `tools/art/make_elementos.py`, y se dibuja en `Die.draw_element_edges()`.
+**Reemplazado por TX10 (ver abajo).** La opción A de TX1 (marcas grandes sobre el borde, `elementos-v3.png`, `tools/art/make_elementos.py`) ya no se dibuja.
+
+## Elementos de los dados (TX10, 07/11/2026)
+
+El emblema de cada elemento es un dibujo de 12 cuadros sobre la cara de arriba del dado. Con «Reducir movimiento» o con la velocidad en cero se ve el primer cuadro fijo; con velocidad rápida el cuadro dura 75 ms en lugar de 120. «Reducir destellos» salta los dos cuadros de destello del rayo. La fase de cada dado sale de su lugar en la mano, no del azar de la partida, y un elemento suspendido por un jefe se ve quieto con la «S».

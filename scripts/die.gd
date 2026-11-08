@@ -137,17 +137,42 @@ func _draw() -> void:
 	if pip_suspended or body_suspended or element_suspended:
 		draw_string(ThemeDB.fallback_font, Vector2(2, 61), "S", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color("663a30"))
 
-## Hoja de las marcas de elemento (TX1): una celda de 96×96 por elemento, con el dado en (17,17).
-const ELEMENT_ART = preload("res://assets/art/pixel-v3/elementos-v3.png")
+## TX10 (D17): the element is an emblem painted in perspective on the top face of the die, 12 frames per element.
+## elementos-v4.png: one row per element, cells of 62×16 drawn at the top of the die (the pips start at row 15).
+const ELEMENT_ART = preload("res://assets/art/pixel-v3/elementos-v4.png")
 const ELEMENT_CELLS := {"fire": 0, "water": 1, "electricity": 2, "earth": 3, "wind": 4}
-const ELEMENT_CELL := 96
-const ELEMENT_MARGIN := 17
+const ELEMENT_FRAMES := 12
+const ELEMENT_CELL := Vector2i(62, 16)
+## Frames 10 and 11 are the lightning flash steps; "reduce flashes" shows frame 9 instead.
+const FLASH_FROM_FRAME := 10
+## The main scene turns the animation on. Off (reduced motion, speed zero or a die made elsewhere) the first frame stays still.
+var element_animated := false
+var element_frame_ms := 120
+## Offset in frames taken from the die's slot in the hand, so five dice never pulse together. It is not random.
+var element_phase := 0
+var flashes_reduced := true
+var _element_frame := 0
+
+## Pure so it can be tested: the frame to show at `ticks_msec`.
+static func element_frame_at(ticks_msec: int, frame_ms: int, phase: int, animated: bool, element_name := "", reduce_flashes := false) -> int:
+	if not animated: return 0
+	var frame: int = (ticks_msec / maxi(1, frame_ms) + phase) % ELEMENT_FRAMES
+	if reduce_flashes and element_name == "electricity" and frame >= FLASH_FROM_FRAME: frame = FLASH_FROM_FRAME - 1
+	return frame
+
+func _process(_delta: float) -> void:
+	if not element_animated or not ELEMENT_CELLS.has(element) or element_suspended: return
+	var frame := element_frame_at(Time.get_ticks_msec(), element_frame_ms, element_phase, true, element, flashes_reduced)
+	if frame != _element_frame:
+		_element_frame = frame
+		queue_redraw()
 
 func draw_element_edges() -> void:
-	# Las marcas viven sobre el borde y las esquinas: ningún punto queda tapado, ni siquiera el seis.
+	# The emblem lives on the top face, above the pips, so it never covers a point (not even the six).
 	if not ELEMENT_CELLS.has(element): return
+	var frame := 0 if element_suspended or not element_animated else _element_frame
 	var cell: int = ELEMENT_CELLS[element]
-	draw_texture_rect_region(ELEMENT_ART, Rect2(-ELEMENT_MARGIN, -ELEMENT_MARGIN, ELEMENT_CELL, ELEMENT_CELL), Rect2(cell * ELEMENT_CELL, 0, ELEMENT_CELL, ELEMENT_CELL))
+	draw_texture_rect_region(ELEMENT_ART, Rect2(Vector2.ZERO, Vector2(ELEMENT_CELL)), Rect2(frame * ELEMENT_CELL.x, cell * ELEMENT_CELL.y, ELEMENT_CELL.x, ELEMENT_CELL.y))
 
 func pixel_pip(center: Vector2, radius: float, color: Color) -> void:
 	var r := radius

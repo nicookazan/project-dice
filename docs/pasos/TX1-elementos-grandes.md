@@ -4,6 +4,8 @@
 
 **Rama:** `feature/texturas`. **Depende de:** ninguna. **Estado actual:** Prototipo en la rama, sin integrar a `main`; se ejecuta según el plan de Notion («4- Plan de implementación TEXTURAS»). **Decisiones vinculadas:** D16.
 
+> **Reemplazada por [TX10](TX10-elementos-arriba.md) (D17, 07/11/2026):** los elementos pasan a ser un emblema animado en la cara de arriba del dado; las marcas laterales descritas acá ya no se cargan.
+
 ## Objetivo
 Que las marcas de fuego, agua, electricidad, tierra y viento se lean mejor: hoy son de 2 a 4 px.
 

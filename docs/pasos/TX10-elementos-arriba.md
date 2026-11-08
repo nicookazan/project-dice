@@ -2,7 +2,7 @@
 
 Ítem 4 (texturas) · 7 de noviembre de 2026.
 
-**Rama:** `feature/elementos-arriba`. **Depende de:** TX1. **Estado actual:** En curso (PR abierto, sin mergear). **Decisiones vinculadas:** D17.
+**Rama:** `feature/elementos-arriba`. **Depende de:** TX1. **Estado actual:** Hecho el 07/11/2026 (PR abierto, sin mergear); falta la aprobación del autor en el juego. **Decisiones vinculadas:** D17.
 
 ## Objetivo
 Que cada elemento se vea como un emblema pintado en perspectiva sobre la cara de arriba del dado, con una animación leve.
