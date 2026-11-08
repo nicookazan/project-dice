@@ -244,3 +244,18 @@ Versión 1 · 25 de octubre de 2026. Este registro evita bloquear todo el proyec
 5. **Reglas de las animaciones:** respetan "Reducir movimiento" y la velocidad, usan un azar aparte y no tocan semilla ni guardado.
 
 **Fuente:** [bocetos del 5 de noviembre](https://claude.ai/artifact/F6gWSJHa3X4ubawQ1SFUMo) y la página «4. Texturas» de Notion.
+
+## D17 — Arte: stickers, monedas y elementos (bocetos del 7 de noviembre)
+
+**Estado:** Confirmada por el autor el 7 de noviembre de 2026 tras cuatro vueltas de bocetos. Es arte y presentación; no cambia reglas ni el formato del guardado.
+
+**Pasos afectados:** TX8 (stickers), TX9 (monedas) y TX10 (elementos). TX10 reemplaza las marcas laterales de TX1.
+
+**Decisiones:**
+
+1. **Stickers:** calcomanía brillante (A) del nivel 1 al 9 y medallón dorado (B) desde el nivel 10. Todos los dados usan el dado modelo del autor: contorno, luz arriba y a la izquierda, sombra abajo y a la derecha, sin banda, puntos de 2×2 en una grilla pareja (2, 5 y 8 en el dado de 12). La escalera son cinco barras, como en la moneda «Acumulada». Tamaños: 52×52 (tienda y álbum, 104 px en pantalla) y 19×19 (termo).
+2. **Monedas:** ficha esmaltada (C) para las 75. El aro marca la rareza (cobre común, plata rara, violeta épica, oro legendaria) y el esmalte la familia. Acumulada (C49) y Veterana (C48) siguen los diseños del autor. **El tamaño en pantalla no cambia.**
+3. **Elementos:** emblema pintado en perspectiva sobre la cara de arriba del dado, animado (12 cuadros de 120 ms), para los cinco, incluido el viento. Reemplaza las marcas laterales de D16.2.
+4. **Valores por defecto del plan:** la oferta de un sticker en la tienda muestra el estilo del nivel que va a tener tras la compra; sin animación propia al pasar al nivel 10; la fase de cada dado sale de su lugar en la mano y no del azar; un elemento suspendido se ve quieto con la «S»; el arte viejo se conserva hasta que el autor apruebe cada PR.
+
+**Fuente:** [bocetos del 7 de noviembre](https://claude.ai/artifact/K55SgNyQyi45GDKj3dmFTz) y [plan en Notion](https://app.notion.com/p/412c28142b5581aa99a0d783a67077b9).

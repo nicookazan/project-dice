@@ -77,6 +77,9 @@ Versión 1 · 25 de octubre de 2026.
 | [TX5 — Inventario de texturas](TX5-inventario-texturas.md) | Texturas | 20 | Relevamiento hecho; falta que el autor marque cada textura |
 | [TX6 — Reemplazar placeholders](TX6-reemplazar-placeholders.md) | Texturas | TX5 | Pendiente (necesita el inventario aprobado) |
 | [TX7 — Vendedor nuevo](TX7-vendedor-nuevo.md) | Texturas | TX5 | Pendiente (necesita definir el personaje con el autor) |
+| [TX8 — Stickers por nivel](TX8-stickers-nivel.md) | Texturas | — | PR abierto; falta la aprobación del autor en el juego |
+| [TX9 — Las 75 monedas en ficha esmaltada](TX9-monedas-esmalte.md) | Texturas | — | PR abierto; falta la aprobación del autor en el juego |
+| [TX10 — Elementos animados en la cara de arriba](TX10-elementos-arriba.md) | Texturas | TX1 | PR abierto; falta la aprobación del autor en el juego |
 
 Las fichas J00–J08 son la etapa de jugabilidad e interactividad posterior al paso 20 (plan en Notion; decisiones en D14). Las fichas MON0–MON9 son la etapa de monedas (plan en Notion; decisiones en D15). Orden no significa fecha ni duración. Se recomienda ejecutar una ficha por vez, comprobar su entrega y entonces habilitar la siguiente. Algunas dependencias permiten trabajo independiente, pero no se propone desarrollar todo simultáneamente.
 

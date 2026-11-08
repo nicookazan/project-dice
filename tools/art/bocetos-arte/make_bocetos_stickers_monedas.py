@@ -50,18 +50,23 @@ def category_ramp(base_hex: str):
 
 
 # ---------------------------------------------------------------- dados con el dibujo del dado real
+# Posición de cada punto dentro del área útil de la cara (0 = un borde, 1 = el otro), como en un dado real.
 PIPS = {
-    0: [], 1: [(.5, .5)], 2: [(.25, .25), (.75, .75)], 3: [(.25, .25), (.5, .5), (.75, .75)],
-    4: [(.25, .25), (.75, .25), (.25, .75), (.75, .75)], 5: [(.25, .25), (.75, .25), (.5, .5), (.25, .75), (.75, .75)],
-    6: [(.25, .2), (.75, .2), (.25, .5), (.75, .5), (.25, .8), (.75, .8)]}
+    0: [], 1: [(.5, .5)], 2: [(0, 0), (1, 1)], 3: [(0, 0), (.5, .5), (1, 1)],
+    4: [(0, 0), (1, 0), (0, 1), (1, 1)], 5: [(0, 0), (1, 0), (.5, .5), (0, 1), (1, 1)],
+    6: [(0, 0), (1, 0), (0, .5), (1, .5), (0, 1), (1, 1)]}
+BIG = 52  # sticker grande (tienda y álbum): 104 px en pantalla
+DIE = 12  # todos los dados de los stickers grandes son iguales: 12 px, puntos de 2×2
+FIELD = {"c": 26.0, "r": 99.0}  # campo del sticker que se está dibujando: la sombra no se sale de ahí
 
 
-def big_die(s: int, value: int) -> Canvas:
-    """Dado de 10 px o más, frontal como el dado maestro: contorno, esquinas redondas, banda superior, costado y base."""
+def big_die(s: int, value: int, anti: bool = False) -> Canvas:
+    """Dado según el modelo del autor (07/11): contorno, esquinas redondeadas, luz arriba y a la izquierda, sombra abajo y a
+    la derecha, sin banda. Los puntos van en una grilla pareja (2, medio, s-2-punto) para que las diagonales sean limpias:
+    en el dado de 12 caen en 2, 5 y 8. `anti` usa la otra diagonal (para el 2 y el 3 cuando otro dado tapa una esquina)."""
     pad = 3
     cv = Canvas(s + pad * 2, s + pad * 2)
     cut = 2 if s >= 12 else 1
-    band = 2 if s >= 14 else 1
     for y in range(s):
         for x in range(s):
             cx, cy = min(x, s - 1 - x), min(y, s - 1 - y)
@@ -69,38 +74,65 @@ def big_die(s: int, value: int) -> Canvas:
                 continue
             if cx == 0 or cy == 0 or cx + cy == cut:
                 c = OUTLINE
-            elif y == 1 or y == band + 1 or x == 1:
+            elif y == 1 or x == 1:
                 c = IV[4]
-            elif y <= band:
-                c = IV[3]
-            elif y >= s - 2 or x == s - 2:
+            elif y == s - 2 or x == s - 2:
                 c = IV[1]
             else:
-                c = IV[3] if x + y < s else IV[2]
+                c = IV[3]
             cv.put(pad + x, pad + y, c)
     pip = 2 if s >= 12 else 1
-    lo, hi = band + 2, s - 3 - pip
-    x0, x1 = 3, s - 3 - pip
+    p0, p1 = 2, s - 2 - pip
+    mid = (p0 + p1) // 2
+    pos = {0: p0, .5: mid, 1: p1}
     for fx, fy in PIPS[value]:
-        px, py = pad + round(x0 + (x1 - x0) * fx), pad + round(lo + (hi - lo) * fy)
+        if anti:
+            fx = 1 - fx
+        px, py = pad + pos[fx], pad + pos[fy]
         for j in range(pip):
             for i in range(pip):
-                corner = pip == 3 and i in (0, 2) and j in (0, 2)
-                if corner and not (i == 2 and j == 2):
+                cv.put(px + i, py + j, PIP_LOW if pip > 1 and j == pip - 1 else PIP)
+    return cv
+
+
+def bars(heights, w=4, step=5) -> Canvas:
+    """Barras que suben, con el dibujo de la moneda «Acumulada» que eligió el autor para la escalera."""
+    pad = 3
+    H = max(heights)
+    cv = Canvas(step * len(heights) + 1 + pad * 2, H + 1 + pad * 2)
+    for i, h in enumerate(heights):
+        x0, y0 = pad + i * step, pad + H - h
+        for y in range(h + 1):
+            for x in range(w + 2):
+                if y == 0 and x in (0, w + 1):
                     continue
-                cv.put(px + i, py + j, PIP_LOW if j == pip - 1 else PIP)
+                if x in (0, w + 1) or y in (0, h):
+                    c = OUTLINE
+                elif x == 1 or y == 1:
+                    c = IV[4]
+                elif x == w:
+                    c = IV[1]
+                else:
+                    c = IV[3]
+                cv.put(x0 + x, y0 + y, c)
     return cv
 
 
 def drop_die(cv: Canvas, die: Canvas, ox: int, oy: int, shadow) -> None:
-    """Pega un dado con su sombra dura proyectada abajo a la derecha."""
+    """Pega un dado con su sombra dura proyectada abajo a la derecha (la sombra queda dentro del campo)."""
     ys, xs = np.nonzero(die.mask_of())
     for x, y in zip(xs, ys):
         for k in (1, 2):
             px, py = ox + x + k, oy + y + k
-            if 0 <= px < cv.w and 0 <= py < cv.h and cv.a[py, px, 3] > 0:
+            inside = math.hypot(px + .5 - FIELD["c"], py + .5 - FIELD["c"]) <= FIELD["r"]
+            if 0 <= px < cv.w and 0 <= py < cv.h and cv.a[py, px, 3] > 0 and inside:
                 cv.put(px, py, shadow)
     cv.blit(die, ox, oy)
+
+
+def die_at(cv, s, value, cx, cy, shadow):
+    """Dado de lado s centrado en (cx, cy), relativo al centro del sticker grande."""
+    drop_die(cv, big_die(s, value), round(BIG / 2 + cx - s / 2) - 3, round(BIG / 2 + cy - s / 2) - 3, shadow)
 
 
 # ---------------------------------------------------------------- contenido de cada sticker
@@ -109,61 +141,65 @@ STICKER_NAMES = {"pair_loose": "Par", "trio": "Trío", "straight": "Escalera", "
 
 
 def spark(cv, x, y, c, c2):
-    for i in range(-2, 3):
-        cv.put(x + i, y, c if abs(i) < 2 else c2)
-        cv.put(x, y + i, c if abs(i) < 2 else c2)
+    for i in range(-1, 2):
+        cv.put(x + i, y, c)
+        cv.put(x, y + i, c)
 
 
 def sticker_dice_big(cv: Canvas, sid: str, shadow) -> None:
-    """Misma composición que el sticker aprobado, en grande: dados reales, apenas desparejos, como tirados."""
+    """Misma composición que el sticker aprobado. Todos los dados son el mismo dado de 12 px (el del par); el full los
+    junta como una pila, compartiendo el contorno, para que entren cinco sin tocar el aro."""
+    o = (BIG - 44) // 2  # la escalera se dibuja en coordenadas del sticker de 44
     if sid == "pair_loose":
-        drop_die(cv, big_die(14, 2), 4, 14, shadow)
-        drop_die(cv, big_die(14, 2), 20, 12, shadow)
+        die_at(cv, DIE, 2, -7, 1, shadow)
+        die_at(cv, DIE, 2, 7, -1, shadow)
     elif sid == "trio":
-        drop_die(cv, big_die(12, 2), 6, 7, shadow)
-        drop_die(cv, big_die(12, 2), 20, 6, shadow)
-        drop_die(cv, big_die(12, 2), 13, 20, shadow)
+        die_at(cv, DIE, 3, -7, -6, shadow)
+        die_at(cv, DIE, 3, 7, -6, shadow)
+        die_at(cv, DIE, 3, 0, 7, shadow)
     elif sid == "straight":
-        for i in range(5):
-            h, w = 7 + i * 4, 5
-            x0, y0 = 9 + i * 5, 34 - h
-            for y in range(-1, h):
-                for x in range(-1, w):
-                    if x in (-1, w - 1) and y == -1:
-                        continue
-                    if x == -1 or y == -1 or x == w - 1 or y == h - 1:
-                        c = OUTLINE
-                    elif y == 0 or x == 0:
-                        c = IV[4]
-                    elif x == w - 2:
-                        c = IV[1]
-                    else:
-                        c = IV[3]
-                    cv.put(x0 + x, y0 + y, c)
-            for k in range(i + 1):
-                for px, py, col in ((1, 2, PIP), (2, 2, PIP), (1, 3, PIP_LOW), (2, 3, PIP_LOW)):
-                    cv.put(x0 + px - 1, y0 + py + k * 4, col)
+        b = bars([7, 11, 15, 19, 23])
+        drop_die(cv, b, BIG // 2 - 13 - 3, BIG // 2 + 10 - 23 - 3, shadow)
     elif sid == "full":
-        for i in range(3):
-            drop_die(cv, big_die(10, 3), 4 + i * 10, 7 + (i % 2), shadow)
-        for i in range(2):
-            drop_die(cv, big_die(10, 2), 9 + i * 10, 21, shadow)
+        for cx in (-11, 0, 11):
+            die_at(cv, DIE, 3, cx, -5, shadow)
+        for cx in (-5.5, 5.5):
+            die_at(cv, DIE, 2, cx, 6, shadow)
     elif sid == "poker":
-        for x, y in ((6, 6), (20, 7), (7, 20), (21, 21)):
-            drop_die(cv, big_die(11, 4), x, y, shadow)
+        for cx, cy in ((-7, -7), (7, -7), (-7, 7), (7, 7)):
+            die_at(cv, DIE, 4, cx, cy, shadow)
     elif sid == "generala":
-        drop_die(cv, big_die(18, 5), 10, 10, shadow)
-        for x, y in ((11, 11), (33, 11), (11, 33), (33, 33)):
+        die_at(cv, 14, 5, 0, 0, shadow)
+        c = BIG // 2
+        for x, y in ((c - 9, c - 9), (c + 8, c - 9), (c - 9, c + 8), (c + 8, c + 8)):
             spark(cv, x, y, IV[4], IV[3])
 
 
+def dice_reach(sid: str, size: int = BIG) -> float:
+    """Distancia máxima al centro de los píxeles de los dados (sin sombra): para comprobar que no tocan el aro."""
+    probe = Canvas(size, size)
+    keep = FIELD["r"]
+    FIELD["r"] = -1  # sin sombra
+    if size > 19:
+        sticker_dice_big(probe, sid, (0, 0, 0))
+    else:
+        sticker_dice_small(probe, sid, (0, 0, 0))
+    FIELD["r"] = keep
+    ys, xs = np.nonzero(probe.mask_of() & (probe.a[..., :3].sum(axis=2) > 0))  # la sombra (negro) no cuenta
+    return max(math.hypot(x + .5 - size / 2, y + .5 - size / 2) for x, y in zip(xs, ys))
+
+
 def sticker_dice_small(cv: Canvas, sid: str, shadow) -> None:
-    """Versión del termo (19 px): la composición de hoy, con dados más limpios."""
+    """Versión del termo (19 px): la composición de hoy, más compacta para dejar un píxel libre antes del aro."""
 
     def die(ox, oy, s, pips):
         for i in range(1, s + 1):
-            cv.put(ox + i, oy + s, shadow)
-            cv.put(ox + s, oy + i, shadow)
+            px, py = ox + i, oy + s
+            if math.hypot(px + .5 - 9.5, py + .5 - 9.5) <= 7.3:
+                cv.put(px, py, shadow)
+            px, py = ox + s, oy + i
+            if math.hypot(px + .5 - 9.5, py + .5 - 9.5) <= 7.3:
+                cv.put(px, py, shadow)
         for y in range(s):
             for x in range(s):
                 c = IV[3]
@@ -175,33 +211,31 @@ def sticker_dice_small(cv: Canvas, sid: str, shadow) -> None:
         for x, y in pips:
             cv.put(ox + x, oy + y, PIP)
 
-    p3 = [(1, 1), (2, 2), (3, 3)]
-    p4 = [(1, 1), (3, 1), (1, 3), (3, 3)]
+    p2 = [(1, 1), (2, 2)]
     if sid == "pair_loose":
-        die(3, 7, 5, p3)
-        die(10, 6, 5, p3)
+        die(4, 7, 5, [(1, 1), (2, 2), (3, 3)])
+        die(10, 7, 5, [(1, 1), (2, 2), (3, 3)])
     elif sid == "trio":
-        die(4, 3, 5, p3)
-        die(10, 4, 5, p3)
-        die(7, 10, 5, p3)
+        die(5, 5, 4, p2)
+        die(10, 5, 4, p2)
+        die(8, 10, 4, p2)
     elif sid == "straight":
         for i in range(4):
-            h = 3 * i + 3
+            h = 2 * i + 2
             for y in range(h):
-                for x in range(3):
-                    c = IV[4] if y == 0 else IV[1] if x == 2 else IV[3]
-                    cv.put(3 + i * 3 + x, 15 - h + y, c)
+                for x in range(2):
+                    cv.put(4 + i * 3 + x, 14 - h + y, IV[4] if y == 0 else IV[1] if x == 1 else IV[3])
     elif sid == "full":
-        for i in range(3):
-            die(3 + i * 4, 4, 4, [(1, 1), (2, 2)])
-        for i in range(2):
-            die(5 + i * 5, 10, 4, [(1, 1), (2, 2)])
+        for x in (4, 8, 12):
+            die(x, 5, 3, [(1, 1)])
+        for x in (6, 10):
+            die(x, 10, 3, [(1, 1)])
     elif sid == "poker":
-        for x, y in ((3, 3), (10, 3), (3, 10), (10, 10)):
-            die(x, y, 5, p4)
+        for x, y in ((5, 5), (10, 5), (5, 10), (10, 10)):
+            die(x, y, 4, p2)
     elif sid == "generala":
-        die(5, 5, 9, [(2, 2), (6, 2), (4, 4), (2, 6), (6, 6)])
-        for x, y in ((3, 3), (15, 3), (3, 15), (15, 15)):
+        die(6, 6, 7, [(1, 1), (5, 1), (3, 3), (1, 5), (5, 5)])
+        for x, y in ((5, 5), (13, 5), (5, 13), (13, 13)):
             cv.put(x, y, IV[4])
 
 
@@ -227,7 +261,7 @@ def rays(fr, dx, dy, d, n, r):
     return c
 
 
-def sticker_a(sid, size=44):
+def sticker_a(sid, size=BIG):
     """Calcomanía brillante: borde de vinilo marfil, campo con rayos, dados reales y reflejo curvo."""
     cv = Canvas(size, size)
     fr = category_ramp(STICKERS[sid])
@@ -261,7 +295,7 @@ def sticker_a(sid, size=44):
     return cv
 
 
-def sticker_b(sid, size=44):
+def sticker_b(sid, size=BIG):
     """Medallón dorado: el aro con perlas de los medallones de la tienda y esmalte de la categoría."""
     cv = Canvas(size, size)
     fr = category_ramp(STICKERS[sid])
@@ -288,13 +322,15 @@ def sticker_b(sid, size=44):
             tt = -(math.cos(a) + math.sin(a)) / 1.41
             cv.put(px, py, GOLD7[1])
             cv.put(px - 1, py - 1, GOLD7[6] if tt > 0 else GOLD7[4])
+        FIELD.update(c=r, r=seam)
         sticker_dice_big(cv, sid, fr[0])
+        FIELD.update(r=99.0)
     else:
         sticker_dice_small(cv, sid, fr[0])
     return cv
 
 
-def sticker_c(sid, size=44):
+def sticker_c(sid, size=BIG):
     """Calcomanía gastada: la A con años de termo encima. Borde sucio, tinta ida en parches y punta levantada."""
     cv = sticker_a(sid, size)
     fr = category_ramp(STICKERS[sid])
@@ -724,7 +760,7 @@ def coin_c(rarity, family, emblem):
                 c = shift(c, .35, fr[3]) if s < .42 else shift(c, .3, fr[2])
         cv.put(x, y, c)
     m = emblem()
-    em_ramp = GOLD7 if rarity == "legendary" else [IV[0], IV[0], IV[1], IV[1], IV[3], IV[3], IV[4]]
+    em_ramp = GOLD7 if rarity == "legendary" else [IV[0], hexc("3a2418"), IV[1], IV[1], IV[3], IV[3], IV[4]]  # hundidos oscuros, como los puntos del dado
     emboss(cv, m, em_ramp, hi=6, mid=4, low=2, deep=2 if rarity == "legendary" else 1, outline=OUTLINE)
     # brillo curvo del esmalte, arriba a la izquierda
     for i in range(9):
@@ -750,8 +786,12 @@ def sheet(cells, cols, gap, scale, bg=None):
 def main():
     os.makedirs(OUT, exist_ok=True)
     bg_sticker = hexc("3a0d18") + (255,)
+    for sid in STICKERS:  # el esmalte de la B llega hasta r - 6 (grande) y r - 2,2 (chico); exigimos un píxel libre
+        big_r, small_r = dice_reach(sid, BIG), dice_reach(sid, 19)
+        ok = big_r <= BIG / 2 - 7 and small_r <= 9.5 - 2.2 - .8
+        print(f"{sid:11s} grande {big_r:5.2f}/{BIG / 2 - 7:.1f}  chico {small_r:5.2f}/6.5  {'ok' if ok else 'TOCA EL ARO'}")
     for name, fn in (("A", sticker_a), ("B", sticker_b), ("C", sticker_c)):
-        big = {sid: fn(sid, 44) for sid in STICKERS}
+        big = {sid: fn(sid, BIG) for sid in STICKERS}
         small = {sid: fn(sid, 19) for sid in STICKERS}
         sheet([big[k] for k in STICKERS], 6, 3, 4, bg_sticker).save(os.path.join(OUT, f"sticker-{name}-x4.png"))
         sheet([small[k] for k in STICKERS], 6, 2, 4, bg_sticker).save(os.path.join(OUT, f"sticker-{name}-chico-x4.png"))
