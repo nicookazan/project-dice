@@ -1,5 +1,5 @@
 extends SceneTree
-## Capturas de TX1: los cinco elementos sobre el seis y sobre el uno, a tamaño de mesa. Requiere GPU (sin --headless).
+## Capturas de TX10: los cinco elementos sobre el seis y sobre el uno, a tamaño de mesa (primer cuadro). Requiere GPU (sin --headless).
 const Die = preload("res://scripts/die.gd")
 func _initialize() -> void:
 	var holder := Control.new()
@@ -25,5 +25,5 @@ func _initialize() -> void:
 	await process_frame
 	await RenderingServer.frame_post_draw
 	root.get_texture().get_image().save_png("res://test-results/texturas-elementos.png")
-	print("TX1 REVIEW OK")
+	print("TX10 REVIEW OK")
 	quit(0)

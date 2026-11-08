@@ -831,6 +831,7 @@ func show_component_gallery() -> void:
 			die.value = value
 			die.body_material = variant[1]
 			die.element = variant[2]
+			animate_element(die, row + value)
 			die.pip_material = variant[3]
 			die.disabled = true
 			die.locked = true
@@ -1390,6 +1391,7 @@ func add_die(parent: Node, index: int, pos: Vector2, grouped := false, angle := 
 	die.pivot_offset = die.size / 2.0
 	die.rotation_degrees = angle
 	die.sway_enabled = not preferences.reduced_motion and preferences.speed != 0
+	animate_element(die, index)
 	die.add_theme_stylebox_override("normal", StyleBoxEmpty.new())
 	die.add_theme_stylebox_override("hover", StyleBoxEmpty.new())
 	die.add_theme_stylebox_override("pressed", StyleBoxEmpty.new())
@@ -1462,6 +1464,13 @@ func coin_state_text(instance: Dictionary) -> String:
 		"streak": return "+%s mult de racha\n" % number(state.streak * 0.5)
 		"bosshunter": return "+%d mult acumulado\n" % state.bosses
 	return ""
+
+## TX10: the element emblem animates with the same switches as the rest of the motion (reduced motion, speed, flashes).
+func animate_element(die: Die, slot: int) -> void:
+	die.element_animated = not preferences.reduced_motion and preferences.speed != 0
+	die.element_frame_ms = 75 if preferences.speed == 2 else 120
+	die.element_phase = (slot * 5) % Die.ELEMENT_FRAMES
+	die.flashes_reduced = preferences.reduced_flashes
 
 func add_coin(parent: Node, coin: String, rect: Rect2) -> void:
 	var icon := CoinArt.new()
@@ -1555,6 +1564,7 @@ func shop_icon(parent: Node, offer: Dictionary, rect: Rect2) -> void:
 		face.pip_material = offer.effect.id if offer.kind == "shell" else ""
 		face.body_material = offer.effect.id if offer.kind == "material" else "basic"
 		face.element = offer.effect.id if offer.kind == "element" else ""
+		animate_element(face, int(rect.position.x / 100.0))
 		face.disabled = true
 		face.locked = true
 		face.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -1660,6 +1670,7 @@ func render_shop() -> void:
 	for id in range(5):
 		var die := Die.new()
 		die.configure_appearance(game.dice[id], game.boss_context())
+		animate_element(die, id)
 		die.die_index = id
 		die.position = Vector2(361 + id * 72, 805)
 		die.scale = Vector2(0.78, 0.78)
