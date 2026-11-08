@@ -668,18 +668,56 @@ func show_game_menu() -> void:
 	dim.size = game_menu.size
 	dim.color = Color(0.02, 0.03, 0.06, 0.72)
 	game_menu.add_child(dim)
-	var card := panel(game_menu, Rect2(520, 190, 400, 500), Color("0d1728"), gold)
-	var title := label(card, "MENÚ", Vector2(0, 24), 30, gold, 400)
-	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	var entries := [
 		["Seguir jugando", close_game_menu, true],
 		["Recorrido · M", func(): close_game_menu(); show_route(), false],
 		["Opciones", func(): close_game_menu(); show_options(), false],
 		["Abandonar partida", func(): close_game_menu(); request_navigation("menu"), false],
 		["Guardar y volver al menú", func(): close_game_menu(); request_navigation("pause"), false]]
+	# Saltar niveles: solo en la campaña (el nivel de prueba tiene uno solo) y fuera de una compra a medio resolver.
+	if not game.campaign.is_empty():
+		var jump := ["Ir a otro nivel", func(): close_game_menu(); show_level_picker(), false]
+		entries.insert(3, jump)
+	var card := panel(game_menu, Rect2(520, 450 - (110 + entries.size() * 72) / 2, 400, 110 + entries.size() * 72), Color("0d1728"), gold)
+	var title := label(card, "MENÚ", Vector2(0, 24), 30, gold, 400)
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	for index in range(entries.size()):
 		var entry: Array = entries[index]
-		button(card, entry[0], Rect2(50, 92 + index * 72, 300, 54), entry[1], false, entry[2])
+		var item := button(card, entry[0], Rect2(50, 92 + index * 72, 300, 54), entry[1], false, entry[2])
+		if entry[0] == "Ir a otro nivel":
+			item.name = "JumpLevel"
+			item.disabled = game.phase in Game.LEVEL_JUMP_BLOCKED
+			if item.disabled: item.tooltip_text = "Terminá primero la compra o el paquete pendiente."
+
+const LEVEL_NAMES := {"dia": "Día", "tarde": "Tarde", "noche": "Noche", "cierre": "Cierre", "espacio": "Espacio", "agujero_negro": "Agujero negro", "cielo": "Cielo · Dios"}
+
+## Elegir a qué nivel ir. Ir a uno abre su presentación desde el primer rival: se conservan plata, dados, monedas y
+## stickers; se pierde el encuentro en curso. Los niveles salteados quedan como superados en el recorrido.
+func show_level_picker() -> void:
+	close_game_menu()
+	game_menu = Control.new()
+	game_menu.name = "LevelPicker"
+	game_menu.size = Vector2(1440, 900)
+	game_menu.z_index = 120
+	ui.add_child(game_menu)
+	var dim := ColorRect.new()
+	dim.size = game_menu.size
+	dim.color = Color(0.02, 0.03, 0.06, 0.72)
+	game_menu.add_child(dim)
+	var card := panel(game_menu, Rect2(420, 195, 600, 510), Color("0d1728"), gold)
+	var title := label(card, "IR A OTRO NIVEL", Vector2(0, 24), 30, gold, 600)
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label(card, "Empezás el nivel elegido desde el primer rival. Conservás plata, dados, monedas y stickers; se pierde el encuentro en curso.", Vector2(40, 74), 16, cream, 520)
+	for index in range(game.campaign.size()):
+		var level_id := index
+		var current: bool = index == game.level_index and game.phase == "level_intro"
+		var name_text := "Nivel %d · %s" % [index + 1, LEVEL_NAMES.get(game.campaign[index].environment, game.campaign[index].environment)]
+		if index == game.level_index: name_text += "  (actual)"
+		var go := button(card, name_text, Rect2(60 + (index % 2) * 250, 150 + int(index / 2) * 66, 230, 52), func():
+			close_game_menu()
+			act(func(): game.jump_to_level(level_id)), current or not game.can_jump_to_level(index), index == game.level_index)
+		go.name = "Level_%d" % (index + 1)
+	button(card, "Volver", Rect2(60, 430, 480, 48), func(): show_game_menu()).name = "Back"
 
 func request_navigation(destination: String) -> void:
 	if destination not in ["menu", "new", "new_debug", "quit", "pause"]: return
