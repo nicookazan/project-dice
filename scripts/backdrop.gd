@@ -17,6 +17,7 @@ const CLOUD_V3 = preload("res://assets/art/pixel-v3/nube-v3.png")
 const HAND_V3 = preload("res://assets/art/pixel-v3/mano-v3.png")
 const BOSS_HANDS = preload("res://assets/art/pixel-v3/manos-jefes-v3.png")
 const BossCatalog = preload("res://scripts/boss_catalog.gd")
+const HandClips = preload("res://scripts/boss_hand_clips.gd")
 const GUARDIAN_ART := [preload("res://assets/art/pixel-v3/guardianes/guardian-ojo-v3.png"), preload("res://assets/art/pixel-v3/guardianes/guardian-figura-v3.png"), preload("res://assets/art/pixel-v3/guardianes/guardian-dado-v3.png")]
 const HAND_FRAMES := 8
 const HAND_SIZE := Vector2i(61, 53)
@@ -53,6 +54,8 @@ var thermos_t := 0.0
 var thermos_configured := false
 ## Fila de la hoja de manos de jefe (-1: la mano común).
 var hand_row := -1
+## Id del jefe cuya mano v4 (con animación propia) se dibuja; "" = la mano de la hoja anterior (El Gótico, la común).
+var hand_boss := ""
 ## Guardián de Dios (-1: sin figura, queda el triángulo provisional).
 var guardian := -1
 var shop_mode := false
@@ -76,6 +79,7 @@ func configure(profile: Dictionary, preferences: Dictionary) -> void:
 	guardian = BossCatalog.guardian(profile.get("boss_id", "")) if actor == "god" else -1
 	# Todos los encuentros de un nivel (rivales y jefe) muestran la mano del jefe del nivel; Dios y los niveles sin jefe, la común.
 	hand_row = BossCatalog.hand_row(profile.get("boss_id", "")) if actor != "god" else -1
+	hand_boss = profile.get("boss_id", "") if actor != "god" and HandClips.CLIPS.has(profile.get("boss_id", "")) else ""
 	level = profile.level
 	motion = not preferences.reduced_motion and preferences.speed != 0
 	speed = preferences.speed
@@ -233,6 +237,13 @@ func _draw() -> void:
 	# fingers drum through an 8-frame cycle (frame 0 when motion is reduced or off).
 	var bob := 2.0 * roundf(sin(elapsed * 1.1) * 1.5) if motion else 0.0
 	var frame := int(elapsed / HAND_FRAME_SECONDS) % HAND_FRAMES if motion else 0
+	if hand_boss != "":
+		var clip_frame := props.hand_clip_frame(hand_boss)
+		var clip_dy := 0.0 if clip_frame > 0 else bob
+		props.draw_hand_clip(self, hand_boss, true, clip_frame, clip_dy)
+		draw_texture_rect(CLOUD_V3, Rect2(552, 0, 262, 40), false)
+		props.draw_hand_clip(self, hand_boss, false, clip_frame, clip_dy)
+		return
 	draw_texture_rect(CLOUD_V3, Rect2(552, 0, 262, 40), false)
 	if props.busy("hand"): props.draw_hand_gesture(self, hand_row)
 	elif hand_row >= 0: draw_texture_rect_region(BOSS_HANDS, Rect2(624, 34 + bob, 122, 106), Rect2(frame * HAND_SIZE.x, hand_row * HAND_SIZE.y, HAND_SIZE.x, HAND_SIZE.y))

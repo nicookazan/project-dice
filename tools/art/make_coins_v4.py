@@ -217,9 +217,8 @@ def main():
     missing = [r[0] for r in rows if r[0] not in EMBLEMS]
     assert not missing, f"faltan emblemas: {missing}"
     cells = [render(r[1], r[2], EMBLEMS[r[0]]).image() for r in rows]
-    old = Image.open(OLD_NEW).convert("RGBA")
-    for k in (16, 17):  # paquetes chico y grande, sin cambios
-        cells.append(old.crop(((k % 6) * S, (k // 6) * S, (k % 6) * S + S, (k // 6) * S + S)))
+    import make_paquetes_v4  # bolsita de terciopelo (08/11): reemplaza a los paquetes viejos
+    cells.extend(make_paquetes_v4.cells())
     ids = [r[0] for r in rows] + ["pack_small", "pack_large"]
     n_rows = (len(cells) + COLUMNS - 1) // COLUMNS
     sheet = Image.new("RGBA", (COLUMNS * S, n_rows * S), (0, 0, 0, 0))

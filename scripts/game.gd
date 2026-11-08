@@ -460,8 +460,8 @@ func _boss_blocks_move(index: int, zone: String) -> bool:
 	if BossRules.is_power(boss_rule, "loaded_die") and zone == "cup":
 		message = "El dado cargado queda fijo en 1: no se relanza."
 		return true
-	if BossRules.is_power(boss_rule, "scared_die") and zone == "reserve" and rolls_made in [1, 2]:
-		message = "El dado asustado no se puede conservar en las dos primeras tiradas."
+	if BossRules.is_power(boss_rule, "scared_die") and zone == "reserve" and rolls_made == 1:
+		message = "La paloma ladrona se llevó ese dado al vaso."
 		return true
 	return false
 
@@ -485,7 +485,7 @@ func _apply_boss_roll(rolled_ids: Array, results: Array) -> void:
 		"loaded_die":
 			if marked in rolled_ids: _set_face(marked, 1, results)
 		"scared_die":
-			if marked >= 0 and rolls_made in [1, 2]: dice[marked].zone = "cup"
+			if marked >= 0 and rolls_made == 1: dice[marked].zone = "cup"   # la paloma ladrona lo lleva al vaso (solo la primera tirada)
 		"shadow":
 			if rolls_made == 1:
 				var top := 0

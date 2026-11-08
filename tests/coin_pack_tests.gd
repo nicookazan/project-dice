@@ -291,7 +291,7 @@ static func run_ui(scene, check: Callable) -> void:
 	scene.render()
 	var card = scene.ui.get_node_or_null("Shop_coins/Offer_3")
 	var offer: Dictionary = _pack(game)
-	check.call(card != null and UI.text_in(card, "Elegí 2 entre 5") and scene.ui.get_node_or_null("Shop_coins/Offer_3/Price") != null, "MON8: la carta cerrada dice Elegí 2 entre 5 y trae precio")
+	check.call(card != null and card.get_node("ObjectHover").tooltip_text.contains("Elegí 2 entre 5") and scene.ui.get_node_or_null("Shop_coins/Offer_3/Price") != null, "MON8: la carta cerrada explica Elegí 2 entre 5 en su tooltip y trae precio")
 	check.call(offer.effect.items.all(func(id): return not UI.text_in(card, Coins.definition(id).name)), "MON8: la carta cerrada no muestra el contenido")
 	var cash: int = game.cash
 	scene.ui.get_node("Shop_coins/Offer_3/Price").pressed.emit()
@@ -341,7 +341,7 @@ static func run_ui(scene, check: Callable) -> void:
 	scene.pack_panel_open = true
 	scene.coin_pack_replacing = ""
 	scene.render()
-	check.call(UI.text_in(scene.ui.get_node("Shop_coins/Offer_3"), "Elegí 1 entre 2"), "MON8: la carta del paquete chico dice Elegí 1 entre 2")
+	check.call(scene.ui.get_node("Shop_coins/Offer_3/ObjectHover").tooltip_text.contains("Elegí 1 entre 2"), "MON8: el paquete chico explica Elegí 1 entre 2 en su tooltip")
 	scene.ui.get_node("Shop_coins/Offer_3/Price").pressed.emit()
 	check.call(UI.text_in(scene.ui.get_node("CoinChoice"), "ELEGÍ UNA MONEDA") and scene.ui.get_node("CoinChoice").get_children().filter(func(node): return node.name.begins_with("PackCoin_")).size() == 2, "MON8: el paquete chico muestra dos cartas")
 	scene.ui.get_node("CoinChoice/PackCoin_" + small.pending_coin_pack.items[0]).pressed.emit()

@@ -14,6 +14,14 @@ const FLAGS := {
 	"shop_flag": {"sprite": preload("res://assets/art/pixel-v3/bandera-tienda-v3.png"), "patch": preload("res://assets/art/pixel-v3/bandera-tienda-fondo-v3.png"), "sprite_x": 671, "patch_x": 677, "top": 102, "row0": 103}}
 const THERMOS = preload("res://assets/art/pixel-v3/termo-mesa-v3.png")
 const HAND_POSES = preload("res://assets/art/pixel-v3/manos-poses-v3.png")
+## Manos de jefe v4: reposo y animación propia del clic (reemplaza a piedra, papel o tijera). Ver boss_hand_clips.gd.
+const HandClips = preload("res://scripts/boss_hand_clips.gd")
+const HAND_CLIC = preload("res://assets/art/pixel-v3/manos-clic-v4.png")
+const HAND_CLIC_BACK = preload("res://assets/art/pixel-v3/manos-clic-atras-v4.png")
+const HAND_RING_SHEET = preload("res://assets/art/pixel-v3/manos-contorno-v4.png")
+## Dónde cae la esquina de la ventana grande (189×110 px lógicos, a 2×) en pantalla: la mano en reposo queda en (624, 34).
+const HAND_WINDOW_ORIGIN := Vector2(534, 0)
+const HAND_CLIP_SECONDS := 0.11
 const Tip = preload("res://scripts/item_tooltip.gd")
 const StickerArt = preload("res://scripts/sticker_art.gd")
 const StickerDefinitions = preload("res://scripts/stickers.gd")
@@ -65,6 +73,8 @@ const HAND_CELL := Vector2(61, 53)
 ## Fila de la hoja de poses de la mano común (después de las 18 de jefe).
 const COMMON_HAND_ROW := 18
 var hand_result := "papel"
+## Jefe cuya animación propia está en marcha ("" = piedra, papel o tijera).
+var hand_clip := ""
 var hand_rng := RandomNumberGenerator.new()
 var hand_font: Font
 
@@ -89,12 +99,19 @@ func step(delta: float) -> void:
 	var rate := 1.6 if speed == 2 else 1.0
 	for id in elapsed.keys():
 		elapsed[id] += delta * rate
-		if elapsed[id] >= SPECS[id].frames * SPECS[id].seconds: elapsed.erase(id)
+		var spec := spec_of(id)
+		if elapsed[id] >= spec.frames * spec.seconds: elapsed.erase(id)
 
 ## Cuadro actual de `id` (-1 si no está en marcha).
 func frame(id: String) -> int:
 	if not elapsed.has(id): return -1
-	return mini(int(elapsed[id] / SPECS[id].seconds), SPECS[id].frames - 1)
+	var spec := spec_of(id)
+	return mini(int(elapsed[id] / spec.seconds), spec.frames - 1)
+
+## Cuadros y segundos de `id`; la mano con animación propia dura lo que su recorte.
+func spec_of(id: String) -> Dictionary:
+	if id == "hand" and hand_clip != "": return {"frames": HandClips.CLIPS[hand_clip].frames, "seconds": HAND_CLIP_SECONDS}
+	return SPECS[id]
 
 static func ease_value(t: float) -> float:
 	t = clampf(t, 0.0, 1.0)
@@ -270,7 +287,9 @@ func _init() -> void:
 	hand_rng.randomize()
 
 ## La mano golpea tres veces con el puño y juega piedra, papel o tijera al azar (azar cosmético propio).
-func play_hand() -> bool:
+func play_hand(boss_id: String = "") -> bool:
+	if elapsed.has("hand") or not motion: return false
+	hand_clip = boss_id if HandClips.CLIPS.has(boss_id) else ""
 	if not play("hand"): return false
 	hand_result = POSES[hand_rng.randi_range(0, POSES.size() - 1)]
 	return true
@@ -280,6 +299,21 @@ static func hand_beat(f: int, result: String) -> Dictionary:
 	if f < 18:
 		return {"pose": 0, "dy": HAND_BEAT_OFFSETS[f % 6], "text": POSE_WORDS[f / 6] + "...", "final": false}
 	return {"pose": maxi(0, POSES.find(result)), "dy": 10 if f < 20 else 2, "text": result.to_upper() + "!", "final": true}
+
+## Rectángulo en pantalla de la fila `clip` de la hoja de manos v4 (recorte lógico a 2×).
+static func hand_clip_rect(clip: Dictionary, dy: float = 0.0) -> Rect2:
+	return Rect2(HAND_WINDOW_ORIGIN + Vector2(clip.origin) * 2.0 + Vector2(0, dy), Vector2(clip.size) * 2.0)
+
+## Dibuja una capa de la mano de jefe v4: `back` (antes de la nube) o la de adelante, en el cuadro `f` (0 = reposo).
+func draw_hand_clip(canvas: CanvasItem, boss_id: String, back: bool, f: int, dy: float = 0.0) -> void:
+	var clip: Dictionary = HandClips.CLIPS[boss_id]
+	if back and not clip.back: return
+	var src := Rect2(Vector2(clip.size.x * mini(f, clip.frames - 1), clip.sheet_y), Vector2(clip.size))
+	canvas.draw_texture_rect_region(HAND_CLIC_BACK if back else HAND_CLIC, hand_clip_rect(clip, dy), src)
+
+## Cuadro de la animación propia de `boss_id` (0 si no está en marcha o juega otra cosa).
+func hand_clip_frame(boss_id: String) -> int:
+	return maxi(0, frame("hand")) if hand_clip == boss_id and elapsed.has("hand") else 0
 
 ## Dibuja la mano del gesto en lugar de la que tamborilea. `row` es la fila de la mano (-1: la común).
 func draw_hand_gesture(canvas: CanvasItem, row: int) -> void:
@@ -319,6 +353,29 @@ static func attach_ring(host: Control, id: String, props: RefCounted) -> Ring:
 	ring.prop_id = id
 	ring.top_level = true
 	ring.position = RINGS[id][1]
+	ring.z_index = 20
+	ring.hide()
+	host.add_child(ring)
+	host.mouse_entered.connect(func(): ring.hovered = true)
+	host.mouse_exited.connect(func(): ring.hovered = false)
+	return ring
+
+## Aro dorado de la mano de `boss_id` (silueta del reposo). Mismo comportamiento que `attach_ring`.
+static func attach_hand_ring(host: Control, boss_id: String, props: RefCounted) -> Ring:
+	var clip: Dictionary = HandClips.CLIPS[boss_id]
+	var ring := Ring.new()
+	ring.name = "Ring_hand"
+	var atlas := AtlasTexture.new()
+	atlas.atlas = HAND_RING_SHEET
+	atlas.region = Rect2(0, clip.ring_y, clip.size.x * 2 + 4, clip.size.y * 2 + 4)
+	ring.texture = atlas
+	ring.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	ring.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	ring.stretch_mode = TextureRect.STRETCH_KEEP
+	ring.props = props
+	ring.prop_id = "hand"
+	ring.top_level = true
+	ring.position = HAND_WINDOW_ORIGIN + Vector2(clip.origin) * 2.0 - Vector2(2, 2)
 	ring.z_index = 20
 	ring.hide()
 	host.add_child(ring)

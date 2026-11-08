@@ -34,13 +34,13 @@ Tipo de poder: **E** = ya existe en `boss_rules.gd`; **E+** = existe pero hay qu
 |---|---|---|---|---|---|---|---|
 | A | **El Kioskero** | Mitones de lana, un billete arrugado y un paquete de chicles | *Impuesto al kiosco*: cada anotación te cobra $2 | N | ● | 125 | 11 |
 | B | **El Payador Tramposo** | Cuero curtido con tientos, un as de espadas entre los dedos | *Con truco no hay generala*: Generala prohibida | E | ● | 130 | 12 |
-| C | **El Rey de las Palomas** | Plumas grises, migas de pan y palomas posadas en los dedos | *Dado asustado*: un dado al azar por mano no se puede conservar en las dos primeras tiradas | N | ●● | 115 | 9 |
+| C | **El Rey de las Palomas** | Plumas grises, migas de pan y palomas posadas en los dedos | *Paloma ladrona*: en la primera tirada de cada mano una paloma se lleva un dado al azar al vaso (no se puede conservar; tiradas | N | ●● | 115 | 9 |
 
 ### Nivel 2 — Tarde (P = 160)
 | | Jefe (mano) | Textura y objeto | Poder | Tipo | Sev. | Obj. | $ |
 |---|---|---|---|---|---|---|---|
 | A | **Don Cebador** | Yerba mate pegada a la piel; sostiene tu termo flotando entre los dedos | *Robo del termo*: te roba el termo, que flota hacia el cielo y queda suspendido mientras dura el jefe; sin termo, los stickers no aportan | N | ●●● | 160 | 8 |
-| B | **El Chamuyero** | Anillos y cadenas doradas de bijouterie, un cartel de «oferta» | *No te vendo dos veces lo mismo*: repetir en la mano 2 la categoría de la mano 1 vale 50 % | N | ●● | 175 | 10 |
+| B | **El Vendedor Ambulante** (antes El Chamuyero) | Anillos y cadenas doradas de bijouterie, un cartel de «oferta» | *No te vendo dos veces lo mismo*: repetir en la mano 2 la categoría de la mano 1 vale 50 % | N | ●● | 175 | 10 |
 | C | **El Referí del Domingo** | Césped en los nudillos, silbato y tarjeta roja | *Tarjeta roja*: una moneda al azar (sorteada al entrar al jefe) queda expulsada | E | ●● | 170 | 9 |
 
 ### Nivel 3 — Noche (P = 230)
@@ -53,16 +53,16 @@ Tipo de poder: **E** = ya existe en `boss_rules.gd`; **E+** = existe pero hay qu
 ### Nivel 4 — Cierre (P = 320)
 | | Jefe (mano) | Textura y objeto | Poder | Tipo | Sev. | Obj. | $ |
 |---|---|---|---|---|---|---|---|
-| A | **El Tahúr** | Fieltro verde de mesa, guante de crupier, fichas y dados cargados | *Dado cargado*: un dado al azar por mano queda fijo en 1, sin relanzar | N | ●●● | 305 | 7 |
+| A | **El Timbero** (antes El Tahúr) | Fieltro verde de mesa, guante de crupier, fichas y dados cargados | *Dado cargado*: un dado al azar por mano queda fijo en 1, sin relanzar | N | ●●● | 305 | 7 |
 | B | **El Patovica** | Cuero negro, brazalete STAFF, auricular y soga de terciopelo rojo | *Lista cerrada*: Par y Doble par prohibidos | E+ | ●● | 350 | 10 |
-| C | **El Payaso de la Risa Final** | Guante blanco con volados rayados, flor que echa agua, sonrisa pintada en la palma | *Cara espejo*: tras cada tirada, un dado al azar pasa a su cara opuesta (7 − x) | N | ●● | 335 | 9 |
+| C | **El Payaso** (antes El Payaso de la Risa Final) | Guante blanco con volados rayados, flor que echa agua, sonrisa pintada en la palma | *Cara espejo*: tras cada tirada, un dado al azar pasa a su cara opuesta (7 − x) | N | ●● | 335 | 9 |
 
 ### Nivel 5 — Espacio (P = 440)
 | | Jefe (mano) | Textura y objeto | Poder | Tipo | Sev. | Obj. | $ |
 |---|---|---|---|---|---|---|---|
 | A | **El Visitante** (alien) | Piel verde lisa y brillante, tres dedos largos con ventosas, luz de rayo tractor en la palma | *Abducción*: un dado por mano es abducido y no cuenta (juegan cuatro) | N | ●●●● | 375 | 6 |
 | B | **El Farolero Cósmico** (portador de anillo linterna) | Mano con un anillo que brilla en verde y crea construcciones de luz sólida (un farol) | *Carga del anillo*: solo se pueden conservar hasta 3 dados | N | ●●● | 420 | 7 |
-| C | **La Computadora de Bordo** (IA rebelde tipo HAL 9000) | Placas metálicas y cables; una lente roja en la palma que mira fijo | *Lo siento, no puedo permitirlo*: la categoría anotada en la mano 1 queda bloqueada en la mano 2 | N | ●● | 460 | 9 |
+| C | **La Sonda** (antes La Computadora de Bordo; nombre provisional) | Placas metálicas y cables; una lente roja en la palma que mira fijo | *Lo siento, no puedo permitirlo*: la categoría anotada en la mano 1 queda bloqueada en la mano 2 | N | ●● | 460 | 9 |
 
 ### Nivel 6 — Agujero negro (P = 600)
 | | Jefe (mano) | Textura y objeto | Poder | Tipo | Sev. | Obj. | $ |
@@ -115,3 +115,9 @@ Abiertas:
 
 4. Nombres definitivos y revisión de nombres parecidos a marcas o personajes ajenos (D10).
 5. Aprobar el esquema `P × k` frente a objetivos manuales por jefe.
+
+
+## Manos v4 (08/11/2026)
+
+Cada jefe de los niveles 1 a 6, salvo El Gótico, tiene una mano nueva y una animación propia al clic que reemplaza a piedra, papel o tijera (los guardianes de Dios y El Gótico quedan como estaban). El dibujo es el de los bocetos aprobados: Kioskero (fajo de billetes), Payador (mano de truco), Rey de las Palomas (migas y dos palomas), Don Cebador (ceba con tu termo), Vendedor Ambulante (cartel «OFERTA»/«2X1»), Referí (amarilla y roja), Conde Sed (murciélago colgado), Lobizón (transformación), Timbero (pila de fichas), Patovica («NO»), Payaso (pistola de dedo), Visitante (rayo tractor), Farolero (farol de luz), Sonda (garra), Horizonte (espaguetización), Relojero (péndulo) y Durmiente (tentáculos del abismo).
+Se generan con `tools/art/make_manos_clic_v4.py` (reusa `tools/art/bocetos-jefes/`) y salen en `assets/art/pixel-v3/manos-clic-v4.png`, `manos-clic-atras-v4.png` y `manos-contorno-v4.png`, más la tabla `scripts/boss_hand_clips.gd` (generada). El cuadro 0 es el reposo; el resto, el clic a 110 ms por cuadro.
