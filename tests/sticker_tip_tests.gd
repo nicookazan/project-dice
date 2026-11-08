@@ -83,17 +83,17 @@ static func run(scene, check: Callable) -> void:
 	for child in scene.ui.get_node("InspectThermos").get_children():
 		if child.has_meta("sticker_id"): stolen_zones += 1
 	check.call(thief.thermos_stolen() and stolen_zones == 0 and not scene.sticker_tip.visible, "Sticker tip: while the thermos is stolen there are no zones or windows")
-	# Tienda: la ventanita va a la derecha.
+	# Tienda: el termo es el de la mesa y la ventanita abre hacia la izquierda, como en la partida.
 	var shop = stickered_game(levels)
 	shop.phase = "shop"
 	scene.game = shop
 	scene.render()
 	var shop_button: Button = scene.ui.get_node("InspectThermos")
 	var shop_zone: Control = shop_button.get_node("StickerZone_full")
-	check.call(shop_zone.get_global_rect().position.is_equal_approx(Backdrop.SHOP_THERMOS_RECT.position + ShopThermos.badge_hit_rect("full", levels).position), "Sticker tip: the shop zones sit on the shop thermos")
+	check.call(shop_zone.get_global_rect().position.is_equal_approx(Backdrop.THERMOS_ORIGIN + ShopThermos.badge_hit_rect("full", levels).position), "Sticker tip: in the shop the zones sit on the table thermos")
 	await Drop.motion(scene, shop_zone.get_global_rect().get_center())
 	scene.update_hover_description()
-	check.call(scene.sticker_tip.visible and scene.sticker_tip.label.text.begins_with("Full · Nivel 1") and scene.sticker_tip.panel.position.x > shop_zone.get_global_rect().end.x, "Sticker tip: in the shop the window opens to the right of the sticker")
+	check.call(scene.sticker_tip.visible and scene.sticker_tip.label.text.begins_with("Full · Nivel 1") and scene.sticker_tip.panel.position.x + scene.sticker_tip.SIZE.x < shop_zone.get_global_rect().position.x, "Sticker tip: in the shop the window opens to the left of the sticker, as on the table")
 	await Drop.motion(scene, Vector2(20, 880))
 	scene.game = Game.new(521)
 	scene.render()

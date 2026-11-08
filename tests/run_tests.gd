@@ -459,11 +459,10 @@ func _initialize() -> void:
 	scene.shop_section = "coins"
 	scene.render()
 	var stored_shop: Dictionary = scene.game.snapshot()
-	scene.ui.get_node("Shop_components/Title").pressed.emit()
-	check(scene.shop_section == "components" and scene.game.snapshot() == stored_shop, "UI switching sections never rerolls stored offers")
+	scene.render()
+	check(scene.game.snapshot() == stored_shop, "UI redrawing the shop never rerolls stored offers")
 	scene.ui.get_node("Shop_components/Refresh").pressed.emit()
 	check(scene.game.cash == 99 and scene.game.renewal_price("components") == 2 and scene.game.renewal_price("coins") == 1 and scene.game.shop_state.coins == stored_shop.shop_state.coins, "UI renews only chosen section and increments only its price")
-	scene.ui.get_node("Shop_coins/Title").pressed.emit()
 	check("$1" in scene.ui.get_node("Shop_coins/Refresh").tooltip_text, "UI other sections retain their original renewal price")
 	stored_shop = scene.game.snapshot()
 	scene.render()

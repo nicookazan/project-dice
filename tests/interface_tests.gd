@@ -196,7 +196,7 @@ static func run(scene, check: Callable) -> Dictionary:
 		var panel = scene.ui.get_node("Shop_" + section)
 		rectangles[section] = panel.get_rect()
 		check.call(Rect2(0, 0, 1440, 900).encloses(panel.get_rect()), "UI: commercial zone stays within logical viewport " + section)
-	check.call(rectangles.numbers.position.y < rectangles.coins.position.y and rectangles.coins.position.x < rectangles.components.position.x and rectangles.cup.position.x < rectangles.coins.position.x and rectangles.cup.size.y > rectangles.cup.size.x and rectangles.numbers.position.x < rectangles.stickers.position.x, "UI: shop places the upright thermos at lower left, separate from all merchandise")
+	check.call(rectangles.coins.end.x < rectangles.components.position.x and rectangles.components.position.y < rectangles.numbers.position.y and rectangles.numbers.position.y < rectangles.stickers.position.y and rectangles.cup.position.x > rectangles.stickers.end.x and rectangles.cup.size.y > rectangles.cup.size.x, "UI: shop on the table: coins on the left felt, one row per section on the middle one, the upright thermos to the right")
 	var separated := true
 	var zones: Array = rectangles.keys()
 	for a in range(zones.size()):
@@ -204,7 +204,7 @@ static func run(scene, check: Callable) -> Dictionary:
 	check.call(separated, "UI: five simultaneous commercial zones never overlap")
 	for section in ["coins", "components", "numbers", "stickers"]:
 		var refresh = scene.ui.get_node("Shop_" + section + "/Refresh")
-		check.call(refresh.text.is_empty() and "$1" in refresh.tooltip_text and refresh.position.y < 0, "UI: each section has a retry icon beside its header with price on hover " + section)
+		check.call(refresh.text.is_empty() and "$1" in refresh.tooltip_text and rectangles[section].grow(30).has_point(refresh.get_global_rect().get_center()), "UI: each section has its retry icon beside its offers with price on hover " + section)
 	before = scene.game.snapshot()
 	scene.render()
 	check.call(scene.game.snapshot() == before, "UI: rendering full five-zone shop never regenerates offers")

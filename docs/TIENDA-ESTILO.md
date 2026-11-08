@@ -1,5 +1,20 @@
 # Tienda: integración artística de la referencia
 
+## Tienda sobre la mesa de juego — 08/11/2026
+
+La tienda deja el fondo del vendedor y el maletín: se arma sobre la misma mesa de la partida, a partir del boceto que aprobó el autor (generador `tools/art/bocetos-tienda-mesa/tienda_mesa.py`). El fondo es el de la mesa (`backdrop.gd`) con la sala completa: bandera, sifones, termo que ceba el mate y ventanas animadas siguen funcionando con un clic, igual que en la partida. Lo único que no se dibuja es la nube con la mano del rival, porque en la tienda no hay rival.
+
+- **Paño izquierdo:** las cuatro monedas en dos filas.
+- **Paño central:** una fila por sección: componentes arriba, números al medio, stickers abajo.
+- **Paño derecho:** mate, termo y vaso, sin cambios. El termo es el de la mesa y recibe los stickers.
+- **Ofertas:** cada objeto se apoya en el paño con una etiqueta de cartón en su esquina, con el precio escrito (`shop_fixtures.gd`, que ahora solo dibuja la etiqueta). El hueco vendido deja la etiqueta «VENDIDO». Al lado de cada sección está su flecha de renovar; el costo se ve al pasar el mouse.
+- **Libreta:** reemplaza a la de puntos y muestra plata, capacidad, el rival superado y el siguiente, tus cinco dados (antes de la primera tirada muestra una de sus caras) y el último aviso. La ventanita de descripción de la tienda va dentro de la libreta, para no tapar las ofertas.
+- **Barra de abajo:** tus monedas en el mismo lugar que durante la partida. Se arrastran al paño para venderlas: la capa de venta cubre los dos paños con ofertas.
+- **Botones:** los de la mesa; «Ir al siguiente rival» ocupa el lugar de TIRAR y «Menú» queda arriba a la derecha.
+- **Stickers:** el sticker comprado vuela desde su oferta hasta su lugar en el termo de la mesa y se pega ahí (`StickerFlight`, mismo vuelo de antes). Los paquetes que dan dos stickers también los pegan en ese termo. `scripts/table_thermos_link.gd` es un nodo invisible en el lugar del termo que le pasa al fondo los stickers que se muestran durante el vuelo. Si el aviso «¡Nuevo!» no entra a la derecha del termo, sale a su izquierda.
+
+Quedan sin usar: `pixel-v3/tienda-v3.png` (vendedor y maletín), la bandera de la tienda (`shop_flag` en `bar_props.gd`, `bandera-tienda-v3.png`) y las bandejas del inventario. No se borraron: el autor decide si se retiran. Revisión visual: `tools/art/bocetos-tienda-mesa/capture_tienda_mesa.gd` (completa, sticker volando, sticker pegado y sala animada).
+
 ## Pixel art de la tienda (Fase 5 del plan de arte) — 01/11/2026
 
 El fondo de la tienda pasa a pixel art en la grilla del juego: `assets/art/pixel-v3/tienda-v3.png` (720×450 px lógicos, dibujado a 1440×900 con filtro nearest). El vendedor es el mismo de la ilustración anterior, convertido con su dibujo, sus colores por zona y sin el ruido de foto. El maletín conserva la silueta del original (interior en trapecio, base abierta hacia abajo), con cuero, herrajes dorados y el terciopelo de la mesa. Las cuatro zonas de ofertas, la capa de venta por arrastre y los controles no se movieron.

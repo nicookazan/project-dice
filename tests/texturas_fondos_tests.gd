@@ -35,7 +35,7 @@ static func run(scene, check: Callable) -> void:
 		fx.free()
 	check.call(WindowFx.pick([Vector2i(1, 1), Vector2i(5, 5), Vector2i(9, 9), Vector2i(20, 3)], 3, 5, 3.0) == WindowFx.pick([Vector2i(1, 1), Vector2i(5, 5), Vector2i(9, 9), Vector2i(20, 3)], 3, 5, 3.0), "TX2: los sorteos de presentación son reproducibles")
 	check.call(WindowFx.wrap_x(10.0, 5.0, 1000.0, 20.0) >= -24.0 and WindowFx.wrap_x(10.0, 5.0, 1000.0, 20.0) <= 405.0, "TX2: los objetos que cruzan siempre vuelven a entrar")
-	# El Backdrop usa la textura animada solo con movimiento y fuera de la tienda.
+	# El Backdrop usa la textura animada solo con movimiento (también en la tienda, que está sobre la misma mesa).
 	var backdrop = Backdrop.new()
 	var profile := {"environment": "noche", "actor": "common", "level": 2, "boss_id": "", "thermos_stolen": false}
 	backdrop.configure(profile, {"reduced_motion": true, "speed": 1})
@@ -46,7 +46,7 @@ static func run(scene, check: Callable) -> void:
 	check.call(backdrop.fx_key == "noche:false", "TX2: con movimiento se activa el fondo de la noche")
 	backdrop.shop_mode = true
 	backdrop.configure(profile, {"reduced_motion": false, "speed": 1})
-	check.call(backdrop.fx_key == "" and backdrop.window_fx.render_target_update_mode == SubViewport.UPDATE_DISABLED, "TX2: en la tienda se apaga y no consume")
+	check.call(backdrop.fx_key == "noche:false" and backdrop.window_fx.render_target_update_mode == SubViewport.UPDATE_ALWAYS, "TX2: la tienda se arma en la misma mesa y las ventanas siguen animadas")
 	backdrop.shop_mode = false
 	backdrop.configure({"environment": "cierre", "actor": "common", "level": 3, "boss_id": "", "thermos_stolen": false}, {"reduced_motion": false, "speed": 1})
 	check.call(backdrop.fx_key == "", "TX2: «cierre» no activa el fondo animado")

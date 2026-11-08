@@ -19,6 +19,7 @@ const Backdrop = preload("res://scripts/backdrop.gd")
 const CoinArt = preload("res://scripts/coin_art.gd")
 const ShopArt = preload("res://scripts/shop_art.gd")
 const ShopFixtures = preload("res://scripts/shop_fixtures.gd")
+const TableThermosLink = preload("res://scripts/table_thermos_link.gd")
 const ThiefPigeon = preload("res://scripts/thief_pigeon.gd")
 const UiSkin = preload("res://scripts/ui_skin.gd")
 const ItemTooltip = preload("res://scripts/item_tooltip.gd")
@@ -329,7 +330,7 @@ func open_sticker_book(sticker_id: String) -> void:
 
 func inspect_thermos() -> void:
 	# En la mesa el termo ceba el mate (los stickers se leen al pasar el mouse); robado y en la tienda abre su detalle.
-	if not game.thermos_stolen() and not background.shop_mode:
+	if not game.thermos_stolen():
 		background.props.play("thermos")
 		return
 	show_thermos_detail()
@@ -420,7 +421,6 @@ func button(parent: Node, text_value: String, rect: Rect2, action: Callable, dis
 		node.add_theme_color_override("font_color", Color.WHITE)
 		node.add_theme_color_override("font_disabled_color", Color("bdbdbd"))
 	node.add_theme_stylebox_override("focus", box(Color.TRANSPARENT, Color.WHITE, 3))
-	if is_instance_valid(background) and background.shop_mode: skin_shop_button(node)
 	# The font's ascent leaves the label about 1 px above the optical centre: push it down 1 px.
 	for state in ["normal", "hover", "pressed", "disabled", "focus"]:
 		var skin: StyleBox = node.get_theme_stylebox(state)
@@ -954,7 +954,7 @@ func update_hover_description() -> void:
 	if is_instance_valid(sticker_tip):
 		var sticker_id: String = hovered.get_meta("sticker_id", "") if hovered != null and not blocked else ""
 		if sticker_id == "" or game.thermos_stolen() or game.cup.stickers.get(sticker_id, 0) <= 0 or background.props.busy("thermos"): sticker_tip.hide()
-		else: sticker_tip.show_for(sticker_id, game.cup.stickers[sticker_id], game.sticker_catalog, hovered.get_global_rect(), background.shop_mode, hovered.get_meta("thermos_origin", Vector2.ZERO))
+		else: sticker_tip.show_for(sticker_id, game.cup.stickers[sticker_id], game.sticker_catalog, hovered.get_global_rect(), false, hovered.get_meta("thermos_origin", Vector2.ZERO))
 	if is_instance_valid(die_card):
 		if hovered_die == null:
 			die_card.hide()
@@ -1024,11 +1024,12 @@ func render() -> void:
 	add_child(ui)
 	hover_description = PanelContainer.new()
 	hover_description.name = "HoverDescription"
-	hover_description.position = Vector2(30, 400)
+	# En la tienda la ventanita va dentro de la libreta, debajo de tus dados, para no tapar las ofertas del paño.
+	hover_description.position = Vector2(30, 420) if background.shop_mode else Vector2(30, 400)
 	hover_description.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	hover_description.add_theme_stylebox_override("panel", ItemTooltip.skin())
 	hover_description_body = ItemTooltip.content("")
-	hover_description_body.custom_minimum_size.x = 422
+	hover_description_body.custom_minimum_size.x = 266 if background.shop_mode else 422
 	hover_description.add_child(hover_description_body)
 	hover_description.hide()
 	# Draw above ordinary UI without becoming a mouse target.
@@ -1059,31 +1060,25 @@ func render() -> void:
 
 func finish_render() -> void:
 	if game.debug_mode: label(ui, "DEBUG · DAÑO ∞ · PLATA ∞", Vector2(480, 114), 16, gold, 460)
-	var thermos_rect: Rect2 = Backdrop.SHOP_THERMOS_RECT if background.shop_mode else (Backdrop.STOLEN_THERMOS_RECT if game.thermos_stolen() else Backdrop.THERMOS_RECT)
+	var thermos_rect: Rect2 = Backdrop.STOLEN_THERMOS_RECT if game.thermos_stolen() else Backdrop.THERMOS_RECT
 	var thermos_button := button(ui, "", thermos_rect, inspect_thermos)
 	thermos_button.name = "InspectThermos"
-	if not background.shop_mode:
-		for prop in ["flag", "soda_left", "soda_right"]:
-			var zone := BarProps.make_zone(prop, background.props)
-			zone.clicked.connect(func(): background.props.play(prop))
-			ui.add_child(zone)
-			ui.move_child(zone, thermos_button.get_index())
-		if not game.thermos_stolen(): BarProps.attach_ring(thermos_button, "thermos", background.props)
-	else:
-		# La bandera de la tienda también ondula al hacer clic.
-		var shop_flag := BarProps.make_zone("shop_flag", background.props)
-		shop_flag.clicked.connect(func(): background.props.play("shop_flag"))
-		ui.add_child(shop_flag)
+	# Bandera, sifones y termo reaccionan al clic también en la tienda, que se arma sobre la misma mesa.
+	for prop in ["flag", "soda_left", "soda_right"]:
+		var zone := BarProps.make_zone(prop, background.props)
+		zone.clicked.connect(func(): background.props.play(prop))
+		ui.add_child(zone)
+		ui.move_child(zone, thermos_button.get_index())
+	if not game.thermos_stolen(): BarProps.attach_ring(thermos_button, "thermos", background.props)
 	thermos_button.tooltip_text = ("Termo robado por Don Cebador · clic para ver qué pasa" if game.thermos_stolen() else "Termo del mate · %d stickers · clic para ver niveles y efectos" % game.cup.stickers.size())
 	for state in ["normal", "hover", "pressed"]: thermos_button.add_theme_stylebox_override(state, StyleBoxEmpty.new())
 	if not background.shop_mode and is_instance_valid(cup_zone) and cup_zone.is_inside_tree(): cup_zone.accept_through(thermos_button)
 	if not game.thermos_stolen():
-		add_sticker_zones(thermos_button, Backdrop.SHOP_THERMOS_RECT.position if background.shop_mode else Backdrop.THERMOS_ORIGIN)
+		add_sticker_zones(thermos_button, Backdrop.THERMOS_ORIGIN)
 		if not background.shop_mode and is_instance_valid(cup_zone):
 			for child in thermos_button.get_children():
 				if child.has_meta("sticker_id"): cup_zone.accept_through(child)
 	if not background.shop_mode: render_boss_hand()
-	if background.shop_mode: label(ui, purchase_error if not purchase_error.is_empty() else game.message, Vector2(38, 864), 17, cream, 1360)
 	if game.phase != "repair": repair_selection.clear()
 	if game.phase in ["reward", "won", "lost", "repair"]: render_result()
 	elif game.phase == "purchase_target": render_purchase_target()
@@ -1634,13 +1629,11 @@ func shop_icon(parent: Node, offer: Dictionary, rect: Rect2) -> void:
 	if offer.kind == "pack":
 		shop_caption(parent, "?" if offer.effect.pack_kind == "choose_one" else "2", Rect2(rect.position + Vector2(0, 5), rect.size - Vector2(0, 5)), 29)
 
-## Gancho con hilos arriba y etiqueta de cartón abajo, detrás de lo que cuelga de la tarjeta (se agrega primero).
-func shop_hook(card: Control, sold: bool) -> void:
-	var fixture := ShopFixtures.new()
-	fixture.name = "Hook"
-	fixture.size = card.size
-	fixture.sold = sold
-	card.add_child(fixture)
+## Oferta apoyada en el paño (tienda sobre la mesa, 08/11/2026): el objeto arriba y su etiqueta de cartón con el precio en
+## la esquina de abajo a la derecha. SHOP_ICON es el lugar del objeto dentro de la tarjeta de SHOP_CARD.
+const SHOP_CARD := Vector2(140, 110)
+const SHOP_ICON := Rect2(20, 4, 100, 91)
+const SHOP_TAG_AT := Vector2(78, 80)
 
 func shop_card(parent: Node, section: String, index: int, rect: Rect2) -> void:
 	var stock: Dictionary = game.shop_state.get(section, {"slots": [], "configured": false})
@@ -1654,35 +1647,35 @@ func shop_card(parent: Node, section: String, index: int, rect: Rect2) -> void:
 	var offer: Dictionary = stock.slots[index] if index < stock.slots.size() else {}
 	if offer.is_empty():
 		if stock.configured:
-			# El gancho queda vacío y la etiqueta dice VENDIDO.
-			shop_hook(card, true)
-			var tag_caption := shop_caption(card, "VENDIDO", Rect2(rect.size.x / 2.0 - 32, 112, 64, 24), 13, ShopFixtures.TAG_INK_SOLD)
+			# Queda solo la etiqueta, que dice VENDIDO.
+			var sold_tag := shop_tag(card, true, Vector2(rect.size.x / 2.0 - ShopFixtures.TAG_SOLD_W - 1, 40))
+			var tag_caption := shop_caption(sold_tag, "VENDIDO", Rect2(0, 0, ShopFixtures.TAG_SOLD_W * 2 + 2, 24), 13, ShopFixtures.TAG_INK_SOLD)
+			tag_caption.add_theme_font_override("font", ItemTooltip.pixel_font())
 			tag_caption.name = "SoldCaption"
 		else:
-			shop_caption(card, "Sin ofertas", Rect2(0, 53, rect.size.x, 34), 17, Color("c6ac88"))
+			shop_caption(card, "Sin ofertas", Rect2(0, 38, rect.size.x, 34), 15, Color("e0b8a0"))
 		return
-	shop_hook(card, false)
 	var text: Array = shop_offer_text(offer)
-	var compact := section == "coins"
-	shop_icon(card, offer, Rect2((rect.size.x - 100) / 2, 10, 100, 91))
+	shop_icon(card, offer, SHOP_ICON)
 	var object_hover := HoverPanel.new()
 	object_hover.name = "ObjectHover"
-	object_hover.position = Vector2((rect.size.x - 100) / 2, 10)
-	object_hover.size = Vector2(100, 91)
+	object_hover.position = SHOP_ICON.position
+	object_hover.size = SHOP_ICON.size
 	object_hover.mouse_filter = Control.MOUSE_FILTER_STOP
 	object_hover.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
 	object_hover.tooltip_text = text[0] + "\n" + text[1]
 	card.add_child(object_hover)
+	shop_tag(card, false, SHOP_TAG_AT)
 	var unavailable: bool = game.phase != "shop" or not game.can_afford(game.offer_price(offer.price)) or not Purchases.valid_offer(section, offer, game.sticker_catalog)
 	if offer.kind == "coin": unavailable = unavailable or not Coins.can_store(game.coin_inventory, offer.effect.coin_id)
 	var id: String = offer.offer_id
-	var purchase := button(card, "$%d" % game.offer_price(offer.price), Rect2((rect.size.x - minf(102, rect.size.x - 8)) / 2, 109, minf(102, rect.size.x - 8), 30), func():
+	var purchase := button(card, "$%d" % game.offer_price(offer.price), Rect2(SHOP_TAG_AT, Vector2(ShopFixtures.TAG_W * 2 + 2, 24)), func():
 		var previous_stickers: Dictionary = game.cup.stickers.duplicate(true)
-		var icon_center: Vector2 = card.get_global_rect().position + Vector2(rect.size.x / 2.0, 55.0)
+		var icon_center: Vector2 = card.get_global_rect().position + SHOP_ICON.get_center()
 		var result: Dictionary = game.begin_purchase(section, id)
 		purchase_error = "" if result.ok else result.message
 		render()
-		# La compra ya está hecha y guardada; el vuelo del sticker suelto es solo presentación.
+		# La compra ya está hecha y guardada; el vuelo del sticker suelto hasta el termo es solo presentación.
 		if result.ok and offer.kind == "sticker" and preferences.speed != 0 and not preferences.reduced_motion:
 			show_sticker_flight(offer.effect.id, previous_stickers.get(offer.effect.id, 0), icon_center)
 		if result.ok and offer.kind == "pack" and offer.effect.pack_kind == "receive_two":
@@ -1691,9 +1684,9 @@ func shop_card(parent: Node, section: String, index: int, rect: Rect2) -> void:
 	# Todo lo que se vende se marca como clickeable: manito y borde amarillo sobre la silueta del objeto.
 	var offer_ring := OfferRing.new()
 	offer_ring.name = "OfferRing"
-	offer_ring.position = Vector2((rect.size.x - 100) / 2 - OfferRing.MARGIN, 10 - OfferRing.MARGIN)
+	offer_ring.position = SHOP_ICON.position - Vector2.ONE * OfferRing.MARGIN
 	offer_ring.key = JSON.stringify([offer.kind, offer.effect])
-	offer_ring.make_icon = func(holder: Node): shop_icon(holder, offer, Rect2(0, 0, 100, 91))
+	offer_ring.make_icon = func(holder: Node): shop_icon(holder, offer, Rect2(Vector2.ZERO, SHOP_ICON.size))
 	card.add_child(offer_ring)
 	for target in [object_hover, purchase]:
 		target.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
@@ -1701,109 +1694,98 @@ func shop_card(parent: Node, section: String, index: int, rect: Rect2) -> void:
 		target.mouse_exited.connect(func(): offer_ring.hover(false))
 	object_hover.activated.connect(func():
 		if not purchase.disabled: purchase.pressed.emit())
-	purchase.add_theme_font_size_override("font_size", 20 if compact else 22)
-	for state in ["normal", "hover", "pressed", "disabled"]: purchase.add_theme_stylebox_override(state, StyleBoxEmpty.new())
-	# El precio va escrito sobre la etiqueta de cartón que cuelga del gancho.
+	purchase.add_theme_font_override("font", ItemTooltip.pixel_font())
+	purchase.add_theme_font_size_override("font_size", 17)
+	for state in ["normal", "hover", "pressed", "disabled", "focus"]: purchase.add_theme_stylebox_override(state, StyleBoxEmpty.new())
+	purchase.size = Vector2(ShopFixtures.TAG_W * 2 + 2, 24)
+	# El precio va escrito sobre la etiqueta de cartón.
 	purchase.add_theme_color_override("font_color", ShopFixtures.TAG_INK)
 	purchase.add_theme_color_override("font_hover_color", ShopFixtures.TAG_INK_SOLD)
+	purchase.add_theme_color_override("font_pressed_color", ShopFixtures.TAG_INK_SOLD)
 	purchase.add_theme_color_override("font_disabled_color", Color("8a7a60"))
 
+## Etiqueta de cartón apoyada en el paño, con su sombra.
+func shop_tag(card: Control, sold: bool, at: Vector2) -> Control:
+	var tag := ShopFixtures.new()
+	tag.name = "Tag"
+	tag.sold = sold
+	tag.position = at
+	tag.size = Vector2(((ShopFixtures.TAG_SOLD_W if sold else ShopFixtures.TAG_W) + 2) * 2, (ShopFixtures.TAG_H + 2) * 2)
+	card.add_child(tag)
+	return tag
+
+## Dónde se apoya cada oferta (centro del objeto) y la flecha de renovar de cada sección. Paño izquierdo: monedas en dos
+## filas; paño central: una fila por sección. El paño derecho queda para el mate, el termo y el vaso.
+const SHOP_LAYOUT := {
+	"coins": [Vector2(450, 410), Vector2(600, 410), Vector2(450, 560), Vector2(600, 560)],
+	"components": [Vector2(800, 372), Vector2(945, 372)],
+	"numbers": [Vector2(800, 482), Vector2(945, 482)],
+	"stickers": [Vector2(800, 592), Vector2(945, 592)],
+}
+const SHOP_RENEW := {"coins": Vector2(628, 352), "components": Vector2(1012, 352), "numbers": Vector2(1020, 462), "stickers": Vector2(1029, 572)}
+## Paños 1 y 2 (donde se suelta una moneda para venderla), en coordenadas de pantalla: arriba izquierda, arriba derecha,
+## abajo derecha, abajo izquierda.
+const SHOP_SALE_SHAPE := [Vector2(378, 316), Vector2(1062, 316), Vector2(1082, 652), Vector2(338, 652)]
+
 func render_shop() -> void:
-	var shop_theme := theme.duplicate()
-	shop_theme.default_font = ItemTooltip.pixel_font()
-	ui.theme = shop_theme
-	shop_frame(Rect2(30, 14, 400, 75), true)
-	shop_caption(ui, "TIENDA", Rect2(55, 34, 350, 38), 34)
-	var inventory := panel(ui, Rect2(770, 777, 635, 80), Color.TRANSPARENT)
-	inventory.name = "ShopInventory"
-	inventory.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
-	render_inventory_trays()
-	for index in range(game.coin_inventory.shared_capacity):
-		var x := 785 + index * minf(78.0, 400.0 / maxf(game.coin_inventory.shared_capacity, 1))
-		if index < game.passives.size():
-			var coin: String = game.passives[index]
-			var inspect := owned_shop_coin(coin, game.coin_inventory.equipped[index].instance_id, Rect2(x, 811, 62, 52))
-			add_coin(inspect, coin, Rect2(5, 0, 52, 52))
-	shop_frame(Rect2(518, 30, 193, 80))
-	shop_caption(ui, "PLATA", Rect2(530, 38, 169, 22), 18)
-	shop_caption(ui, money_text(game.cash), Rect2(530, 60, 169, 42), 34, gold)
-	shop_frame(Rect2(730, 30, 200, 80))
-	shop_caption(ui, "CAPACIDAD", Rect2(742, 38, 176, 22), 18)
-	shop_caption(ui, str(game.coin_inventory.shared_capacity), Rect2(742, 60, 176, 42), 34, gold)
-	for id in range(5):
-		var die := Die.new()
-		die.configure_appearance(game.dice[id], game.boss_context())
-		animate_element(die, id)
-		die.die_index = id
-		die.position = Vector2(361 + id * 72, 811)
-		die.scale = Vector2(0.78, 0.78)
-		die.pressed.connect(func(): inspect_die(id))
-		die.inspect_requested.connect(inspect_die)
-		for state in ["normal", "hover", "pressed"]: die.add_theme_stylebox_override(state, StyleBoxEmpty.new())
-		ui.add_child(die)
-	var cup_zone := panel(ui, Backdrop.SHOP_THERMOS_RECT, Color.TRANSPARENT)
-	cup_zone.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
-	cup_zone.name = "Shop_cup"
-	var thermos := preload("res://scripts/shop_thermos.gd").new()
-	thermos.name = "ThermosArtwork"
-	thermos.size = cup_zone.size
-	thermos.stickers = game.cup.stickers.duplicate(true)
-	cup_zone.add_child(thermos)
-	for slot in range(game.coin_inventory.consumables.size()):
-		var stored: Dictionary = game.coin_inventory.consumables[slot]
-		var offset: float = 1260.0 - (game.coin_inventory.consumables.size() - 1) * 38.0 + slot * 76.0
-		var inspect := owned_shop_coin(stored.coin_id, stored.instance_id, Rect2(offset, 813, 62, 46))
-		add_coin(inspect, stored.coin_id, Rect2(8, 0, 46, 46))
-		if Coins.can_use(stored.coin_id, "shop"):
-			var slot_index := slot
-			var use_button := button(ui, "Usar", Rect2(offset, 880, 62, 18), func(): act(func(): game.use_consumable(slot_index)), game.phase != "shop")
-			use_button.name = "UseShopCoin_" + str(slot)
-			use_button.add_theme_font_size_override("font_size", 13)
-	var zones := {"numbers": Rect2(538, 252, 367, 179), "components": Rect2(929, 252, 388, 179), "coins": Rect2(525, 442, 380, 179), "stickers": Rect2(929, 442, 401, 179)}
-	var titles := {"numbers": "Números y caras", "components": "Componentes", "coins": "Monedas", "stickers": "Stickers"}
+	render_shop_notebook()
 	var renew_names := {"coins": "monedas", "components": "componentes", "numbers": "números", "stickers": "stickers"}
-	for section in zones:
+	for section in SHOP_LAYOUT:
 		var section_id: String = section
-		var zone := panel(ui, zones[section], Color.TRANSPARENT)
-		zone.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
+		var centers: Array = SHOP_LAYOUT[section]
+		var corner: Vector2 = centers[0]
+		var far: Vector2 = centers[0]
+		for c in centers:
+			corner = corner.min(c)
+			far = far.max(c)
+		var origin := corner - SHOP_ICON.get_center()
+		var zone := Control.new()
 		zone.name = "Shop_" + section
-		var title_width := 0.0   # sin texto: el botón de renovar queda solo y centrado
-		var header_x: float = (zones[section].size.x - title_width - 32) / 2
-		var title := button(zone, "", Rect2(header_x, 0, title_width, 26), func(): shop_section = section_id)
-		title.name = "Title"
-		for state in ["normal", "hover", "pressed"]: title.add_theme_stylebox_override(state, StyleBoxEmpty.new())
-		title.add_theme_font_size_override("font_size", 18)
-		var count := 4 if section == "coins" else 2
-		var width: float = (zones[section].size.x - 24) / count
-		for index in range(count): shop_card(zone, section, index, Rect2(12 + index * width, 28, width, 145))
+		zone.position = origin
+		zone.size = far - corner + SHOP_CARD
+		zone.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		ui.add_child(zone)
+		for index in range(centers.size()): shop_card(zone, section, index, Rect2(centers[index] - SHOP_ICON.get_center() - origin, SHOP_CARD))
 		var stock: Dictionary = game.shop_state.get(section, {"slots": [], "configured": false})
-		var renew := button(zone, "", Rect2(header_x, -2, 32, 30), func(): act(func(): game.refresh_shop(section_id)), game.phase != "shop" or not stock.configured or not game.can_afford(game.renewal_price(section_id)))
+		var renew := button(zone, "", Rect2(SHOP_RENEW[section] - origin - Vector2(16, 15), Vector2(32, 30)), func(): act(func(): game.refresh_shop(section_id)), game.phase != "shop" or not stock.configured or not game.can_afford(game.renewal_price(section_id)))
 		renew.name = "Refresh"
-		renew.tooltip_text = "Renovar %s · $%d\nCambia solo las ofertas de esta zona.\nEl costo aumenta solo para esta zona durante esta visita." % [renew_names[section], game.renewal_price(section_id)]
-		for state in ["normal", "hover", "pressed", "disabled"]: renew.add_theme_stylebox_override(state, StyleBoxEmpty.new())
+		renew.tooltip_text = "Renovar %s · $%d\nCambia solo las ofertas de esta sección.\nEl costo aumenta solo para esta sección durante esta visita." % [renew_names[section], game.renewal_price(section_id)]
+		for state in ["normal", "hover", "pressed", "disabled", "focus"]: renew.add_theme_stylebox_override(state, StyleBoxEmpty.new())
 		var retry_icon := preload("res://scripts/retry_icon.gd").new()
 		retry_icon.position = Vector2(2, 0)
 		retry_icon.size = Vector2(28, 30)
 		renew.add_child(retry_icon)
+	# El termo de la mesa (lo dibuja el fondo) como destino de los stickers que se compran.
+	var cup_zone := Control.new()
+	cup_zone.name = "Shop_cup"
+	cup_zone.position = Backdrop.THERMOS_ORIGIN
+	cup_zone.size = Vector2(144, 330)
+	cup_zone.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	ui.add_child(cup_zone)
+	var thermos := TableThermosLink.new()
+	thermos.name = "ThermosArtwork"
+	thermos.size = cup_zone.size
+	thermos.backdrop = background
+	thermos.stickers = background.stickers
+	cup_zone.add_child(thermos)
+	render_shop_inventory()
 	var next_label := "Entrar al nivel %d →" % (game.level_index + 2) if game.rival + 1 == game.level_encounters.size() and game.has_next_encounter() else "Ir al %s →" % ("jefe" if game.rival + 1 < game.level_encounters.size() and game.is_boss(game.rival + 1) else "siguiente rival")
-	var next_button := button(ui, next_label, Rect2(1025, 25, 380, 93), func(): act(game.leave_shop), game.phase != "shop", true)
+	var next_button := button(ui, next_label, Rect2(1082, 681, 312, 47), func(): act(game.leave_shop), game.phase != "shop", true)
 	next_button.name = "ShopAdvance"
-	next_button.add_theme_font_size_override("font_size", 18)
-	var game_menu_button := button(ui, "Menú", Rect2(1025, 126, 380, 36), show_game_menu)
-	game_menu_button.add_theme_font_size_override("font_size", 16)
-	shop_caption(ui, "NIVEL %d · %s · DATOS PROVISIONALES" % [game.level_index + 1, game.environment_id().replace("_", " ").to_upper()], Rect2(30, 94, 400, 22), 11)
+	button(ui, "Menú", Rect2(1220, 23, 185, 38), show_game_menu)
 	coin_sale_overlay = preload("res://scripts/coin_sale_zone.gd").new()
 	coin_sale_overlay.name = "CoinSaleOverlay"
-	coin_sale_overlay.position = Vector2(518, 248)
-	coin_sale_overlay.size = Vector2(819, 377)
+	coin_sale_overlay.position = Vector2(SHOP_SALE_SHAPE[3].x, SHOP_SALE_SHAPE[0].y)
+	coin_sale_overlay.size = Vector2(SHOP_SALE_SHAPE[2].x - SHOP_SALE_SHAPE[3].x, SHOP_SALE_SHAPE[2].y - SHOP_SALE_SHAPE[0].y)
 	coin_sale_overlay.z_index = 100
 	coin_sale_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
 	coin_sale_overlay.accepts = can_sell_dragged_coin
 	coin_sale_overlay.coin_dropped.connect(sell_dragged_coin)
 	coin_sale_overlay.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
 	ui.add_child(coin_sale_overlay)
-	# La zona de venta sigue la forma de la valija (el interior es un trapecio) y usa la letra del juego.
-	var sale_shape := PackedVector2Array([Vector2(22, -2), Vector2(793, -2), Vector2(819, 377), Vector2(0, 377)])
+	# La zona de venta sigue la forma de los dos paños con ofertas.
+	var sale_shape := PackedVector2Array()
+	for point in SHOP_SALE_SHAPE: sale_shape.append(point - coin_sale_overlay.position)
 	coin_sale_overlay.shape = sale_shape
 	var sale_fill := Polygon2D.new()
 	sale_fill.polygon = sale_shape
@@ -1815,31 +1797,75 @@ func render_shop() -> void:
 	sale_edge.width = 2.0
 	sale_edge.default_color = Color(0.93, 0.73, 0.40, 0.80)
 	coin_sale_overlay.add_child(sale_edge)
-	coin_sale_caption = shop_caption(coin_sale_overlay, "", Rect2(0, 140, 819, 90), 38)
+	coin_sale_caption = shop_caption(coin_sale_overlay, "", Rect2(0, 120, coin_sale_overlay.size.x, 90), 38)
 	coin_sale_caption.add_theme_font_override("font", ItemTooltip.pixel_font())
 	coin_sale_overlay.hide()
 
-## Bandejas de madera con vivo dorado donde se apoyan tus dados (paño verde) y tus monedas (terciopelo bordó); la de un uso
-## lleva un hueco con aro dorado. Se adaptan a la capacidad de monedas (coordenadas lógicas de 2×2 px).
-func render_inventory_trays() -> void:
-	var capacity: int = game.coin_inventory.shared_capacity
-	var step := minf(78.0, 400.0 / maxf(capacity, 1))
-	var first := 785.0 + 31.0
-	var last := 785.0 + (capacity - 1) * step + 31.0
-	var singles := maxi(game.coin_inventory.consumables.size(), 1)
-	var first_use := 1260.0 - (singles - 1) * 38.0 + 31.0
-	var last_use := first_use + (singles - 1) * 76.0
-	var holes: Array = []
-	for k in range(singles): holes.append(Vector2i(int((first_use + k * 76.0) / 2.0), 418))
-	var fixtures := ShopFixtures.new()
-	fixtures.name = "InventoryTrays"
-	fixtures.mode = "trays"
-	fixtures.size = Vector2(1440, 900)
-	fixtures.trays = [
-		{"rect": Rect2i(172, 397, 358, 439), "felt": "green", "holes": []},
-		{"rect": Rect2i(int((first - 50.0) / 2.0), 397, int((last + 50.0) / 2.0), 439), "felt": "bordo", "holes": []},
-		{"rect": Rect2i(int((first_use - 38.0) / 2.0), 397, int((last_use + 38.0) / 2.0), 439), "felt": "bordo", "holes": holes}]
-	ui.add_child(fixtures)
+## La libreta de la tienda: plata, capacidad, recorrido, tus cinco dados y el último aviso.
+func render_shop_notebook() -> void:
+	var note := panel(ui, Rect2(22, 25, 310, 630), Color("f3e6c7"), Color("856a47"))
+	note.name = "ShopNotebook"
+	note.tooltip_text = "Semilla %d · %s" % [game.run_seed, "Campaña provisional" if not game.campaign.is_empty() else "Prototipo"]
+	for line_y in range(44, 621, 24):
+		var rule := ColorRect.new()
+		rule.position = Vector2(18, line_y)
+		rule.size = Vector2(275, 1)
+		rule.color = Color(0.45, 0.54, 0.61, 0.16)
+		rule.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		note.add_child(rule)
+	var margin := ColorRect.new()
+	margin.position = Vector2(17, 12)
+	margin.size = Vector2(1, 605)
+	margin.color = Color(0.62, 0.23, 0.22, 0.35)
+	margin.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	note.add_child(margin)
+	label(note, "TIENDA", Vector2(28, 14), 22, ink)
+	label(note, "PLATA", Vector2(28, 49), 14, ink)
+	label(note, money_text(game.cash), Vector2(28, 69), 32, ink).name = "ShopCash"
+	label(note, "Capacidad", Vector2(28, 115), 18, ink)
+	label(note, str(game.coin_inventory.shared_capacity), Vector2(224, 113), 22, ink).name = "ShopCapacity"
+	label(note, "Nivel %d · Rival %d / %d superado" % [game.level_index + 1, game.rival + 1, game.level_encounters.size()], Vector2(28, 177), 15, ink, 254)
+	var next_stop := "Nivel %d" % (game.level_index + 2) if game.rival + 1 >= game.level_encounters.size() else ("Jefe" if game.is_boss(game.rival + 1) else "Rival %d / %d" % [game.rival + 2, game.level_encounters.size()])
+	label(note, "Siguiente: " + next_stop, Vector2(28, 200), 15, ink, 254)
+	label(note, "%s · DATOS PROVISIONALES" % game.environment_id().replace("_", " ").to_upper(), Vector2(28, 227), 11, Color(ink, 0.7), 254)
+	label(note, "TUS DADOS", Vector2(28, 304), 17, ink)
+	for id in range(5):
+		var die := Die.new()
+		# Antes de la primera tirada el dado no tiene valor: la libreta muestra una de sus caras.
+		var shown: Dictionary = game.dice[id].duplicate(true)
+		if int(shown.value) == 0: shown.value = shown.faces[id % shown.faces.size()]
+		die.configure_appearance(shown, game.boss_context())
+		animate_element(die, id)
+		die.die_index = id
+		die.position = Vector2(46 + id * 54, 362)
+		die.scale = Vector2(0.78, 0.78)
+		die.pressed.connect(func(): inspect_die(id))
+		die.inspect_requested.connect(inspect_die)
+		for state in ["normal", "hover", "pressed"]: die.add_theme_stylebox_override(state, StyleBoxEmpty.new())
+		ui.add_child(die)
+	var status := label(note, purchase_error if not purchase_error.is_empty() else game.message, Vector2(28, 560), 14, ink, 254)
+	status.name = "ShopStatus"
+
+## Tus monedas en la barra de abajo, en el mismo lugar que durante la partida; se arrastran al paño para venderlas.
+func render_shop_inventory() -> void:
+	label(ui, "%d/%d" % [game.passives.size(), game.coin_inventory.shared_capacity], Vector2(42, 750), 14, gold)
+	var step := minf(90.0, 740.0 / maxf(game.coin_inventory.shared_capacity, 1))
+	for index in range(game.passives.size()):
+		var coin: String = game.passives[index]
+		var inspect := owned_shop_coin(coin, game.coin_inventory.equipped[index].instance_id, Rect2(175 + index * step, 748, 62, 60))
+		add_coin(inspect, coin, Rect2(2, 1, 58, 58))
+	label(ui, "UN USO", Vector2(922, 751), 13, gold)
+	for slot in range(game.coin_inventory.consumables.size()):
+		var stored: Dictionary = game.coin_inventory.consumables[slot]
+		var x := 999.0 + slot * 74.0
+		var inspect := owned_shop_coin(stored.coin_id, stored.instance_id, Rect2(x, 748, 62, 60))
+		add_coin(inspect, stored.coin_id, Rect2(2, 1, 58, 58))
+		if Coins.can_use(stored.coin_id, "shop"):
+			var slot_index := slot
+			var use_button := button(ui, "Usar", Rect2(x + 64, 760, 62, 34), func(): act(func(): game.use_consumable(slot_index)), game.phase != "shop")
+			use_button.name = "UseShopCoin_" + str(slot)
+			use_button.add_theme_font_size_override("font_size", 14)
+	button(ui, "Ayuda", Rect2(1273, 748, 120, 60), show_help)
 
 func owned_shop_coin(coin: String, instance: int, rect: Rect2) -> Button:
 	var node := preload("res://scripts/shop_coin_drag.gd").new()

@@ -1,12 +1,6 @@
 extends Control
-const ART = preload("res://assets/art/club-table-v2.png")
-const SHOP_ART = preload("res://assets/art/shop-table-v1.png")
-const SELLER_ART = preload("res://assets/art/pixel-v3/tienda-v3.png")
 const EXTERIORS = preload("res://assets/art/pixel-v3/exteriores-v3.png")
-const TABLE_PROPS = preload("res://assets/art/environment-v2/mesa-proporciones-v3.png")
 const CLEAN_TABLE = preload("res://assets/art/environment-v2/mesa-libreta-frontal-v1.png")
-const CUP_TABLE_ART = preload("res://assets/art/environment-v2/vaso-cuero-negro-mesa-v2.png")
-const CUP_SHOP_ART = preload("res://assets/art/environment-v2/vaso-cuero-negro-tienda-v1.png")
 const TABLE_V3 = preload("res://assets/art/pixel-v3/mesa-v3.png")
 const SALON_V3 = preload("res://assets/art/pixel-v3/salon-v3.png")
 const MULLIONS_V3 = preload("res://assets/art/pixel-v3/parteluces-v3.png")
@@ -38,7 +32,6 @@ var last_shop_mode := false
 var stickers: Dictionary = {}
 const THERMOS_ORIGIN = Vector2(1203, 168)
 const THERMOS_RECT = Rect2(1203, 170, 144, 225)
-const SHOP_THERMOS_RECT = Rect2(65, 525, 145, 330)
 const CUP_RECT = Rect2(1260, 400, 145, 180)
 ## Zona clickeable de la mano del fondo (con el vaivén) y del triángulo de Dios.
 const HAND_RECT = Rect2(624, 31, 122, 112)
@@ -92,9 +85,9 @@ func configure(profile: Dictionary, preferences: Dictionary) -> void:
 	queue_redraw()
 	if is_instance_valid(pour_layer): pour_layer.queue_redraw()
 
-## Activa, cambia o apaga el fondo animado. Sin movimiento (o en la tienda, o en «cierre») se ve el cuadro fijo de siempre.
+## Activa, cambia o apaga el fondo animado. Sin movimiento (o en «cierre») se ve el cuadro fijo de siempre.
 func _configure_window_fx(profile: Dictionary) -> void:
-	if not (motion and not shop_mode and WindowFx.is_animated(environment_id)):
+	if not (motion and WindowFx.is_animated(environment_id)):
 		fx_key = ""
 		if window_fx != null: window_fx.render_target_update_mode = SubViewport.UPDATE_DISABLED
 		return
@@ -137,38 +130,16 @@ func _ready() -> void:
 
 func _draw_pour_layer() -> void:
 	var f := props.frame("thermos")
-	if f < 0 or shop_mode: return
+	if f < 0: return
 	props.draw_pour_effects(pour_layer, f)
 	var pose := BarProps.thermos_pose(f)
 	if pose.over: BarProps.draw_thermos(pour_layer, pose.center, pose.rotation, stickers)
 
-func draw_recovered_figure(outline: Array, offset: Vector2, texture: Texture2D = ART) -> void:
-	var points := PackedVector2Array()
-	var uv := PackedVector2Array()
-	var texture_size := Vector2(texture.get_width(), texture.get_height())
-	for source_point in outline:
-		uv.append(source_point / texture_size)
-		points.append(source_point * Vector2(1440, 900) / texture_size + offset)
-	draw_polygon(points, PackedColorArray([Color.WHITE]), uv, texture)
-
 func _draw() -> void:
-	if shop_mode:
-		# The salesman and his case replace the entire playing table and props.
-		draw_texture_rect(SELLER_ART, Rect2(0, 0, 1440, 900), false)
-		props.draw_flag(self, "shop_flag")
-		return
-	draw_texture_rect(ART if shop_mode else CLEAN_TABLE, Rect2(0, 0, 1440, 900), false)
-	if shop_mode:
-		# Reuse the original club/hand above the table; only the shop table changes.
-		var source_size := Vector2(SHOP_ART.get_width(), SHOP_ART.get_height())
-		draw_texture_rect_region(SHOP_ART, Rect2(0, 278, 1440, 622), Rect2(Vector2(0, 278) * source_size / Vector2(1440, 900), Vector2(1440, 622) * source_size / Vector2(1440, 900)))
-	# Consume only the edited cup areas; preserve the existing room and props.
-	var cup_art: Texture2D = CUP_SHOP_ART if shop_mode else CUP_TABLE_ART
-	var cup_patch := Rect2(50, 640, 280, 235) if shop_mode else Rect2(1100, 330, 320, 260)
-	var cup_scale := Vector2(cup_art.get_size()) / Vector2(1440, 900)
-	if shop_mode: draw_texture_rect_region(cup_art, cup_patch, Rect2(cup_patch.position * cup_scale, cup_patch.size * cup_scale))
+	# La tienda (08/11/2026) se arma sobre esta misma mesa: sin vendedor ni maletín, con la sala y sus animaciones.
+	draw_texture_rect(CLEAN_TABLE, Rect2(0, 0, 1440, 900), false)
 	# Pixel-v3 club room (walls, lamps, pictures, chairs); windows are drawn over it.
-	else: draw_texture_rect(SALON_V3, Rect2(0, 0, 1440, 300), false)
+	draw_texture_rect(SALON_V3, Rect2(0, 0, 1440, 300), false)
 	var panels := {"dia": 0, "tarde": 1, "noche": 2, "espacio": 3, "agujero_negro": 4, "cielo": 5}
 	var cell := Vector2(EXTERIORS.get_size()) / Vector2(2, 3)
 	var index: int = panels.get(environment_id, 0)
@@ -187,22 +158,12 @@ func _draw() -> void:
 			if fx_key != "": draw_texture_rect_region(window_fx.get_texture(), window, Rect2((window.position - panorama.position) / 2.0, window.size / 2.0))
 			else: draw_texture_rect_region(EXTERIORS, window, source)
 	# Wooden mullions over the glass (not over the boarded-up "cierre" windows); hand and cloud stay in front.
-	if not shop_mode and environment_id != "cierre": draw_texture_rect(MULLIONS_V3, Rect2(0, 0, 1440, 300), false)
-	if not shop_mode:
-		props.draw_flag(self)
-		props.draw_soda(self, "soda_left")
-		props.draw_soda(self, "soda_right")
+	if environment_id != "cierre": draw_texture_rect(MULLIONS_V3, Rect2(0, 0, 1440, 300), false)
+	props.draw_flag(self)
+	props.draw_soda(self, "soda_left")
+	props.draw_soda(self, "soda_right")
 	# Pixel-v3 table (wood, felt, front, floor) over the old plate; the room above it stays.
-	if not shop_mode: draw_texture_rect(TABLE_V3, Rect2(0, 272, 1440, 628), false)
-	# Only replace the prop strip: all dice areas, the hand and the original
-	# room remain sourced from the existing plates. Keep the shop cup below it.
-	var props_points := PackedVector2Array([Vector2(0, 137), Vector2(360, 137), Vector2(360, 520), Vector2(322, 715), Vector2(0, 715)]) if shop_mode else PackedVector2Array([Vector2(0, 137), Vector2(360, 137), Vector2(360, 680), Vector2(0, 680)])
-	var props_uv := PackedVector2Array()
-	for point in props_points: props_uv.append(point / Vector2(1440, 900))
-	if shop_mode: draw_polygon(props_points, PackedColorArray([Color.WHITE]), props_uv, TABLE_PROPS)
-	if shop_mode:
-		# Restore the shop's leather cup without its former oversized notebook.
-		draw_recovered_figure([Vector2(184, 719), Vector2(218, 726), Vector2(254, 734), Vector2(286, 748), Vector2(310, 767), Vector2(331, 792), Vector2(347, 825), Vector2(349, 868), Vector2(337, 903), Vector2(312, 932), Vector2(278, 950), Vector2(240, 950), Vector2(205, 940), Vector2(169, 928), Vector2(130, 915), Vector2(103, 901), Vector2(83, 875), Vector2(79, 844), Vector2(84, 809), Vector2(95, 779), Vector2(112, 754), Vector2(133, 738), Vector2(154, 726)], Vector2.ZERO, CUP_SHOP_ART)
+	draw_texture_rect(TABLE_V3, Rect2(0, 272, 1440, 628), false)
 	# Thermos with its stickers, then the mate and the dice cup in front of it.
 	# Mientras ceba el mate se dibuja aparte: debajo del mate al subir y bajar, y por delante mientras cruza y vierte.
 	var pour_frame := props.frame("thermos")
@@ -221,6 +182,8 @@ func _draw() -> void:
 		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 	draw_texture_rect(MATE_V3, Rect2(1088, 310, 136, 236), false)
 	if not cup_hidden: draw_texture_rect(CUP_V3, Rect2(1280, 426, 144, 188), false)
+	# En la tienda no hay rival: ni nube ni mano en la ventana.
+	if shop_mode: return
 	# God remains a provisional silhouette; ordinary hands retain existing art.
 	var center := Vector2(667, 105 + (sin(elapsed * 1.1) * 3 if motion else 0))
 	if actor == "god" and guardian >= 0:
