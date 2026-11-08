@@ -68,3 +68,7 @@ El cuerpo del dado ahora usa el sprite transparente `assets/art/ivory-die-v3.png
 ## Metales nuevos — TX3, 07/11/2026
 
 `assets/art/pixel-v3/metales-mascaras-v3.png` (124×62) lo genera por código `tools/art/make_metales.py`, sin imagen generativa: ruido con semillas fijas sobre la silueta de la cara protegida `dice-faces-v1/negro-v1.png` (solo lectura). Hierro oxidado B (goteos y costra), cobre oxidado A (pátina en manchas) y oro A (pulido) según las elecciones del autor sobre los bocetos del 5/11/2026 (D16). Los colores de las rampas viven en `scripts/die_body.gdshader`. Bocetos originales: `tools/art/bocetos-texturas/make_bocetos_dados.py`.
+
+## Monedas en ficha esmaltada — TX9, 07/11/2026
+
+`assets/art/pixel-v3/coins-v4.png` (352×224, 11 columnas de celdas de 32×32) lo genera por código `py -3.13 tools/art/make_coins_v4.py`, sin imagen generativa. Contiene las 75 monedas de `Coins.DATA` en su orden y los dos paquetes (copiados sin cambios de `coins-nuevas-v3.png`). El aro lo da la rareza y el esmalte la familia, leídos de `coins.gd`. Los emblemas son los de los bocetos aprobados el 07/11/2026 (`tools/art/bocetos-arte/`); los de las 24 monedas que ya tenían dibujo son los de `make_coins.gd` y `make_coins_nuevas.gd` pasados al estilo nuevo, y Acumulada (C49) y Veterana (C48) siguen los diseños del autor. Los dados que aparecen son el dado modelo del autor (contorno, luz arriba a la izquierda, sombra abajo a la derecha, puntos de 2×2). `coins-v3.png` y `coins-nuevas-v3.png` ya no se cargan y quedan hasta que el autor apruebe TX9 en el juego.

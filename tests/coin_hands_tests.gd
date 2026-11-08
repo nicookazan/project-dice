@@ -47,7 +47,7 @@ static func run(check: Callable) -> void:
 static func _test_catalog(check: Callable) -> void:
 	var data := Coins.definition("extra_hand")
 	check.call(data.code == "C52" and data.rarity == "legendary" and data.type == "passive" and data.price == 14 and data.resale == 7, "C52 es una pasiva Legendaria de $14 / $7")
-	check.call("extra_hand" in Coins.PASSIVES and "extra_hand" in CoinArt.NEW_IDS and Coins.SHORT.has("extra_hand"), "C52 está en el catálogo, tiene arte y abreviatura")
+	check.call("extra_hand" in Coins.PASSIVES and "extra_hand" in CoinArt.ALL_IDS and Coins.SHORT.has("extra_hand"), "C52 está en el catálogo, tiene arte y abreviatura")
 	check.call(Coins.catalog().size() >= 65 and Coins.PASSIVES.size() == 57, "el catálogo incluye Mano extra: 57 pasivas")
 
 static func _test_limit_and_loss(check: Callable) -> void:

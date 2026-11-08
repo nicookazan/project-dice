@@ -60,7 +60,7 @@ static func _test_catalog(check: Callable) -> void:
 	for row in TABLE:
 		var data := Coins.definition(row[0])
 		check.call(data.code == row[1] and data.rarity == row[2] and data.type == "consumable" and data.price == row[3] and data.resale == row[4] and data.use_contexts == [row[5]], "MON5: %s es %s, $%d / $%d y se usa en %s" % [row[0], row[2], row[3], row[4], row[5]])
-		check.call(row[0] in Coins.CONSUMABLES and row[0] in CoinArt.NEW_IDS and Coins.SHORT.has(row[0]), "MON5: %s está en el catálogo, tiene arte y abreviatura" % row[0])
+		check.call(row[0] in Coins.CONSUMABLES and row[0] in CoinArt.ALL_IDS and Coins.SHORT.has(row[0]), "MON5: %s está en el catálogo, tiene arte y abreviatura" % row[0])
 	check.call(Coins.catalog().size() >= 72 and Coins.CONSUMABLES.size() >= 15, "MON5: el catálogo incluye las siete monedas nuevas")
 
 static func _test_mult_plus2(check: Callable) -> void:

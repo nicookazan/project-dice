@@ -42,7 +42,7 @@ Marcas: **Final** (aprobado por el autor, no se toca), **Placeholder** (provisor
 
 | Archivo(s) | Uso | Propuesta |
 | --- | --- | --- |
-| `pixel-v3/coins-v3.png` | Monedas de la primera tanda | Final, a confirmar |
+| `pixel-v3/coins-v3.png` | Monedas de la primera tanda (ya no se carga: TX9 la reemplaza con `coins-v4.png`) | Sobra cuando el autor apruebe TX9 |
 | `pixel-v3/coins-nuevas-v3.png` | Monedas nuevas del paquete; las 51 sin arte propio usan la moneda en blanco con abreviatura | Placeholder (pase de arte pendiente) |
 | `coins-v2.png` | Atlas anterior; sin cita | Referencia |
 

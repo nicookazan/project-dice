@@ -52,7 +52,7 @@ static func _test_catalog(check: Callable) -> void:
 	for row in [["reroll_all", "U09"], ["flip_die", "U12"], ["boss_shield", "U14"]]:
 		var data := Coins.definition(row[0])
 		check.call(data.code == row[1] and data.rarity == "rare" and data.type == "consumable" and data.price == 3 and data.resale == 1 and data.use_contexts == ["play"], "MON6: %s es una moneda de un uso Rara de $3 / $1 que se usa en la mesa" % row[0])
-		check.call(row[0] in Coins.CONSUMABLES and row[0] in CoinArt.NEW_IDS and Coins.SHORT.has(row[0]), "MON6: %s está en el catálogo, tiene arte y abreviatura" % row[0])
+		check.call(row[0] in Coins.CONSUMABLES and row[0] in CoinArt.ALL_IDS and Coins.SHORT.has(row[0]), "MON6: %s está en el catálogo, tiene arte y abreviatura" % row[0])
 	check.call(Coins.catalog().size() == 75 and Coins.CONSUMABLES.size() == 18, "MON6: el catálogo pasa a 75 monedas (18 de un uso)")
 	check.call(Coins.once_per_run("boss_shield") and not Coins.once_per_run("reroll_all") and Coins.targeted("flip_die") and not Coins.targeted("boss_shield"), "MON6: solo el Escudo es de una vez por partida y solo Voltear dado pide un dado")
 
