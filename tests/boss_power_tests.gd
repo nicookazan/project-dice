@@ -145,7 +145,7 @@ static func bare(id: String, at_boss: bool, values: Array, groups: Array):
 	return game
 
 static func _dice(check: Callable) -> void:
-	# 1C Rey de las Palomas: el dado asustado no se puede conservar en las dos primeras tiradas.
+	# 1C Rey de las Palomas: la paloma ladrona se lleva un dado al vaso en la primera tirada.
 	var scared = BossPanel.forced_boss("l1_palomas", true)
 	var marked: int = scared.boss_state.die
 	check.call(marked >= 0 and marked <= 4 and scared.boss_marks() == {marked: "scared"}, "Boss power Palomas: one die is marked each hand and shown")
@@ -153,12 +153,11 @@ static func _dice(check: Callable) -> void:
 	scared.start_hand()
 	check.call(scared.boss_state.die == marked and scared.rng.state == rng_before, "Boss power Palomas: the draw is reproducible and never touches the main RNG")
 	scared.roll()
-	check.call(scared.dice[marked].zone == "cup" and not scared.move_die(marked, "reserve"), "Boss power Palomas: after roll 1 the marked die cannot be kept")
+	check.call(scared.dice[marked].zone == "cup" and not scared.move_die(marked, "reserve"), "Boss power Palomas: after roll 1 the thief pigeon took the marked die to the cup")
 	check.call(SaveTests.roundtrip(scared, check).boss_state == scared.boss_state, "Boss power Palomas: saved mid-hand without redrawing")
 	scared.roll()
-	check.call(scared.rolls_made == 2 and scared.dice[marked].zone == "cup", "Boss power Palomas: also after roll 2")
-	scared.roll()
-	check.call(scared.rolls_made == 3 and scared.dice[marked].zone == "reserve" and scared.move_die(marked, "reserve"), "Boss power Palomas: free to keep after the second roll")
+	check.call(scared.rolls_made == 2 and scared.dice[marked].zone == "reserve", "Boss power Palomas: only the first roll of each hand")
+	check.call(scared.dice[marked].zone == "reserve" and scared.move_die(marked, "reserve"), "Boss power Palomas: free to keep after the first roll")
 	var other = BossPanel.forced_boss("l1_palomas", false)
 	other.roll()
 	check.call(other.dice.all(func(die): return die.zone == "reserve"), "Boss power Palomas: a common rival has no restriction")

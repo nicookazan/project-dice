@@ -18,6 +18,8 @@ const StickerBook = preload("res://scripts/sticker_book.gd")
 const Backdrop = preload("res://scripts/backdrop.gd")
 const CoinArt = preload("res://scripts/coin_art.gd")
 const ShopArt = preload("res://scripts/shop_art.gd")
+const ShopFixtures = preload("res://scripts/shop_fixtures.gd")
+const ThiefPigeon = preload("res://scripts/thief_pigeon.gd")
 const UiSkin = preload("res://scripts/ui_skin.gd")
 const ItemTooltip = preload("res://scripts/item_tooltip.gd")
 const CoinPackPanel = preload("res://scripts/coin_pack_panel.gd")
@@ -96,6 +98,11 @@ var dragged_group: Array = []
 var throwing := false
 var flying_dice: Array = []
 var table_dice: Dictionary = {}
+## Paloma ladrona (jefe 1C): dado que se muestra en la mesa hasta que la paloma se lo lleva. `thief_next` lo deja `act`
+## para el próximo render; `thief_pending` es el que está en pantalla; `thief_node` es la paloma en vuelo.
+var thief_next := -1
+var thief_pending := -1
+var thief_node: Control
 var throw_blocker: Control
 
 func _ready() -> void:
@@ -432,10 +439,45 @@ func act(action: Callable) -> void:
 	purchase_error = ""
 	action.call()
 	selected.clear()
+	thief_next = thief_candidate(previous_event)
 	render()
 	if game.event_sequence > previous_event and not game.events.is_empty():
 		var event: Dictionary = game.events.back()
 		if event.type in [Game.INITIAL_ROLL, Game.REROLL]: begin_throw(event.payload.rolled_ids)
+
+## Dado que la paloma ladrona se lleva en esta tirada (-1 si no corresponde): primera tirada de la mano contra el jefe 1C, con movimiento.
+func thief_candidate(previous_event: int) -> int:
+	if game.event_sequence <= previous_event or game.events.is_empty() or game.events.back().type != Game.INITIAL_ROLL: return -1
+	if preferences.speed == 0 or preferences.reduced_motion or not game.boss_power_on() or not BossRules.is_power(game.boss_rule, "scared_die"): return -1
+	var marked := int(game.boss_state.get("die", -1))
+	return marked if marked >= 0 and marked < game.dice.size() and game.dice[marked].zone == "cup" else -1
+
+## La paloma sale de la mano del jefe, agarra el dado que quedó en la mesa y se lo lleva al vaso.
+func start_thief() -> void:
+	var ghost: Control = table_dice.get(thief_pending)
+	if not is_instance_valid(ghost):
+		thief_pending = -1
+		return
+	ghost.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	ghost.disabled = true
+	thief_node = ThiefPigeon.new()
+	thief_node.die = ghost
+	thief_node.start = Vector2(685, 120)
+	thief_node.grab = ghost.get_global_rect().get_center()
+	thief_node.drop = Backdrop.CUP_RECT.get_center() + Vector2(0, -30)
+	thief_node.speed = 1.6 if preferences.speed == 2 else 1.0
+	ui.add_child(thief_node)
+
+## Termina la escena de la paloma: el dado ya no está en la mesa.
+func end_thief() -> void:
+	if is_instance_valid(thief_node): thief_node.queue_free()
+	thief_node = null
+	var ghost: Control = table_dice.get(thief_pending)
+	if is_instance_valid(ghost):
+		flying_dice = flying_dice.filter(func(flight): return flight.node != ghost)
+		ghost.queue_free()
+		table_dice.erase(thief_pending)
+	thief_pending = -1
 
 func begin_throw(ids: Array) -> void:
 	if preferences.speed == 0 or preferences.reduced_motion: return
@@ -483,7 +525,14 @@ func step_throw(delta: float) -> void:
 			die.rotation_degrees = flight.angle + state.spin
 			last_landing = maxi(last_landing, CupThrow.landed_frame(flight.order))
 		# Los dados se pueden usar apenas cae el último; el vaso termina de bajar por su cuenta.
-		if f >= last_landing:
+		if f >= last_landing and thief_pending >= 0:
+			if thief_node == null: start_thief()
+			elif thief_node.done:
+				end_thief()
+				release_dice()
+				feedback_text = "Tirada resuelta · elegí tus grupos"
+				if is_instance_valid(feedback_label): feedback_label.text = feedback_text
+		elif f >= last_landing:
 			release_dice()
 			feedback_text = "Tirada resuelta · elegí tus grupos"
 			if is_instance_valid(feedback_label): feedback_label.text = feedback_text
@@ -517,6 +566,7 @@ func end_cup_animation() -> void:
 
 ## Al redibujar la pantalla: si los dados todavía vuelan se corta todo; si solo falta que el vaso baje, sigue.
 func finish_throw() -> void:
+	if thief_pending >= 0 or is_instance_valid(thief_node): end_thief()
 	if throwing:
 		release_dice()
 		end_cup_animation()
@@ -1358,8 +1408,10 @@ func render_table() -> void:
 		ui.add_child(plays_panel)
 		plays_panel.setup(plays, game.groups.size(), BossRules.forecast_hidden(game.boss_context()), number, group_area if preferences.drag_groups else null)
 	var reserve := make_zone(Rect2(712, 324, 350, 330), "reserve")
+	thief_pending = thief_next
+	thief_next = -1
 	for index in range(game.dice.size()):
-		if game.dice[index].zone == "reserve" and not game.is_grouped(index) and not (preferences.drag_groups and index in selected):
+		if (game.dice[index].zone == "reserve" or index == thief_pending) and not game.is_grouped(index) and not (preferences.drag_groups and index in selected):
 			var pose := loose_die_pose(index)
 			add_die(reserve, index, pose.position, false, pose.angle)
 	var cup := make_zone(Rect2(1082, 324, 358, 330), "cup")
@@ -1552,11 +1604,7 @@ func shop_icon(parent: Node, offer: Dictionary, rect: Rect2) -> void:
 		add_coin(parent, offer.effect.coin_id, rect)
 		return
 	if offer.kind == "coin_pack":
-		var ring := panel(parent, Rect2(rect.position + Vector2(rect.size.x * 0.12, 0), rect.size - Vector2(rect.size.x * 0.24, 14)), Color.TRANSPARENT, gold)
-		ring.name = "PackRing"
-		ring.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		add_coin(parent, "pack_small" if offer.effect.size == "small" else "pack_large", Rect2(rect.position + Vector2(rect.size.x * 0.12, 2), rect.size - Vector2(rect.size.x * 0.24, 18)))
-		shop_caption(parent, CoinPackPanel.closed_text(offer.effect), Rect2(rect.position + Vector2(-6, rect.size.y - 18), Vector2(rect.size.x + 12, 18)), 11, gold)
 		return
 	if offer.kind in ["face", "shell", "material", "element"]:
 		var face := Die.new()
@@ -1586,6 +1634,14 @@ func shop_icon(parent: Node, offer: Dictionary, rect: Rect2) -> void:
 	if offer.kind == "pack":
 		shop_caption(parent, "?" if offer.effect.pack_kind == "choose_one" else "2", Rect2(rect.position + Vector2(0, 5), rect.size - Vector2(0, 5)), 29)
 
+## Gancho con hilos arriba y etiqueta de cartón abajo, detrás de lo que cuelga de la tarjeta (se agrega primero).
+func shop_hook(card: Control, sold: bool) -> void:
+	var fixture := ShopFixtures.new()
+	fixture.name = "Hook"
+	fixture.size = card.size
+	fixture.sold = sold
+	card.add_child(fixture)
+
 func shop_card(parent: Node, section: String, index: int, rect: Rect2) -> void:
 	var stock: Dictionary = game.shop_state.get(section, {"slots": [], "configured": false})
 	var card := HoverPanel.new()
@@ -1597,8 +1653,15 @@ func shop_card(parent: Node, section: String, index: int, rect: Rect2) -> void:
 	card.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
 	var offer: Dictionary = stock.slots[index] if index < stock.slots.size() else {}
 	if offer.is_empty():
-		shop_caption(card, "VENDIDO" if stock.configured else "Sin ofertas", Rect2(0, 53, rect.size.x, 34), 17, Color("c6ac88"))
+		if stock.configured:
+			# El gancho queda vacío y la etiqueta dice VENDIDO.
+			shop_hook(card, true)
+			var tag_caption := shop_caption(card, "VENDIDO", Rect2(rect.size.x / 2.0 - 32, 112, 64, 24), 13, ShopFixtures.TAG_INK_SOLD)
+			tag_caption.name = "SoldCaption"
+		else:
+			shop_caption(card, "Sin ofertas", Rect2(0, 53, rect.size.x, 34), 17, Color("c6ac88"))
 		return
+	shop_hook(card, false)
 	var text: Array = shop_offer_text(offer)
 	var compact := section == "coins"
 	shop_icon(card, offer, Rect2((rect.size.x - 100) / 2, 10, 100, 91))
@@ -1640,8 +1703,10 @@ func shop_card(parent: Node, section: String, index: int, rect: Rect2) -> void:
 		if not purchase.disabled: purchase.pressed.emit())
 	purchase.add_theme_font_size_override("font_size", 20 if compact else 22)
 	for state in ["normal", "hover", "pressed", "disabled"]: purchase.add_theme_stylebox_override(state, StyleBoxEmpty.new())
-	purchase.add_theme_color_override("font_color", gold)
-	purchase.add_theme_color_override("font_hover_color", Color("fff0c7"))
+	# El precio va escrito sobre la etiqueta de cartón que cuelga del gancho.
+	purchase.add_theme_color_override("font_color", ShopFixtures.TAG_INK)
+	purchase.add_theme_color_override("font_hover_color", ShopFixtures.TAG_INK_SOLD)
+	purchase.add_theme_color_override("font_disabled_color", Color("8a7a60"))
 
 func render_shop() -> void:
 	var shop_theme := theme.duplicate()
@@ -1652,27 +1717,25 @@ func render_shop() -> void:
 	var inventory := panel(ui, Rect2(770, 777, 635, 80), Color.TRANSPARENT)
 	inventory.name = "ShopInventory"
 	inventory.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
-	shop_caption(ui, "TUS MONEDAS %d/%d" % [game.passives.size(), game.coin_inventory.shared_capacity], Rect2(770, 777, 410, 18), 13)
+	render_inventory_trays()
 	for index in range(game.coin_inventory.shared_capacity):
 		var x := 785 + index * minf(78.0, 400.0 / maxf(game.coin_inventory.shared_capacity, 1))
 		if index < game.passives.size():
 			var coin: String = game.passives[index]
-			var inspect := owned_shop_coin(coin, game.coin_inventory.equipped[index].instance_id, Rect2(x, 798, 62, 38))
-			add_coin(inspect, coin, Rect2(11, 0, 40, 38))
-	shop_caption(ui, "UN USO", Rect2(1190, 777, 205, 18), 13)
+			var inspect := owned_shop_coin(coin, game.coin_inventory.equipped[index].instance_id, Rect2(x, 811, 62, 52))
+			add_coin(inspect, coin, Rect2(5, 0, 52, 52))
 	shop_frame(Rect2(518, 30, 193, 80))
 	shop_caption(ui, "PLATA", Rect2(530, 38, 169, 22), 18)
 	shop_caption(ui, money_text(game.cash), Rect2(530, 60, 169, 42), 34, gold)
 	shop_frame(Rect2(730, 30, 200, 80))
 	shop_caption(ui, "CAPACIDAD", Rect2(742, 38, 176, 22), 18)
 	shop_caption(ui, str(game.coin_inventory.shared_capacity), Rect2(742, 60, 176, 42), 34, gold)
-	shop_caption(ui, "TUS DADOS", Rect2(350, 777, 370, 22), 15)
 	for id in range(5):
 		var die := Die.new()
 		die.configure_appearance(game.dice[id], game.boss_context())
 		animate_element(die, id)
 		die.die_index = id
-		die.position = Vector2(361 + id * 72, 805)
+		die.position = Vector2(361 + id * 72, 811)
 		die.scale = Vector2(0.78, 0.78)
 		die.pressed.connect(func(): inspect_die(id))
 		die.inspect_requested.connect(inspect_die)
@@ -1689,11 +1752,11 @@ func render_shop() -> void:
 	for slot in range(game.coin_inventory.consumables.size()):
 		var stored: Dictionary = game.coin_inventory.consumables[slot]
 		var offset: float = 1260.0 - (game.coin_inventory.consumables.size() - 1) * 38.0 + slot * 76.0
-		var inspect := owned_shop_coin(stored.coin_id, stored.instance_id, Rect2(offset, 798, 62, 38))
-		add_coin(inspect, stored.coin_id, Rect2(11, 0, 40, 38))
+		var inspect := owned_shop_coin(stored.coin_id, stored.instance_id, Rect2(offset, 813, 62, 46))
+		add_coin(inspect, stored.coin_id, Rect2(8, 0, 46, 46))
 		if Coins.can_use(stored.coin_id, "shop"):
 			var slot_index := slot
-			var use_button := button(ui, "Usar", Rect2(offset, 838, 62, 20), func(): act(func(): game.use_consumable(slot_index)), game.phase != "shop")
+			var use_button := button(ui, "Usar", Rect2(offset, 880, 62, 18), func(): act(func(): game.use_consumable(slot_index)), game.phase != "shop")
 			use_button.name = "UseShopCoin_" + str(slot)
 			use_button.add_theme_font_size_override("font_size", 13)
 	var zones := {"numbers": Rect2(538, 252, 367, 179), "components": Rect2(929, 252, 388, 179), "coins": Rect2(525, 442, 380, 179), "stickers": Rect2(929, 442, 401, 179)}
@@ -1704,16 +1767,17 @@ func render_shop() -> void:
 		var zone := panel(ui, zones[section], Color.TRANSPARENT)
 		zone.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
 		zone.name = "Shop_" + section
-		var title_width: float = ui.theme.default_font.get_string_size(titles[section], HORIZONTAL_ALIGNMENT_LEFT, -1, 18).x
-		var header_x: float = (zones[section].size.x - title_width - 40) / 2
-		var title := button(zone, titles[section], Rect2(header_x, 0, title_width, 26), func(): shop_section = section_id)
+		var title_width := 0.0   # sin texto: el botón de renovar queda solo y centrado
+		var header_x: float = (zones[section].size.x - title_width - 32) / 2
+		var title := button(zone, "", Rect2(header_x, 0, title_width, 26), func(): shop_section = section_id)
+		title.name = "Title"
 		for state in ["normal", "hover", "pressed"]: title.add_theme_stylebox_override(state, StyleBoxEmpty.new())
 		title.add_theme_font_size_override("font_size", 18)
 		var count := 4 if section == "coins" else 2
 		var width: float = (zones[section].size.x - 24) / count
 		for index in range(count): shop_card(zone, section, index, Rect2(12 + index * width, 28, width, 145))
 		var stock: Dictionary = game.shop_state.get(section, {"slots": [], "configured": false})
-		var renew := button(zone, "", Rect2(header_x + title_width + 8, -2, 32, 30), func(): act(func(): game.refresh_shop(section_id)), game.phase != "shop" or not stock.configured or not game.can_afford(game.renewal_price(section_id)))
+		var renew := button(zone, "", Rect2(header_x, -2, 32, 30), func(): act(func(): game.refresh_shop(section_id)), game.phase != "shop" or not stock.configured or not game.can_afford(game.renewal_price(section_id)))
 		renew.name = "Refresh"
 		renew.tooltip_text = "Renovar %s · $%d\nCambia solo las ofertas de esta zona.\nEl costo aumenta solo para esta zona durante esta visita." % [renew_names[section], game.renewal_price(section_id)]
 		for state in ["normal", "hover", "pressed", "disabled"]: renew.add_theme_stylebox_override(state, StyleBoxEmpty.new())
@@ -1727,7 +1791,6 @@ func render_shop() -> void:
 	next_button.add_theme_font_size_override("font_size", 18)
 	var game_menu_button := button(ui, "Menú", Rect2(1025, 126, 380, 36), show_game_menu)
 	game_menu_button.add_theme_font_size_override("font_size", 16)
-	shop_caption(ui, "EL MALETÍN · TODAS LAS OFERTAS A LA VISTA", Rect2(410, 750, 980, 31), 15)
 	shop_caption(ui, "NIVEL %d · %s · DATOS PROVISIONALES" % [game.level_index + 1, game.environment_id().replace("_", " ").to_upper()], Rect2(30, 94, 400, 22), 11)
 	coin_sale_overlay = preload("res://scripts/coin_sale_zone.gd").new()
 	coin_sale_overlay.name = "CoinSaleOverlay"
@@ -1755,6 +1818,28 @@ func render_shop() -> void:
 	coin_sale_caption = shop_caption(coin_sale_overlay, "", Rect2(0, 140, 819, 90), 38)
 	coin_sale_caption.add_theme_font_override("font", ItemTooltip.pixel_font())
 	coin_sale_overlay.hide()
+
+## Bandejas de madera con vivo dorado donde se apoyan tus dados (paño verde) y tus monedas (terciopelo bordó); la de un uso
+## lleva un hueco con aro dorado. Se adaptan a la capacidad de monedas (coordenadas lógicas de 2×2 px).
+func render_inventory_trays() -> void:
+	var capacity: int = game.coin_inventory.shared_capacity
+	var step := minf(78.0, 400.0 / maxf(capacity, 1))
+	var first := 785.0 + 31.0
+	var last := 785.0 + (capacity - 1) * step + 31.0
+	var singles := maxi(game.coin_inventory.consumables.size(), 1)
+	var first_use := 1260.0 - (singles - 1) * 38.0 + 31.0
+	var last_use := first_use + (singles - 1) * 76.0
+	var holes: Array = []
+	for k in range(singles): holes.append(Vector2i(int((first_use + k * 76.0) / 2.0), 418))
+	var fixtures := ShopFixtures.new()
+	fixtures.name = "InventoryTrays"
+	fixtures.mode = "trays"
+	fixtures.size = Vector2(1440, 900)
+	fixtures.trays = [
+		{"rect": Rect2i(172, 397, 358, 439), "felt": "green", "holes": []},
+		{"rect": Rect2i(int((first - 50.0) / 2.0), 397, int((last + 50.0) / 2.0), 439), "felt": "bordo", "holes": []},
+		{"rect": Rect2i(int((first_use - 38.0) / 2.0), 397, int((last_use + 38.0) / 2.0), 439), "felt": "bordo", "holes": holes}]
+	ui.add_child(fixtures)
 
 func owned_shop_coin(coin: String, instance: int, rect: Rect2) -> Button:
 	var node := preload("res://scripts/shop_coin_drag.gd").new()
@@ -2031,7 +2116,7 @@ func render_repairs() -> void:
 ## muestran su información. El poder del jefe se lee en la libreta y al pasar el mouse.
 func click_hand() -> void:
 	if BossInfo.is_god(game) and game.is_boss(): inspect_boss_hand()
-	else: background.props.play_hand()
+	else: background.props.play_hand(background.hand_boss)
 
 func render_boss_hand() -> void:
 	var info := BossInfo.panel(game)
@@ -2039,7 +2124,9 @@ func render_boss_hand() -> void:
 	var hand_button := button(ui, "", Backdrop.GOD_RECT if guardian_hand else Backdrop.HAND_RECT, click_hand)
 	hand_button.name = "InspectBoss"
 	hand_button.tooltip_text = "" if info.is_empty() else info.alt
-	if not guardian_hand: BarProps.attach_ring(hand_button, "hand", background.props)
+	if not guardian_hand:
+		if background.hand_boss != "": BarProps.attach_hand_ring(hand_button, background.hand_boss, background.props)
+		else: BarProps.attach_ring(hand_button, "hand", background.props)
 	hand_button.focus_mode = Control.FOCUS_ALL
 	for state in ["normal", "pressed"]: hand_button.add_theme_stylebox_override(state, StyleBoxEmpty.new())
 	# Resalte mínimo al pasar el mouse; el foco de teclado conserva el contorno del tema.

@@ -108,12 +108,12 @@ static func _test_reroll_all_bosses(check: Callable) -> void:
 	var value_before: int = abducted.dice[gone].value
 	_use(abducted, "reroll_all")
 	check.call(abducted.dice[gone].value == value_before and gone in abducted.events.back().payload.kept_ids, "U09 deja afuera al dado abducido")
-	# Dado asustado: después de relanzar vuelve al vaso, como en cualquier tirada.
+	# Paloma ladrona: solo se lleva el dado en la primera tirada; un relanzo total posterior lo deja en la mesa.
 	var scared = _boss("l1_palomas", ["reroll_all"], 10)
 	scared.roll()
 	var shy: int = int(scared.boss_state.die)
 	_use(scared, "reroll_all")
-	check.call(scared.dice[shy].zone == "cup" and scared.events.back().payload.rolled_ids.size() == 5, "U09 con dado asustado: se relanza y vuelve al vaso")
+	check.call(scared.dice[shy].zone == "reserve" and scared.events.back().payload.rolled_ids.size() == 5, "U09 con paloma ladrona: se relanza y ya no se lo lleva")
 
 static func _test_flip_die(check: Callable) -> void:
 	var game = _rolled(["flip_die"])
