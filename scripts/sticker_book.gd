@@ -122,6 +122,7 @@ func make_row(id: String, pos: Vector2) -> Button:
 	panel.add_child(row)
 	var icon := StickerArt.new()
 	icon.sticker_id = id
+	icon.level = maxi(1, levels.get(id, 1))
 	icon.position = Vector2(14, 11)
 	icon.size = Vector2(52, 52)
 	icon.modulate = Color.WHITE if owned else Color(0.35, 0.35, 0.4, 0.8)
@@ -178,8 +179,8 @@ func build_detail() -> void:
 	medallion.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	panel.add_child(medallion)
 	big_sticker = StickerArt.new()
-	big_sticker.size = Vector2(152, 152)
-	big_sticker.position = Vector2(36, 36)
+	big_sticker.size = Vector2(156, 156)  # 3× the 52 px art
+	big_sticker.position = Vector2(34, 34)
 	medallion.add_child(big_sticker)
 	level_label = caption("", Rect2(x0, 322, width, 36), 28, GOLD)
 	upgrades_label = caption("", Rect2(x0, 366, width, 110), 18, CREAM, HORIZONTAL_ALIGNMENT_LEFT)
@@ -207,6 +208,7 @@ func select(id: String) -> void:
 		rows[key].add_theme_stylebox_override("normal", row_style(key == id, owned))
 	var owned_now: bool = levels.get(id, 0) > 0
 	big_sticker.sticker_id = id
+	big_sticker.level = maxi(1, levels.get(id, 1))
 	big_sticker.modulate = Color.WHITE if owned_now else Color(0.35, 0.35, 0.4, 0.8)
 	big_sticker.queue_redraw()
 	level_label.text = "NIVEL %d" % levels[id] if owned_now else "SIN CONSEGUIR"

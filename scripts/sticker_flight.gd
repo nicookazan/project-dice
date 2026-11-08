@@ -69,6 +69,7 @@ func _ready() -> void:
 			thermos.queue_redraw()
 	badge = Art.new()
 	badge.sticker_id = sticker_id
+	badge.level = level_after
 	badge.size = Vector2(START_SIZE, START_SIZE)
 	badge.pivot_offset = badge.size / 2.0
 	badge.visible = false

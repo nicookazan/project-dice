@@ -43,3 +43,6 @@ Ejemplo exclusivo de prueba: trío nivel 2 con +3 puntos y +0,5 al multiplicador
 
 Capturas revisadas: test-results/stickers-categorias.png y sticker-desglose.png, mediante tests/visual_review.gd. Implementación en scripts/stickers.gd, scripts/game.gd, scripts/rules.gd y scripts/main.gd. Desde el paso 12, los paquetes se integran al stock real y al panel provisional de elección con cierre/reapertura; la integración visual completa conserva el 13 y los datos comerciales normales siguen pendientes.
 
+## Arte por nivel (TX8, 07/11/2026)
+
+Hasta el nivel 9 el sticker se dibuja como calcomanía brillante; desde el nivel 10, como medallón dorado (`StickerArt.GOLD_FROM_LEVEL`). Es solo presentación: no cambia puntos, multiplicador ni guardado. La oferta de la tienda muestra el estilo del nivel que tendrá el sticker después de comprarlo.

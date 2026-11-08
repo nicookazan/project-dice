@@ -41,6 +41,7 @@ func _ready() -> void:
 		var badge := Art.new()
 		badge.name = "Sticker_" + items[i]
 		badge.sticker_id = items[i]
+		badge.level = after[items[i]]
 		badge.position = origin
 		badge.size = Vector2(144, 144)
 		add_child(badge)
