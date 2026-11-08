@@ -2,7 +2,7 @@
 
 Ítem 4 (texturas) · 7 de noviembre de 2026.
 
-**Rama:** `feature/monedas-esmalte`. **Depende de:** Ninguna. **Estado actual:** En curso (PR abierto, sin mergear). **Decisiones vinculadas:** D17.
+**Rama:** `feature/monedas-esmalte`. **Depende de:** Ninguna. **Estado actual:** Hecho el 07/11/2026 (PR abierto, sin mergear); falta la aprobación del autor en el juego. **Decisiones vinculadas:** D17.
 
 ## Objetivo
 Que todas las monedas tengan dibujo propio en el mismo estilo: aro por rareza y esmalte por familia.
