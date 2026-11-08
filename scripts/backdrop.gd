@@ -12,6 +12,9 @@ const HAND_V3 = preload("res://assets/art/pixel-v3/mano-v3.png")
 const BOSS_HANDS = preload("res://assets/art/pixel-v3/manos-jefes-v3.png")
 const BossCatalog = preload("res://scripts/boss_catalog.gd")
 const HandClips = preload("res://scripts/boss_hand_clips.gd")
+## Animación al clic de los guardianes (make_guardianes_clic_v4.py): una fila por guardián, 16 cuadros de 124×100.
+const GUARDIAN_CLIC = preload("res://assets/art/pixel-v3/guardianes/guardianes-clic-v4.png")
+const GUARDIAN_SIZE := Vector2(124, 100)
 const GUARDIAN_ART := [preload("res://assets/art/pixel-v3/guardianes/guardian-ojo-v3.png"), preload("res://assets/art/pixel-v3/guardianes/guardian-figura-v3.png"), preload("res://assets/art/pixel-v3/guardianes/guardian-dado-v3.png")]
 const HAND_FRAMES := 8
 const HAND_SIZE := Vector2i(61, 53)
@@ -189,7 +192,10 @@ func _draw() -> void:
 	if actor == "god" and guardian >= 0:
 		# Pixel-v3: 124×100 logical px on 2×2 blocks, centered where the triangle was; the bob moves in 2 px steps.
 		var god_bob := 2.0 * roundf(sin(elapsed * 1.1) * 1.5) if motion else 0.0
-		draw_texture_rect(GUARDIAN_ART[guardian], Rect2(center.x - 124, 5 + god_bob, 248, 200), false)
+		var clic := props.frame("guardian")
+		var at := Rect2(center.x - 124, 5 + god_bob, 248, 200)
+		if clic > 0: draw_texture_rect_region(GUARDIAN_CLIC, at, Rect2(Vector2(clic, guardian) * GUARDIAN_SIZE, GUARDIAN_SIZE))
+		else: draw_texture_rect(GUARDIAN_ART[guardian], at, false)
 		return
 	if actor == "god":
 		draw_colored_polygon(PackedVector2Array([center + Vector2(0, -35), center + Vector2(-53, 29), center + Vector2(53, 29)]), Color("eac16c"))

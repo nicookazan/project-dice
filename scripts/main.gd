@@ -2138,11 +2138,19 @@ func render_repairs() -> void:
 
 
 ## La mano (o el triángulo de Dios) del fondo abre el poder del jefe. Mismo patrón que el termo: botón transparente.
-## Clic en la mano del fondo: juega piedra, papel o tijera (solo un gesto); los guardianes de Dios no juegan y
-## muestran su información. El poder del jefe se lee en la libreta y al pasar el mouse.
+## Clic en la mano del fondo: cada jefe hace su animación. Los guardianes de Dios hacen la suya y al terminar muestran
+## su información (sin movimiento, la muestran enseguida). El poder del jefe se lee en la libreta y al pasar el mouse.
 func click_hand() -> void:
-	if BossInfo.is_god(game) and game.is_boss(): inspect_boss_hand()
-	else: background.props.play_hand(background.hand_boss)
+	if not (BossInfo.is_god(game) and game.is_boss()):
+		background.props.play_hand(background.hand_boss)
+		return
+	if background.props.busy("guardian"): return
+	if background.guardian < 0 or not background.props.play("guardian"):
+		inspect_boss_hand()
+		return
+	var shown = game
+	while is_instance_valid(background) and background.props.busy("guardian"): await get_tree().process_frame
+	if game == shown and not detail.visible and not confirmation.visible: inspect_boss_hand()
 
 func render_boss_hand() -> void:
 	var info := BossInfo.panel(game)

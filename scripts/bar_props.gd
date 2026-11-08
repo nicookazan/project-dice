@@ -33,7 +33,9 @@ const SPECS := {
 	"soda_right": {"frames": 52, "seconds": 0.06},
 	"flag": {"frames": 34, "seconds": 0.07},
 	"shop_flag": {"frames": 34, "seconds": 0.07},
-	"hand": {"frames": 28, "seconds": 0.075}}
+	"hand": {"frames": 28, "seconds": 0.075},
+	## Guardianes de Dios (ojo, figura, dado): la animación propia de cada uno al clic, 1,8 s.
+	"guardian": {"frames": 16, "seconds": 0.11}}
 ## Desplazamiento de cada sifón respecto del primero (el salón repite el motivo a 432 px).
 const SODA_SHIFT := {"soda_left": 0.0, "soda_right": 432.0}
 ## Aros dorados: textura y lugar en pantalla (los calcula tools/art/make_bar_props.py).

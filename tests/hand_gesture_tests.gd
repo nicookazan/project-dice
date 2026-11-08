@@ -71,12 +71,43 @@ static func run(scene, check: Callable) -> void:
 		results[scene.background.props.hand_result] = true
 	scene.background.props.stop_all()
 	check.call(results.size() == 3, "Hand gesture: over many clicks it plays all three")
-	# Guardianes: no juegan, siguen mostrando su información.
+	# Guardianes: hacen su animación y al terminar muestran su información.
 	scene.game = god
 	scene.render()
+	var god_before: Dictionary = scene.game.snapshot()
 	scene.ui.get_node("InspectBoss").pressed.emit()
-	check.call(not scene.background.props.busy("hand") and scene.detail.visible and scene.detail.title == "Dios", "Hand gesture: God's guardians do not play; the click shows their information")
+	check.call(scene.background.guardian >= 0 and scene.background.props.busy("guardian") and not scene.background.props.busy("hand") and not scene.detail.visible, "Hand gesture: clicking God's guardian starts its own animation before its information")
+	scene.ui.get_node("InspectBoss").pressed.emit()
+	check.call(scene.background.props.elapsed.size() == 1 and not scene.detail.visible, "Hand gesture: clicking the guardian again while it plays changes nothing")
+	for f in range(16):
+		scene.background.props.elapsed["guardian"] = (f + 0.5) * BarProps.SPECS.guardian.seconds
+		if f == 0 or f == 15: check.call(scene.background.props.frame("guardian") == f, "Hand gesture: guardian frame %d follows the clock" % f)
+		scene.background.queue_redraw()
+		await scene.get_tree().process_frame
+	scene.background.props.step(10.0)
+	await scene.get_tree().process_frame
+	check.call(not scene.background.props.busy("guardian") and scene.detail.visible and scene.detail.title == "Dios" and scene.game.snapshot() == god_before, "Hand gesture: when the guardian's animation ends its information opens and the game is untouched")
 	scene.detail.hide()
+	scene.preferences.reduced_motion = true
+	scene.render()
+	scene.ui.get_node("InspectBoss").pressed.emit()
+	check.call(not scene.background.props.busy("guardian") and scene.detail.visible and scene.detail.title == "Dios", "Hand gesture: with reduced motion the guardian's information opens right away")
+	scene.detail.hide()
+	scene.preferences.reduced_motion = false
+	var clic_sheet: Texture2D = load("res://assets/art/pixel-v3/guardianes/guardianes-clic-v4.png")
+	var rest_same := true
+	for g in range(3):
+		var sheet_rest := clic_sheet.get_image().get_region(Rect2i(0, g * 100, 124, 100))
+		sheet_rest.convert(Image.FORMAT_RGBA8)
+		var rest: Image = scene.background.GUARDIAN_ART[g].get_image()
+		rest.convert(Image.FORMAT_RGBA8)
+		# Se comparan los píxeles visibles: el importador retoca el color de los transparentes (fix_alpha_border).
+		for y in range(100):
+			for x in range(124):
+				var p := sheet_rest.get_pixel(x, y)
+				var q := rest.get_pixel(x, y)
+				if (p.a > 0 or q.a > 0) and not p.is_equal_approx(q): rest_same = false
+	check.call(clic_sheet.get_size() == Vector2(124 * 16, 300) and rest_same, "Guardians: one row of 16 frames per guardian and frame 0 is its resting drawing")
 	# Con movimiento reducido el clic no anima.
 	scene.preferences.reduced_motion = true
 	scene.game = rival
