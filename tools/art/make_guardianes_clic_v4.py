@@ -5,7 +5,8 @@ lógicos; el cuadro 0 es el reposo (igual al dibujo de guardianes/) y el juego l
 Uso: py -3.13 tools/art/make_guardianes_clic_v4.py  ->  assets/art/pixel-v3/guardianes/guardianes-clic-v4.png
 
 También escribe guardian-ojo-reposo-v4.png (08/11/2026, pedido del autor): el parpadeo y mirada del ojo solar (idea A de
-los bocetos), 16 cuadros que el juego repite cada tanto mientras el ojo está en reposo.
+los bocetos), 16 cuadros que el juego repite cada tanto mientras el ojo está en reposo. Y guardian-figura-reposo-v4.png:
+la figura de luz en reposo (esferas que respiran y estrellas que titilan), 24 cuadros en bucle.
 """
 import os
 import sys
@@ -42,5 +43,14 @@ if __name__ == "__main__":
     strip = Image.new("RGBA", (W * FRAMES, H))
     for i, f in enumerate(idle): strip.alpha_composite(f, (i * W, 0))
     out = os.path.join(G.K.ART, "guardianes", "guardian-ojo-reposo-v4.png")
+    strip.save(out)
+    print(out, strip.size)
+    # Reposo de la figura de luz: las esferas respiran y titilan estrellas, en bucle (la flotación la hace el juego).
+    idle = G.figura_reposo()
+    base = np.array(G.load("figura"))
+    assert len(idle) == G.IDLE_FIG_FRAMES and (np.array(idle[0]) == base).all(), "el reposo de la figura debe empezar en su dibujo"
+    strip = Image.new("RGBA", (W * len(idle), H))
+    for i, f in enumerate(idle): strip.alpha_composite(f, (i * W, 0))
+    out = os.path.join(G.K.ART, "guardianes", "guardian-figura-reposo-v4.png")
     strip.save(out)
     print(out, strip.size)

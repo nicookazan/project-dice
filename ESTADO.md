@@ -1,3 +1,5 @@
+> Actualización del 08/11/2026 (suite: 4382 comprobaciones, cero fallos): **La figura de luz flota en reposo.** Sube y baja despacio, las esferas de sus manos respiran y titilan estrellas del manto; al hacer clic sigue la de metales en el aire. Rama `feature/tienda-en-mesa`.
+
 > Actualización del 08/11/2026 (suite: 4379 comprobaciones, cero fallos): **El ojo solar parpadea en reposo.** Cada 4,8 s parpadea y mira a un lado y al otro (la idea A de los bocetos); al hacer clic sigue la corona que gira. Rama `feature/tienda-en-mesa`.
 
 > Actualización del 08/11/2026 (suite: 4377 comprobaciones, cero fallos): **Ir a otro nivel, en la rama `feature/tienda-en-mesa`.** Desde el menú de la partida se elige uno de los siete niveles y se va a su presentación, conservando plata, dados, monedas y stickers. Los niveles salteados quedan como superados y el guardado sigue siendo válido. Detalle en [menú y recorrido](docs/MENU-Y-RECORRIDO.md). Está disponible en toda partida de campaña, no solo en la de debug.

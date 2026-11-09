@@ -220,6 +220,32 @@ def figura_a():
     return frames
 
 
+IDLE_FIG_FRAMES = 24
+
+
+def figura_reposo():
+    """Reposo de la figura de luz (pedido del autor, 08/11/2026): las esferas de las manos respiran despacio y dos
+    estrellas del manto titilan por vez. Es un bucle sin pausa; el cuadro 0 es el dibujo de siempre. La flotación (subir
+    y bajar) la hace el juego al dibujarla."""
+    frames = []
+    star_pts = sorted(zip(*np.nonzero(STARS)))
+    for f in range(IDLE_FIG_FRAMES):
+        s = round(1 - math.cos(2 * math.pi * f / IDLE_FIG_FRAMES))  # 0, 1, 2, 1, 0
+        img = Image.fromarray(FIG_A)
+        layer = Image.new("RGBA", FIG.size)
+        if s:
+            for cx, cy in ORBS: orb_glow(layer, cx, cy, 5 + s)
+        if f % 3 == 1 and star_pts:
+            for k in (0, len(star_pts) // 2):
+                y, x = star_pts[(f // 3 * 3 + k) % len(star_pts)]
+                d = ImageDraw.Draw(layer)
+                d.point([(x - 1, y), (x + 1, y), (x, y - 1), (x, y + 1)], fill=K.hexc("#ffe488"))
+                d.point((x, y), fill=K.hexc("#fffcf0"))
+        img.alpha_composite(layer)
+        frames.append(scene(img))
+    return frames
+
+
 def metal_die(color_light, color, color_dark):
     s = Image.new("RGBA", (9, 9))
     d = ImageDraw.Draw(s)

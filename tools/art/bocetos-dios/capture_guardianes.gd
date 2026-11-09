@@ -47,4 +47,17 @@ func _initialize() -> void:
 		blinks.blit_rect(root.get_texture().get_image().get_region(Rect2i(470, 0, 400, 230)), Rect2i(0, 0, 400, 230), Vector2i(i * 400, 0))
 		i += 1
 	blinks.save_png("res://test-results/bocetos-dios/juego-ojo-reposo.png")
+	# Figura de luz en reposo: flotando abajo, al medio y arriba, con las esferas respirando.
+	scene.game = CatalogTests.forced_boss("l7_dios_metales", true)
+	scene.render()
+	var floats := Image.create(400 * 3, 230, false, Image.FORMAT_RGBA8)
+	i = 0
+	for t in [0.0, 1.0, 2.0]:
+		scene.background.elapsed = t + 0.01
+		scene.background.queue_redraw()
+		await process_frame
+		await RenderingServer.frame_post_draw
+		floats.blit_rect(root.get_texture().get_image().get_region(Rect2i(470, 0, 400, 230)), Rect2i(0, 0, 400, 230), Vector2i(i * 400, 0))
+		i += 1
+	floats.save_png("res://test-results/bocetos-dios/juego-figura-reposo.png")
 	quit()

@@ -20,6 +20,11 @@ const EYE_IDLE = preload("res://assets/art/pixel-v3/guardianes/guardian-ojo-repo
 const EYE_IDLE_FRAMES := 16
 const EYE_IDLE_SECONDS := 0.11
 const EYE_IDLE_PAUSE := 3.0
+## La figura de luz en reposo: las esferas respiran y titilan estrellas (24 cuadros de 120 ms, en bucle, sin pausa) y
+## flota un poco más alto y más lento que los otros guardianes.
+const FIGURE_IDLE = preload("res://assets/art/pixel-v3/guardianes/guardian-figura-reposo-v4.png")
+const FIGURE_IDLE_FRAMES := 24
+const FIGURE_IDLE_SECONDS := 0.12
 const GUARDIAN_ART := [preload("res://assets/art/pixel-v3/guardianes/guardian-ojo-v3.png"), preload("res://assets/art/pixel-v3/guardianes/guardian-figura-v3.png"), preload("res://assets/art/pixel-v3/guardianes/guardian-dado-v3.png")]
 const HAND_FRAMES := 8
 const HAND_SIZE := Vector2i(61, 53)
@@ -150,6 +155,15 @@ static func eye_idle_frame(t: float) -> int:
 	var at := fmod(maxf(t, 0.0), blink + EYE_IDLE_PAUSE)
 	return int(at / EYE_IDLE_SECONDS) if at < blink else 0
 
+## Cuadro del reposo de la figura de luz en el instante `t`: un bucle continuo.
+static func figure_idle_frame(t: float) -> int:
+	return int(fmod(maxf(t, 0.0), FIGURE_IDLE_FRAMES * FIGURE_IDLE_SECONDS) / FIGURE_IDLE_SECONDS)
+
+## Cuánto sube y baja el guardián `g` (en pantalla, pasos de 2 px): la figura de luz flota más alto y más despacio.
+static func guardian_bob(g: int, t: float) -> float:
+	if g == 1: return 2.0 * roundf(sin(t * 0.8) * 3.0)
+	return 2.0 * roundf(sin(t * 1.1) * 1.5)
+
 func _draw() -> void:
 	# La tienda (08/11/2026) se arma sobre esta misma mesa: sin vendedor ni maletín, con la sala y sus animaciones.
 	draw_texture_rect(CLEAN_TABLE, Rect2(0, 0, 1440, 900), false)
@@ -203,12 +217,16 @@ func _draw() -> void:
 	var center := Vector2(667, 105 + (sin(elapsed * 1.1) * 3 if motion else 0))
 	if actor == "god" and guardian >= 0:
 		# Pixel-v3: 124×100 logical px on 2×2 blocks, centered where the triangle was; the bob moves in 2 px steps.
-		var god_bob := 2.0 * roundf(sin(elapsed * 1.1) * 1.5) if motion else 0.0
+		var god_bob := guardian_bob(guardian, elapsed) if motion else 0.0
 		var clic := props.frame("guardian")
 		var at := Rect2(center.x - 124, 5 + god_bob, 248, 200)
-		var idle := eye_idle_frame(elapsed) if guardian == 0 and motion else 0
+		# Reposo animado: el ojo parpadea cada tanto y la figura respira; el dado cósmico queda quieto.
+		var idle_sheet: Texture2D = null
+		var idle := 0
+		if motion and guardian == 0: idle_sheet = EYE_IDLE; idle = eye_idle_frame(elapsed)
+		elif motion and guardian == 1: idle_sheet = FIGURE_IDLE; idle = figure_idle_frame(elapsed)
 		if clic > 0: draw_texture_rect_region(GUARDIAN_CLIC, at, Rect2(Vector2(clic, guardian) * GUARDIAN_SIZE, GUARDIAN_SIZE))
-		elif idle > 0: draw_texture_rect_region(EYE_IDLE, at, Rect2(Vector2(idle, 0) * GUARDIAN_SIZE, GUARDIAN_SIZE))
+		elif idle > 0: draw_texture_rect_region(idle_sheet, at, Rect2(Vector2(idle, 0) * GUARDIAN_SIZE, GUARDIAN_SIZE))
 		else: draw_texture_rect(GUARDIAN_ART[guardian], at, false)
 		return
 	if actor == "god":

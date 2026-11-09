@@ -124,6 +124,25 @@ static func run(scene, check: Callable) -> void:
 				var q := eye_rest.get_pixel(x, y)
 				if (p.a > 0 or q.a > 0) and not p.is_equal_approx(q): ends_same = false
 	check.call(idle_sheet.get_size() == Vector2i(124 * 16, 100) and ends_same, "Solar eye: the blink has 16 frames and starts and ends on its resting drawing")
+	# La figura de luz flota en reposo (esferas que respiran, estrellas que titilan); el clic sigue siendo metales en el aire.
+	var loop: float = Backdrop.FIGURE_IDLE_FRAMES * Backdrop.FIGURE_IDLE_SECONDS
+	check.call(Backdrop.figure_idle_frame(0.0) == 0 and Backdrop.figure_idle_frame(0.12 * 7 + 0.01) == 7 and Backdrop.figure_idle_frame(loop + 0.12 * 2 + 0.01) == 2, "Figure of light: its resting loop runs without a pause and starts again")
+	var bobs := {}
+	for k in range(200): bobs[Backdrop.guardian_bob(1, k * 0.05)] = true
+	var eye_bobs := {}
+	for k in range(200): eye_bobs[Backdrop.guardian_bob(0, k * 0.05)] = true
+	check.call(bobs.keys().max() > eye_bobs.keys().max() and bobs.keys().all(func(v): return int(v) % 2 == 0), "Figure of light: it floats higher than the other guardians, in 2 px steps")
+	var figure_sheet: Image = load("res://assets/art/pixel-v3/guardianes/guardian-figura-reposo-v4.png").get_image()
+	figure_sheet.convert(Image.FORMAT_RGBA8)
+	var figure_rest: Image = scene.background.GUARDIAN_ART[1].get_image()
+	figure_rest.convert(Image.FORMAT_RGBA8)
+	var starts_same := true
+	for y in range(100):
+		for x in range(124):
+			var p := figure_sheet.get_pixel(x, y)
+			var q := figure_rest.get_pixel(x, y)
+			if (p.a > 0 or q.a > 0) and not p.is_equal_approx(q): starts_same = false
+	check.call(figure_sheet.get_size() == Vector2i(124 * 24, 100) and starts_same, "Figure of light: the resting loop has 24 frames and frame 0 is its drawing")
 	# Con movimiento reducido el clic no anima.
 	scene.preferences.reduced_motion = true
 	scene.game = rival
