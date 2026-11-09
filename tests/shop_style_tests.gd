@@ -44,10 +44,15 @@ static func run(scene, check: Callable) -> Dictionary:
 	scene.render()
 	check.call(UI.find_button(scene.ui.get_node("Shop_numbers"), "$3").disabled and scene.ui.get_node("Shop_numbers/Refresh").disabled, "Shop style: debt disables purchase and renewal while keeping continuation available")
 	check.call(not UI.find_button(scene.ui, "Ir al siguiente rival →").disabled, "Shop style: debt does not trap player in shop")
-	check.call(scene.ui.get_node("ShopInventory").position.y >= 777 and scene.ui.get_node("ShopAdvance").position.y == 25 and scene.ui.get_node("ShopAdvance").position.x >= 1025, "Shop layout: owned coins occupy footer and continuation occupies old upper-right inventory area")
+	check.call(scene.ui.get_node("ShopAdvance").get_rect() == Rect2(1082, 681, 312, 47) and scene.ui.get_node("ShopNotebook") != null and scene.ui.get_node_or_null("PlayerNotebook") == null, "Shop layout: the shop sits on the table, its notebook replaces the scorebook and continuing takes the place of TIRAR")
+	scene.game.passives = ["even", "odd"]
+	scene.render()
+	var owned_y: Array = scene.ui.find_children("OwnedCoin_*", "", true, false).map(func(node): return node.position.y)
+	check.call(not owned_y.is_empty() and owned_y.all(func(y): return y == 748), "Shop layout: owned coins sit on the bottom bar where they are during a match")
+	check.call(scene.ui.get_node("Shop_coins").get_global_rect().end.x < 700 and scene.ui.get_node("Shop_stickers").get_global_rect().end.x < 1090 and scene.ui.get_node("Shop_components").position.x > 700, "Shop layout: coins on the left felt, components, numbers and stickers on the middle one, the right felt keeps mate, thermos and cup")
 	scene.game = Purchase.fixture("sticker", {"id": "trio"}, 4)
 	scene.render()
-	check.call(scene.ui.get_node("Shop_cup/ThermosArtwork").stickers.is_empty() and UI.dice_in(scene.ui).filter(func(die): return die.position.y >= 800).size() == 5, "Shop footer: empty thermos invents no stickers and all five player dice belong to blue footer")
+	check.call(scene.ui.get_node("Shop_cup/ThermosArtwork").stickers.is_empty() and UI.dice_in(scene.ui).filter(func(die): return die.position.x < 330 and die.position.y > 300).size() == 5, "Shop notebook: empty thermos invents no stickers and all five player dice are in the shop notebook")
 	UI.find_button(scene.ui.get_node("Shop_stickers"), "$4").pressed.emit()
 	check.call(scene.game.cash == 96 and scene.ui.get_node("Shop_cup/ThermosArtwork").stickers == {"trio": 1}, "Shop footer: real sticker purchase immediately attaches its badge to thermos")
 	scene.game.shop_state.stickers.slots[0] = {"offer_id": "fixture:2", "kind": "sticker", "price": 4, "effect": {"id": "trio"}}

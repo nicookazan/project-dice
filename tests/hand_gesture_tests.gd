@@ -71,12 +71,78 @@ static func run(scene, check: Callable) -> void:
 		results[scene.background.props.hand_result] = true
 	scene.background.props.stop_all()
 	check.call(results.size() == 3, "Hand gesture: over many clicks it plays all three")
-	# Guardianes: no juegan, siguen mostrando su información.
+	# Guardianes: hacen su animación y al terminar muestran su información.
 	scene.game = god
 	scene.render()
+	var god_before: Dictionary = scene.game.snapshot()
 	scene.ui.get_node("InspectBoss").pressed.emit()
-	check.call(not scene.background.props.busy("hand") and scene.detail.visible and scene.detail.title == "Dios", "Hand gesture: God's guardians do not play; the click shows their information")
+	check.call(scene.background.guardian >= 0 and scene.background.props.busy("guardian") and not scene.background.props.busy("hand") and not scene.detail.visible, "Hand gesture: clicking God's guardian starts its own animation before its information")
+	scene.ui.get_node("InspectBoss").pressed.emit()
+	check.call(scene.background.props.elapsed.size() == 1 and not scene.detail.visible, "Hand gesture: clicking the guardian again while it plays changes nothing")
+	for f in range(16):
+		scene.background.props.elapsed["guardian"] = (f + 0.5) * BarProps.SPECS.guardian.seconds
+		if f == 0 or f == 15: check.call(scene.background.props.frame("guardian") == f, "Hand gesture: guardian frame %d follows the clock" % f)
+		scene.background.queue_redraw()
+		await scene.get_tree().process_frame
+	scene.background.props.step(10.0)
+	await scene.get_tree().process_frame
+	check.call(not scene.background.props.busy("guardian") and scene.detail.visible and scene.detail.title == "Dios" and scene.game.snapshot() == god_before, "Hand gesture: when the guardian's animation ends its information opens and the game is untouched")
 	scene.detail.hide()
+	scene.preferences.reduced_motion = true
+	scene.render()
+	scene.ui.get_node("InspectBoss").pressed.emit()
+	check.call(not scene.background.props.busy("guardian") and scene.detail.visible and scene.detail.title == "Dios", "Hand gesture: with reduced motion the guardian's information opens right away")
+	scene.detail.hide()
+	scene.preferences.reduced_motion = false
+	var clic_sheet: Texture2D = load("res://assets/art/pixel-v3/guardianes/guardianes-clic-v4.png")
+	var rest_same := true
+	for g in range(3):
+		var sheet_rest := clic_sheet.get_image().get_region(Rect2i(0, g * 100, 124, 100))
+		sheet_rest.convert(Image.FORMAT_RGBA8)
+		var rest: Image = scene.background.GUARDIAN_ART[g].get_image()
+		rest.convert(Image.FORMAT_RGBA8)
+		# Se comparan los píxeles visibles: el importador retoca el color de los transparentes (fix_alpha_border).
+		for y in range(100):
+			for x in range(124):
+				var p := sheet_rest.get_pixel(x, y)
+				var q := rest.get_pixel(x, y)
+				if (p.a > 0 or q.a > 0) and not p.is_equal_approx(q): rest_same = false
+	check.call(clic_sheet.get_size() == Vector2(124 * 16, 300) and rest_same, "Guardians: one row of 16 frames per guardian and frame 0 is its resting drawing")
+	# El ojo solar parpadea y mira cada tanto en reposo; el clic sigue siendo la corona que gira.
+	var Backdrop = scene.background.get_script()
+	var blink: float = Backdrop.EYE_IDLE_FRAMES * Backdrop.EYE_IDLE_SECONDS
+	check.call(Backdrop.eye_idle_frame(0.0) == 0 and Backdrop.eye_idle_frame(0.11 * 5 + 0.01) == 5 and Backdrop.eye_idle_frame(blink + 1.0) == 0 and Backdrop.eye_idle_frame(blink + Backdrop.EYE_IDLE_PAUSE + 0.11 * 3 + 0.01) == 3, "Solar eye: it blinks and looks around, rests a while and starts again")
+	var idle_sheet: Image = load("res://assets/art/pixel-v3/guardianes/guardian-ojo-reposo-v4.png").get_image()
+	idle_sheet.convert(Image.FORMAT_RGBA8)
+	var eye_rest: Image = scene.background.GUARDIAN_ART[0].get_image()
+	eye_rest.convert(Image.FORMAT_RGBA8)
+	var ends_same := true
+	for frame_x in [0, 15 * 124]:
+		for y in range(100):
+			for x in range(124):
+				var p := idle_sheet.get_pixel(frame_x + x, y)
+				var q := eye_rest.get_pixel(x, y)
+				if (p.a > 0 or q.a > 0) and not p.is_equal_approx(q): ends_same = false
+	check.call(idle_sheet.get_size() == Vector2i(124 * 16, 100) and ends_same, "Solar eye: the blink has 16 frames and starts and ends on its resting drawing")
+	# La figura de luz flota en reposo (esferas que respiran, estrellas que titilan); el clic sigue siendo metales en el aire.
+	var loop: float = Backdrop.FIGURE_IDLE_FRAMES * Backdrop.FIGURE_IDLE_SECONDS
+	check.call(Backdrop.figure_idle_frame(0.0) == 0 and Backdrop.figure_idle_frame(0.12 * 7 + 0.01) == 7 and Backdrop.figure_idle_frame(loop + 0.12 * 2 + 0.01) == 2, "Figure of light: its resting loop runs without a pause and starts again")
+	var bobs := {}
+	for k in range(200): bobs[Backdrop.guardian_bob(1, k * 0.05)] = true
+	var eye_bobs := {}
+	for k in range(200): eye_bobs[Backdrop.guardian_bob(0, k * 0.05)] = true
+	check.call(bobs.keys().max() > eye_bobs.keys().max() and bobs.keys().all(func(v): return int(v) % 2 == 0), "Figure of light: it floats higher than the other guardians, in 2 px steps")
+	var figure_sheet: Image = load("res://assets/art/pixel-v3/guardianes/guardian-figura-reposo-v4.png").get_image()
+	figure_sheet.convert(Image.FORMAT_RGBA8)
+	var figure_rest: Image = scene.background.GUARDIAN_ART[1].get_image()
+	figure_rest.convert(Image.FORMAT_RGBA8)
+	var starts_same := true
+	for y in range(100):
+		for x in range(124):
+			var p := figure_sheet.get_pixel(x, y)
+			var q := figure_rest.get_pixel(x, y)
+			if (p.a > 0 or q.a > 0) and not p.is_equal_approx(q): starts_same = false
+	check.call(figure_sheet.get_size() == Vector2i(124 * 24, 100) and starts_same, "Figure of light: the resting loop has 24 frames and frame 0 is its drawing")
 	# Con movimiento reducido el clic no anima.
 	scene.preferences.reduced_motion = true
 	scene.game = rival

@@ -1,6 +1,7 @@
 extends RefCounted
 ## Paso J08: vuelo del sticker suelto (nuevo y repetido) y paquetes que solo hacen volar lo nuevo.
 const StickerFlight = preload("res://scripts/sticker_flight.gd")
+const Backdrop = preload("res://scripts/backdrop.gd")
 const Purchases = preload("res://tests/purchase_tests.gd")
 
 static func offer_price(scene, index := 0) -> Button:
@@ -29,11 +30,13 @@ static func run(scene, check: Callable) -> void:
 	check.call(game.cup.stickers.get("trio", 0) == 1 and game.cash == cash_before - 4, "Sticker flight: the purchase is already done and paid before anything animates")
 	var flight = scene.ui.get_node_or_null("StickerFlight")
 	check.call(flight != null and flight.is_new and flight.thermos.stickers.has("trio") == false, "Sticker flight: a new loose sticker flies and the thermos does not show it yet")
+	check.call(Backdrop.THERMOS_RECT.grow(20).has_point(flight.slot) and flight.from.x < flight.slot.x and not scene.background.stickers.has("trio"), "Sticker flight: in the shop on the table it flies to the table thermos beside the offers, drawn by the room without it")
 	check.call(scene.ui.get_node_or_null("StickerReveal") == null and not scene.sticker_animation_active(), "Sticker flight: no dark overlay and the shop is not blocked")
 	flight.step(StickerFlight.FRAME * (StickerFlight.HOLD + 8))
 	check.call(flight.badge.visible and flight.thermos.stickers.has("trio") == false, "Sticker flight: in mid-air the sticker is in flight and not yet on the thermos")
 	flight.step(StickerFlight.FRAME * (StickerFlight.FLIGHT + 1))
 	check.call(flight.thermos.stickers.get("trio", 0) == 1 and not flight.badge.visible, "Sticker flight: on landing it is stuck on the thermos")
+	check.call(scene.background.stickers.get("trio", 0) == 1, "Sticker flight: on landing the room draws it on the table thermos")
 	flight.step(5.0)
 	check.call(not is_instance_valid(flight) or flight.finished, "Sticker flight: it ends by itself")
 	await scene.get_tree().process_frame

@@ -96,7 +96,7 @@ static func run(scene, check: Callable) -> void:
 	check.call(not ring.visible, "Bar props: the border is gone when the mouse leaves")
 	var thermos_ring = scene.ui.get_node("InspectThermos").get_node("Ring_thermos")
 	check.call(thermos_ring != null and thermos_ring.texture != null, "Bar props: the thermos has its gold border too")
-	# Al cambiar de pantalla las animaciones se cortan; la tienda solo tiene la bandera.
+	# Al cambiar de pantalla las animaciones se cortan; la tienda se arma sobre la misma mesa y conserva bandera y sifones.
 	scene.background.props.play("flag")
 	scene.preferences.speed = 1
 	scene.game.phase = "shop"
@@ -104,17 +104,21 @@ static func run(scene, check: Callable) -> void:
 	var shop_zones: Array = []
 	for child in scene.ui.get_children():
 		if child.name.begins_with("BarProp_"): shop_zones.append(str(child.name))
-	check.call(not scene.background.props.any_busy() and shop_zones == ["BarProp_shop_flag"], "Bar props: changing screen cuts the animations and the shop only has its flag")
+	check.call(not scene.background.props.any_busy() and shop_zones == ["BarProp_flag", "BarProp_soda_left", "BarProp_soda_right"], "Bar props: changing screen cuts the animations and the shop keeps the room's flag and siphons")
 	var shop_before: Dictionary = scene.game.snapshot()
-	scene.ui.get_node("BarProp_shop_flag").clicked.emit()
-	check.call(scene.background.props.busy("shop_flag"), "Bar props: clicking the shop's flag makes it wave")
+	for prop in ["flag", "soda_left", "soda_right"]:
+		scene.ui.get_node("BarProp_" + prop).clicked.emit()
+	check.call(scene.background.props.busy("flag") and scene.background.props.busy("soda_left") and scene.background.props.busy("soda_right"), "Bar props: in the shop the flag waves and the siphons spray when clicked")
 	for f in range(34):
-		scene.background.props.elapsed["shop_flag"] = (f + 0.5) * BarProps.SPECS.shop_flag.seconds
+		scene.background.props.step(0.07)
 		scene.background.queue_redraw()
 		await scene.get_tree().process_frame
-	check.call(scene.game.snapshot() == shop_before, "Bar props: drawing the shop flag wave every frame leaves the game untouched")
+	check.call(scene.game.snapshot() == shop_before, "Bar props: drawing the room animations in the shop leaves the game untouched")
 	scene.background.props.step(10.0)
-	check.call(not scene.background.props.busy("shop_flag"), "Bar props: the shop flag stops by itself")
+	check.call(not scene.background.props.any_busy(), "Bar props: the shop's room animations stop by themselves")
+	scene.ui.get_node("InspectThermos").pressed.emit()
+	check.call(scene.background.props.busy("thermos") and scene.game.snapshot() == shop_before, "Bar props: in the shop the thermos also pours the mate")
+	scene.background.props.stop_all()
 	scene.game = Game.new(521)
 	scene.preferences.speed = 0
 	scene.render()

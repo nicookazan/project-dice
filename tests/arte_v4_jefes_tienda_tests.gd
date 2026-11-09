@@ -64,23 +64,17 @@ static func run(scene, check: Callable) -> void:
 	scene.background.props.stop_all()
 	# Nombres nuevos.
 	check.call(BossCatalog.entry("l2_chamuyero").name == "El Vendedor Ambulante" and BossCatalog.entry("l4_tahur").name == "El Timbero" and BossCatalog.entry("l4_payaso").name == "El Payaso", "Boss catalog: renamed Vendedor Ambulante, Timbero and Payaso")
-	# Tienda: cada oferta cuelga de un gancho con etiqueta, el vendido lo muestra vacío y las bandejas siguen la capacidad.
+	# Tienda sobre la mesa: cada oferta apoyada en el paño lleva su etiqueta con el precio encima.
 	scene.game = ShopTests.game_at_shop(162)
 	scene.render()
-	var hooks := 0
+	var tags := 0
 	var tags_with_price := 0
 	for card in scene.ui.find_children("Offer_*", "Control", true, false):
-		var hook = card.get_node_or_null("Hook")
-		if hook != null and not hook.sold: hooks += 1
-		if hook != null and card.get_node_or_null("Price") != null: tags_with_price += 1
-	check.call(hooks >= 4 and tags_with_price == hooks, "Shop fixtures: every offer hangs from a hook with its price on the tag")
-	var trays = scene.ui.get_node_or_null("InventoryTrays")
-	check.call(trays != null and trays.trays.size() == 3 and trays.trays[2].holes.size() == 1 and trays.trays[1].holes.is_empty(), "Shop fixtures: dice and coin trays, with a single hole only on the one-use tray")
-	var right_before: int = trays.trays[1].rect.size.x
-	scene.game.coin_inventory.shared_capacity = 7
-	scene.render()
-	check.call(scene.ui.get_node("InventoryTrays").trays[1].rect.size.x > right_before - 1, "Shop fixtures: the coin tray follows the coin capacity")
-	scene.game.coin_inventory.shared_capacity = 5
+		var tag = card.get_node_or_null("Tag")
+		if tag != null and tag.get_script() == ShopFixtures and not tag.sold: tags += 1
+		var price = card.get_node_or_null("Price")
+		if tag != null and price != null and Rect2(tag.position, tag.size).encloses(Rect2(price.position, price.size).grow(-2)): tags_with_price += 1
+	check.call(tags >= 4 and tags_with_price == tags, "Shop on the table: every offer lies on the felt with its price written on its tag")
 	# Paquetes: celdas 75 y 76 de la hoja de monedas con la bolsita de terciopelo (ya no son las viejas).
 	var coins_sheet := Image.load_from_file("res://assets/art/pixel-v3/coins-v4.png")
 	var small := coins_sheet.get_region(Rect2i(9 * 32, 6 * 32, 32, 32))

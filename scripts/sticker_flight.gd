@@ -130,12 +130,18 @@ func step(delta: float) -> void:
 			thermos.queue_redraw()
 		var b := f - HOLD - FLIGHT
 		notice.visible = landed and b < 10
-		notice.position = slot + Vector2(40, -40 - b)
+		notice.position = notice_at(slot + Vector2(40, -40 - b))
 	else:
 		notice.visible = f >= 6
 		var n := f - 6
-		notice.position = slot + Vector2(40, -30 - n)
+		notice.position = notice_at(slot + Vector2(40, -30 - n))
 		notice.modulate.a = 1.0 if n < 12 else 1.0 - (n - 12) / 6.0
+
+## El aviso va a la derecha del lugar del sticker; si no entra en pantalla (el termo de la mesa está contra el borde), a la izquierda.
+func notice_at(right: Vector2) -> Vector2:
+	var width := notice.get_combined_minimum_size().x
+	if right.x + width <= size.x - 8.0: return right
+	return Vector2(right.x - 80.0 - width, right.y)
 
 ## Estela dorada detrás del sticker que vuela y destellos al pegarse.
 func _draw() -> void:

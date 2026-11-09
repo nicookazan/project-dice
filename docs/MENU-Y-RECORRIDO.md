@@ -4,6 +4,14 @@ Paso 14 completado el 26 de octubre de 2026. Conserva los objetivos y reglas vig
 
 Actualización del paso 15: [guardado y Continuar](GUARDADO-Y-CONTINUAR.md) implementados. La evidencia de 978 comprobaciones al final de este documento corresponde al cierre histórico de 14; la suite actual tiene 1083 sin fallos.
 
+## Ir a otro nivel (08/11/2026)
+
+En la campaña, el menú de la partida (botón «Menú») ofrece «Ir a otro nivel». El selector lista los siete niveles con su ambiente. Al elegir uno se va a su presentación (`level_intro`) desde el primer rival, hacia adelante o hacia atrás. Se conservan plata, dados (con sus mejoras), monedas y stickers, y se pierde el encuentro en curso. Si ya estás en la presentación de un nivel, ese nivel no se puede volver a elegir. `Game.jump_to_level(index)`:
+- **Niveles anteriores al elegido:** quedan como superados en el recorrido. Si nunca se entró a uno, se sortea su jefe en ese momento.
+- **Niveles posteriores:** se olvidan; su jefe se vuelve a sortear al llegar.
+
+Así `Campaign.valid_progress` y el guardado siguen siendo válidos. Está bloqueado en el menú principal y con una compra, un paquete de stickers o un paquete de monedas a medio resolver (`Game.LEVEL_JUMP_BLOCKED`). El nivel de prueba suelto (40 → 70 → 110) no lo ofrece. Funciona en cualquier partida, también en la normal. Pruebas en `tests/level_jump_tests.gd` y captura con `tools/art/bocetos-dios/capture_selector.gd`.
+
 ## Inicio y navegación
 
 La aplicación abre en `menu`: Nueva partida, Opciones y Salir. Desde 15 muestra Continuar solo con un guardado válido activo, o Recuperar respaldo y continuar cuando existe respaldo válido. Opciones muestra controles y el estado de pantalla; F11 alterna pantalla completa y restaura el modo previo, sin cambiar la partida. Las preferencias duran esta sesión.
