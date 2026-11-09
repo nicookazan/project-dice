@@ -3,6 +3,9 @@ tools/art/bocetos-dios/): ojo solar B (corona que gira), figura de luz B (metale
 cósmica). Una fila por guardián en el orden de BossCatalog.GUARDIANS (ojo, figura, dado), 16 cuadros de 124×100 px
 lógicos; el cuadro 0 es el reposo (igual al dibujo de guardianes/) y el juego los dibuja a 2× como el reposo.
 Uso: py -3.13 tools/art/make_guardianes_clic_v4.py  ->  assets/art/pixel-v3/guardianes/guardianes-clic-v4.png
+
+También escribe guardian-ojo-reposo-v4.png (08/11/2026, pedido del autor): el parpadeo y mirada del ojo solar (idea A de
+los bocetos), 16 cuadros que el juego repite cada tanto mientras el ojo está en reposo.
 """
 import os
 import sys
@@ -33,3 +36,11 @@ if __name__ == "__main__":
     out = os.path.join(G.K.ART, "guardianes", "guardianes-clic-v4.png")
     sheet.save(out)
     print(out, sheet.size)
+    idle = G.ojo_a()
+    base = np.array(G.load("ojo"))
+    assert len(idle) == FRAMES and (np.array(idle[0]) == base).all() and (np.array(idle[-1]) == base).all(), "el parpadeo debe empezar y terminar en el reposo"
+    strip = Image.new("RGBA", (W * FRAMES, H))
+    for i, f in enumerate(idle): strip.alpha_composite(f, (i * W, 0))
+    out = os.path.join(G.K.ART, "guardianes", "guardian-ojo-reposo-v4.png")
+    strip.save(out)
+    print(out, strip.size)

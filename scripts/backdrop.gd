@@ -15,6 +15,11 @@ const HandClips = preload("res://scripts/boss_hand_clips.gd")
 ## Animación al clic de los guardianes (make_guardianes_clic_v4.py): una fila por guardián, 16 cuadros de 124×100.
 const GUARDIAN_CLIC = preload("res://assets/art/pixel-v3/guardianes/guardianes-clic-v4.png")
 const GUARDIAN_SIZE := Vector2(124, 100)
+## El ojo solar parpadea y mira a los lados cada tanto mientras está en reposo (16 cuadros de 110 ms y una pausa).
+const EYE_IDLE = preload("res://assets/art/pixel-v3/guardianes/guardian-ojo-reposo-v4.png")
+const EYE_IDLE_FRAMES := 16
+const EYE_IDLE_SECONDS := 0.11
+const EYE_IDLE_PAUSE := 3.0
 const GUARDIAN_ART := [preload("res://assets/art/pixel-v3/guardianes/guardian-ojo-v3.png"), preload("res://assets/art/pixel-v3/guardianes/guardian-figura-v3.png"), preload("res://assets/art/pixel-v3/guardianes/guardian-dado-v3.png")]
 const HAND_FRAMES := 8
 const HAND_SIZE := Vector2i(61, 53)
@@ -138,6 +143,13 @@ func _draw_pour_layer() -> void:
 	var pose := BarProps.thermos_pose(f)
 	if pose.over: BarProps.draw_thermos(pour_layer, pose.center, pose.rotation, stickers)
 
+## Cuadro del parpadeo del ojo solar en el instante `t` (segundos de presentación): parpadea y mira, y descansa
+## EYE_IDLE_PAUSE segundos con el dibujo de siempre (cuadro 0).
+static func eye_idle_frame(t: float) -> int:
+	var blink := EYE_IDLE_FRAMES * EYE_IDLE_SECONDS
+	var at := fmod(maxf(t, 0.0), blink + EYE_IDLE_PAUSE)
+	return int(at / EYE_IDLE_SECONDS) if at < blink else 0
+
 func _draw() -> void:
 	# La tienda (08/11/2026) se arma sobre esta misma mesa: sin vendedor ni maletín, con la sala y sus animaciones.
 	draw_texture_rect(CLEAN_TABLE, Rect2(0, 0, 1440, 900), false)
@@ -194,7 +206,9 @@ func _draw() -> void:
 		var god_bob := 2.0 * roundf(sin(elapsed * 1.1) * 1.5) if motion else 0.0
 		var clic := props.frame("guardian")
 		var at := Rect2(center.x - 124, 5 + god_bob, 248, 200)
+		var idle := eye_idle_frame(elapsed) if guardian == 0 and motion else 0
 		if clic > 0: draw_texture_rect_region(GUARDIAN_CLIC, at, Rect2(Vector2(clic, guardian) * GUARDIAN_SIZE, GUARDIAN_SIZE))
+		elif idle > 0: draw_texture_rect_region(EYE_IDLE, at, Rect2(Vector2(idle, 0) * GUARDIAN_SIZE, GUARDIAN_SIZE))
 		else: draw_texture_rect(GUARDIAN_ART[guardian], at, false)
 		return
 	if actor == "god":

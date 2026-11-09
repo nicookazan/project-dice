@@ -108,6 +108,22 @@ static func run(scene, check: Callable) -> void:
 				var q := rest.get_pixel(x, y)
 				if (p.a > 0 or q.a > 0) and not p.is_equal_approx(q): rest_same = false
 	check.call(clic_sheet.get_size() == Vector2(124 * 16, 300) and rest_same, "Guardians: one row of 16 frames per guardian and frame 0 is its resting drawing")
+	# El ojo solar parpadea y mira cada tanto en reposo; el clic sigue siendo la corona que gira.
+	var Backdrop = scene.background.get_script()
+	var blink: float = Backdrop.EYE_IDLE_FRAMES * Backdrop.EYE_IDLE_SECONDS
+	check.call(Backdrop.eye_idle_frame(0.0) == 0 and Backdrop.eye_idle_frame(0.11 * 5 + 0.01) == 5 and Backdrop.eye_idle_frame(blink + 1.0) == 0 and Backdrop.eye_idle_frame(blink + Backdrop.EYE_IDLE_PAUSE + 0.11 * 3 + 0.01) == 3, "Solar eye: it blinks and looks around, rests a while and starts again")
+	var idle_sheet: Image = load("res://assets/art/pixel-v3/guardianes/guardian-ojo-reposo-v4.png").get_image()
+	idle_sheet.convert(Image.FORMAT_RGBA8)
+	var eye_rest: Image = scene.background.GUARDIAN_ART[0].get_image()
+	eye_rest.convert(Image.FORMAT_RGBA8)
+	var ends_same := true
+	for frame_x in [0, 15 * 124]:
+		for y in range(100):
+			for x in range(124):
+				var p := idle_sheet.get_pixel(frame_x + x, y)
+				var q := eye_rest.get_pixel(x, y)
+				if (p.a > 0 or q.a > 0) and not p.is_equal_approx(q): ends_same = false
+	check.call(idle_sheet.get_size() == Vector2i(124 * 16, 100) and ends_same, "Solar eye: the blink has 16 frames and starts and ends on its resting drawing")
 	# Con movimiento reducido el clic no anima.
 	scene.preferences.reduced_motion = true
 	scene.game = rival

@@ -34,4 +34,17 @@ func _initialize() -> void:
 	for i in shots.size(): sheet.blit_rect(shots[i], Rect2i(0, 0, 400, 230), Vector2i((i % 4) * 400, (i / 4) * 230))
 	sheet.save_png("res://test-results/bocetos-dios/juego-guardianes.png")
 	print("capturas ", shots.size())
+	# Parpadeo del ojo solar en reposo: cerrado, mirando a un lado y al otro.
+	scene.game = CatalogTests.forced_boss("l7_dios_dados", true)
+	scene.render()
+	var blinks := Image.create(400 * 3, 230, false, Image.FORMAT_RGBA8)
+	var i := 0
+	for f in [3, 8, 11]:
+		scene.background.elapsed = (f + 0.3) * scene.background.EYE_IDLE_SECONDS
+		scene.background.queue_redraw()
+		await process_frame
+		await RenderingServer.frame_post_draw
+		blinks.blit_rect(root.get_texture().get_image().get_region(Rect2i(470, 0, 400, 230)), Rect2i(0, 0, 400, 230), Vector2i(i * 400, 0))
+		i += 1
+	blinks.save_png("res://test-results/bocetos-dios/juego-ojo-reposo.png")
 	quit()
