@@ -18,21 +18,21 @@ static func isolate(scene, profile: bool) -> void:
 	scene.detail.hide()
 	scene.cancel_navigation()
 	scene.validation_profile = profile
-	scene.persistence_enabled = true
-	scene.save_store = Store.new(folder + "/case-" + str(serial) + ".json")
 	scene.session_started = false
-	scene.last_checkpoint = {}
-	scene.save_error = ""
 
 static func reload_ui(scene, check: Callable, context: String) -> bool:
-	var before: Dictionary = scene.checkpoint_data()
-	var valid: bool = scene.save_error == "" and scene.save_store.inspect().get("active", false)
-	check.call(valid, "Integral: checkpoint valid before reload " + context + " / " + scene.save_error)
-	if not valid: return false
-	Flow.click(scene, "Guardar y volver al menú")
-	var resumed := Flow.click(scene, "Continuar")
-	check.call(resumed and scene.checkpoint_data() == before, "Integral: UI reload preserves exact game/RNG/choices " + context)
-	return resumed
+	## Sin guardado en disco: se comprueba que el estado en memoria se restaura exacto, con el azar incluido.
+	scene.render() # Un redibujado limpio, como el que antes hacía recargar la partida (corta animaciones pendientes).
+	var data: Dictionary = scene.checkpoint_data()
+	var restored = Store.new(folder + "/unused.json").restore_game(data)
+	var ok: bool = restored != null and restored.snapshot() == data.game
+	var diff: Array = []
+	if restored != null:
+		var snap: Dictionary = restored.snapshot()
+		for key in snap:
+			if snap[key] != data.game.get(key): diff.append(key)
+	check.call(ok, "Integral: in-memory snapshot restores exact game/RNG/choices " + context + (" (restore null: %s, invalid: %s, phase: %s, differing keys: %s)" % [str(restored == null), Validator.validate(data), scene.game.phase, str(diff)] if not ok else ""))
+	return ok
 
 static func annotate(scene, check: Callable, context: String) -> void:
 	var expected: Dictionary = scene.game.preview()
@@ -69,9 +69,9 @@ static func play_hand(scene, check: Callable, context: String) -> void:
 static func natural_run(scene, seed_value: int, profile: bool, ending: String, check: Callable) -> Dictionary:
 	isolate(scene, profile)
 	scene.game.return_to_menu()
-	scene.refresh_save_status()
 	scene.render()
-	Flow.click(scene, "Nueva partida")
+	Flow.click(scene, "Nueva jugada")
+	Flow.click(scene, "No, ir a la campaña")
 	# Fixed regression seed is input; dice, stock, cash and outcomes are never injected.
 	scene.start_new_run(seed_value)
 	Flow.click(scene, "Empezar primer encuentro")
@@ -101,9 +101,8 @@ static func natural_run(scene, seed_value: int, profile: bool, ending: String, c
 						break
 				Flow.click(scene, "Ir al %s →" % ("jefe" if scene.game.rival == 1 else "siguiente rival"))
 			_: break
-	check.call(scene.game.phase == ending and scene.save_error == "", "Integral: natural route ends " + ending + " with reloads, no injected outcomes (seed %d profile %s got %s)" % [seed_value, str(profile), scene.game.phase])
+	check.call(scene.game.phase == ending, "Integral: natural route ends " + ending + " with reloads, no injected outcomes (seed %d profile %s got %s)" % [seed_value, str(profile), scene.game.phase])
 	if ending == "lost": check.call(UI.text_in(scene.ui, "se agotaron las manos") and scene.game.payout.is_empty(), "Integral: loss explains exhausted hands/target and grants no final reward")
-	check.call(not scene.save_store.inspect().active, "Integral: natural terminal state cannot resume")
 	return {"seed": seed_value, "profile": Profile.ID if profile else "normal", "ending": scene.game.phase, "hands": trace, "cash": scene.game.cash, "rival": scene.game.rival}
 
 static func controlled_shop(scene, check: Callable) -> void:
@@ -118,7 +117,6 @@ static func controlled_shop(scene, check: Callable) -> void:
 	Flow.click(scene, "Ir a la tienda →")
 	scene.game.cash = 200 # Explicit laboratory wallet, never used in natural routes.
 	scene.render()
-	check.call(scene.save_error == "", "Integral: generated mixed profile shop is persistable")
 
 static func offer_from_profile(kind: String, id: String) -> Dictionary:
 	for section in Profile.tables():
@@ -182,7 +180,7 @@ static func run(scene, check: Callable) -> Dictionary:
 	var historic_score: Dictionary = scene.game.last_score.duplicate(true)
 	for kind in ["global"]: buy_controlled(scene, kind, "", check)
 	buy_controlled(scene, "face", "", check, 4)
-	check.call(scene.game.dice[4].value == 4 and scene.game.dice[4].faces[3] == 6 and scene.game.last_score == historic_score and scene.save_error == "", "Integral: purchased last-rolled face preserves historic result/blue score and saves new face")
+	check.call(scene.game.dice[4].value == 4 and scene.game.dice[4].faces[3] == 6 and scene.game.last_score == historic_score, "Integral: purchased last-rolled face preserves historic result/blue score and saves new face")
 	scene.inspect_die(4)
 	check.call("Resultado anterior al cambio de cara" in scene.detail_text, "Integral: inspection explains historic result after face purchase")
 	scene.detail.hide()
@@ -218,10 +216,9 @@ static func run(scene, check: Callable) -> Dictionary:
 	_test_score_matrix(scene, check)
 	var mismatches: Array = comparisons.filter(func(row): return not row.matches)
 	check.call(mismatches.is_empty(), "Integral: zero preview/credited mismatches across catalog scenarios")
-	scene.persistence_enabled = false
+	scene.profiles_enabled = false
 	scene.campaign_mode = false
 	scene.validation_profile = false
-	scene.save_error = ""
 	scene.session_started = false
 	return {"date": "2026-10-26", "profile": Profile.ID, "routes": routes, "comparisons": comparisons, "mismatches": mismatches, "human_playtest": "pending", "balance_approved": false}
 

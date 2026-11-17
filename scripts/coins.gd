@@ -11,7 +11,11 @@ const PASSIVES = [
 	"first_roll", "unused_rolls", "last_roll", "second_hand", "thermos", "collection", "interest",
 	"pocket", "pocket_small", "discount", "tempered_gem", "jeweler",
 	"veteran", "accumulated", "streak", "bosshunter",
-	"reserve_roll", "collector", "level_veteran", "served", "leftovers", "extra_hand"]
+	"reserve_roll", "collector", "level_veteran", "served", "leftovers", "extra_hand", "vendor_gift"]
+## Monedas que se pueden tener varias veces (una copia por ranura). El resto de las pasivas es de una sola copia.
+const STACKABLE = ["vendor_gift"]
+## Monedas bloqueadas: no salen en la tienda hasta que la partida guardada las desbloquea (ver achievements.gd).
+const LOCKED = ["vendor_gift"]
 const CONSUMABLES = ["boost", "roll", "boost_25", "boost_36", "double_mult", "free_renewal_use", "repair_gem", "free_reroll_use",
 	"mult_plus2", "points_bag", "two_rolls", "quick_cash", "visit_discount", "repair_all", "even_boost",
 	"reroll_all", "flip_die", "boss_shield"]
@@ -32,7 +36,7 @@ const SHORT = {
 	"first_roll": "1T", "unused_rolls": "TS", "last_roll": "UT", "second_hand": "M2", "thermos": "Te", "collection": "Co", "interest": "In",
 	"pocket": "B+", "pocket_small": "b+", "discount": "-%", "tempered_gem": "GT", "jeweler": "Jo",
 	"veteran": "Ve", "accumulated": "Ac", "streak": "Ra", "bosshunter": "Cz",
-	"reserve_roll": "TR", "collector": "Cb", "level_veteran": "VN", "served": "Sv", "leftovers": "So", "extra_hand": "M3",
+	"reserve_roll": "TR", "collector": "Cb", "level_veteran": "VN", "served": "Sv", "leftovers": "So", "extra_hand": "M3", "vendor_gift": "-$",
 	"boost_25": "25", "boost_36": "36", "double_mult": "x2", "free_renewal_use": "R0", "repair_gem": "Rp", "free_reroll_use": "R1",
 	"mult_plus2": "+2", "points_bag": "Bp", "two_rolls": "T2", "quick_cash": "$5", "visit_discount": "-V", "repair_all": "RT", "even_boost": "246",
 	"reroll_all": "R*", "flip_die": "VD", "boss_shield": "EJ"}
@@ -193,7 +197,10 @@ const DATA = {
 	"flip_die": {"code": "U12", "name": "Voltear dado", "description": "Elegí un dado suelto ya tirado: pasa a la cara opuesta. No afecta dados fijados por un jefe. Se consume al elegir el dado.", "rarity": "rare", "family": "use", "scope": "die", "duration": "hand", "contexts": ["play"],
 		"effects": [{"kind": "use_flip_die", "amount": 1}]},
 	"boss_shield": {"code": "U14", "name": "Escudo de jefe", "description": "Apaga el poder del jefe durante la mano actual. Solo contra un jefe. Aparece una sola vez por partida. Se consume.", "rarity": "rare", "family": "use", "scope": "boss", "duration": "hand", "contexts": ["play"], "once_per_run": true,
-		"effects": [{"kind": "use_boss_shield", "amount": 1}]}
+		"effects": [{"kind": "use_boss_shield", "amount": 1}]},
+	# C58 va al final: el orden de DATA fija las celdas de la hoja de arte (coin_art.gd) y esta moneda todavía no tiene celda.
+	"vendor_gift": {"code": "C58", "name": "El regalo del vendedor", "description": "Todas las monedas sueltas de la tienda cuestan $1 menos (mínimo $1). Se acumula: cada copia resta otro $1. No abarata los paquetes ni las renovaciones.", "rarity": "rare", "family": "economy",
+		"effects": [{"kind": "coin_discount_flat", "amount": 1}]}
 }
 
 static func definition(id: String) -> Dictionary:
@@ -218,6 +225,12 @@ static func definition(id: String) -> Dictionary:
 ## Monedas que aparecen una sola vez por partida (cuenta al generarse la oferta).
 static func once_per_run(id: String) -> bool:
 	return DATA.get(id, {}).get("once_per_run", false)
+
+static func stackable(id: String) -> bool:
+	return id in STACKABLE
+
+static func locked(id: String) -> bool:
+	return id in LOCKED
 
 ## Monedas que piden elegir un dado al usarse.
 static func targeted(id: String) -> bool:
@@ -277,7 +290,7 @@ static func can_store(inventory: Dictionary, id: String) -> bool:
 	var data := definition(id)
 	if data.is_empty(): return false
 	if data.type in ["passive", "active"]:
-		return inventory.equipped.size() < inventory.shared_capacity and id not in ids(inventory.equipped)
+		return inventory.equipped.size() < inventory.shared_capacity and (stackable(id) or id not in ids(inventory.equipped))
 	return data.type == "consumable" and inventory.consumables.size() < inventory.consumable_capacity
 
 static func can_remove(inventory: Dictionary, id: String) -> bool:
@@ -305,7 +318,7 @@ static func can_replace(inventory: Dictionary, instance_id: int, incoming_id: St
 			break
 	if not found: return false
 	if passive:
-		if incoming_id in ids(equipped): return false
+		if incoming_id in ids(equipped) and not stackable(incoming_id): return false
 		equipped.append(instance(incoming_id, 0))
 	else: consumables.append(instance(incoming_id, 0))
 	var limits := capacity(ids(equipped))

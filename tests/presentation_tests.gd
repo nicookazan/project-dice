@@ -12,7 +12,7 @@ const PurchaseTests = preload("res://tests/purchase_tests.gd")
 const BreakageGame = preload("res://tests/support/breakage_game.gd")
 
 static func run(scene, check: Callable) -> Dictionary:
-	scene.persistence_enabled = false
+	scene.profiles_enabled = false
 	scene.preferences_enabled = true
 	scene.preference_store = Preferences.new("res://test-results/preferences/" + str(Time.get_ticks_usec()) + "/options.cfg")
 	var service = scene.preference_store

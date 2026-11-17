@@ -15,6 +15,9 @@ const ALL_IDS = [
 	"level_veteran", "served", "leftovers", "extra_hand", "boost", "roll", "boost_25", "boost_36", "double_mult",
 	"free_renewal_use", "repair_gem", "free_reroll_use", "mult_plus2", "points_bag", "two_rolls", "quick_cash",
 	"visit_discount", "repair_all", "even_boost", "reroll_all", "flip_die", "boss_shield", "pack_small", "pack_large"]
+## Monedas del catálogo que todavía no tienen celda en la hoja (arte pendiente de aprobación): usan la ficha provisional.
+## C58 «El regalo del vendedor» va acá hasta que el autor apruebe su boceto (docs/TUTORIAL.md).
+const PROVISIONAL_ART = ["vendor_gift"]
 const Coins = preload("res://scripts/coins.gd")
 const TINTS = {"common": Color("b9864a"), "rare": Color("6e9bd1"), "epic": Color("a76bd4"), "legendary": Color("e0b13c")}
 var coin_id := "full"

@@ -10,9 +10,10 @@ static func _icon(id: String) -> CoinArt:
 	return icon
 
 static func run(check: Callable) -> void:
-	var expected: Array = Coins.DATA.keys()
+	var expected: Array = Coins.DATA.keys().filter(func(id): return id not in CoinArt.PROVISIONAL_ART)
 	expected.append_array(["pack_small", "pack_large"])
 	check.call(CoinArt.ALL_IDS == expected, "TX9: ALL_IDS sigue el orden de Coins.DATA más los dos paquetes (%d ids)" % CoinArt.ALL_IDS.size())
+	check.call(CoinArt.PROVISIONAL_ART == ["vendor_gift"] and _icon("vendor_gift").has_node("Provisional"), "C58 usa la ficha provisional hasta tener celda en la hoja")
 	var seen: Dictionary = {}
 	for id in CoinArt.ALL_IDS: seen[id] = true
 	check.call(seen.size() == CoinArt.ALL_IDS.size(), "TX9: ningún id se repite en la hoja")

@@ -10,6 +10,7 @@ static func boss_entry(game) -> Dictionary:
 	if not game.campaign.is_empty() and game.selected_bosses.has(str(game.level_index)):
 		var chosen: Dictionary = Campaign.candidate(game.campaign[game.level_index], game.selected_bosses[str(game.level_index)])
 		if not chosen.is_empty(): return {"name": chosen.name, "rule": chosen.rule, "target": chosen.target, "reward": chosen.base_reward}
+	if game.tutorial: return {"name": Catalog.TUTORIAL_BOSS.name, "rule": game.boss_rule, "target": Catalog.TUTORIAL_BOSS.fixed_target, "reward": 0}
 	for encounter in game.level_encounters:
 		if encounter.kind == "boss": return {"name": "Jefe", "rule": game.boss_rule, "target": encounter.target, "reward": Campaign.NORMAL_REWARD}
 	return {}

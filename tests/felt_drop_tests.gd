@@ -11,7 +11,7 @@ static var held := false
 static func run(scene, check: Callable) -> void:
 	scene.detail.hide()
 	scene.confirmation.hide()
-	scene.persistence_enabled = false
+	scene.profiles_enabled = false
 	scene.preferences_enabled = false
 	scene.preferences.drag_groups = true
 	scene.preferences.reduced_motion = false

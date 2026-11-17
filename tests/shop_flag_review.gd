@@ -4,7 +4,7 @@ const Purchases = preload("res://tests/purchase_tests.gd")
 const BarProps = preload("res://scripts/bar_props.gd")
 func _initialize() -> void:
 	var scene = load("res://main.tscn").instantiate()
-	scene.persistence_enabled = false
+	scene.profiles_enabled = false
 	scene.preferences_enabled = false
 	scene.preferences.muted = true
 	scene.preferences.speed = 1

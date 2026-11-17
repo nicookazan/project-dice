@@ -33,7 +33,10 @@ const ROWS := [
 	{"id": "l7_dios_carcasas", "level": 7, "slot": 3, "name": "Dios", "hand": "Triángulo con un ojo", "power": "Carcasas suspendidas", "text": "Ojo que no ve: las carcasas de los puntos quedan suspendidas.", "severity": 3, "k": 1.0, "fixed_target": 900, "kind": "suspend_shell", "target": "all", "implemented": true}
 ]
 # Poderes propios (kind "boss_power") que BossRules acepta como objetivo válido.
-const POWERS := ["kiosk_tax", "scared_die", "thermos_theft", "no_repeat", "red_card", "shadow", "fire_out", "seventh_son", "loaded_die", "closed_list", "mirror_face", "abduction", "ring_charge", "board_lock", "gravity", "time_stop", "madness"]
+const POWERS := ["kiosk_tax", "scared_die", "thermos_theft", "no_repeat", "red_card", "shadow", "fire_out", "seventh_son", "loaded_die", "closed_list", "mirror_face", "abduction", "ring_charge", "board_lock", "gravity", "time_stop", "madness", "cash_drain"]
+
+## Jefe solo del tutorial: no está en ROWS, así que nunca entra al sorteo de la campaña ni cuenta en sus catálogos.
+const TUTORIAL_BOSS := {"id": "tutorial_vendedor", "level": 1, "slot": 0, "name": "El Vendedor", "hand": "La mano del vendedor de la tienda, con la palma abierta para cobrar", "power": "Se queda con todo", "text": "Al terminar el encuentro te saca todo el dinero.", "severity": 1, "k": 1.0, "fixed_target": 125, "kind": "boss_power", "target": "cash_drain", "implemented": true}
 
 static func rows() -> Array:
 	return ROWS.duplicate(true)
@@ -41,6 +44,7 @@ static func rows() -> Array:
 static func entry(id: String) -> Dictionary:
 	for row in ROWS:
 		if row.id == id: return row.duplicate(true)
+	if id == TUTORIAL_BOSS.id: return TUTORIAL_BOSS.duplicate(true)
 	return {}
 
 static func of_level(level: int) -> Array:

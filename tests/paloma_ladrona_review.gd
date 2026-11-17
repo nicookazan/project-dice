@@ -9,7 +9,7 @@ func _initialize() -> void:
 	DisplayServer.window_set_size(Vector2i(1440, 900))
 	root.size = Vector2i(1440, 900)
 	scene = load("res://main.tscn").instantiate()
-	scene.persistence_enabled = false
+	scene.profiles_enabled = false
 	scene.preferences_enabled = false
 	root.add_child(scene)
 	await process_frame

@@ -57,24 +57,16 @@ static func run(scene, check: Callable) -> void:
 		if campaign.phase == "shop": campaign.leave_shop()
 	check.call(won == 21 and campaign.phase == "won" and campaign.debug_mode and campaign.completed_encounters.size() == 21, "Debug: one hand per encounter traverses all seven levels and defeats God")
 
-	var old_store = scene.save_store
-	var old_persistence: bool = scene.persistence_enabled
 	var old_campaign: bool = scene.campaign_mode
-	scene.save_store = Store.new("res://test-results/debug-mode/" + str(Time.get_ticks_usec()) + ".json")
-	scene.persistence_enabled = true
 	scene.campaign_mode = true
 	scene.start_new_run(413)
-	var normal_saved: Dictionary = scene.save_store.inspect().data
-	scene.request_navigation("pause")
-	UI.find_button(scene.ui, "Nueva partida debug").pressed.emit()
-	check.call(scene.confirmation.visible and not scene.game.debug_mode and scene.save_store.inspect().data == normal_saved, "Debug UI: button requests existing-game replacement before changing its save")
+	scene.request_navigation("menu")
+	check.call(scene.confirmation.visible and not scene.game.debug_mode, "Debug UI: abandoning a run in progress asks first")
 	scene.confirm_navigation()
-	check.call(scene.game.debug_mode and scene.game.phase == "level_intro" and scene.save_store.inspect().data.game.debug_mode, "Debug UI: confirmed new debug game is marked and saved before first encounter")
-	scene.request_navigation("pause")
-	scene.continue_saved()
-	check.call(scene.game.debug_mode and UI.text_in(scene.ui, "DEBUG"), "Debug UI: Continue restores debug settings and visible mode indicator")
+	var debug_button = UI.find_button(scene.ui, "Nueva jugada debug")
+	check.call(scene.game.phase == "menu" and debug_button != null, "Debug UI: the menu offers a debug run in development builds")
+	debug_button.pressed.emit()
+	check.call(scene.game.debug_mode and scene.game.phase == "level_intro" and UI.text_in(scene.ui, "DEBUG"), "Debug UI: the debug run is marked and shows its indicator before the first encounter")
 	scene.start_new_run(414)
-	check.call(not scene.game.debug_mode and not scene.game.can_afford(1) and scene.game.cash == 0, "Debug UI: normal New Game resets cheats and normal economy")
-	scene.save_store = old_store
-	scene.persistence_enabled = old_persistence
+	check.call(not scene.game.debug_mode and not scene.game.can_afford(1) and scene.game.cash == 0, "Debug UI: a normal new run resets cheats and the normal economy")
 	scene.campaign_mode = old_campaign

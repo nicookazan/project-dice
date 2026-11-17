@@ -4,7 +4,7 @@ const UI = preload("res://tests/interface_tests.gd")
 
 func _initialize() -> void:
 	var scene = load("res://main.tscn").instantiate()
-	scene.persistence_enabled = false
+	scene.profiles_enabled = false
 	root.add_child(scene)
 	await process_frame
 	var valid: bool = scene.campaign_mode and UI.text_in(scene.ui, "21 encuentros")

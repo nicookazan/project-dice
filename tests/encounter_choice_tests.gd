@@ -22,7 +22,7 @@ static func reward_game():
 static func run(scene, check: Callable) -> void:
 	scene.detail.hide()
 	scene.cancel_navigation()
-	scene.persistence_enabled = false
+	scene.profiles_enabled = false
 	scene.game = reward_game()
 	scene.render()
 	check.call(scene.ui.has_node("EncounterChoice") and UI.find_button(scene.ui, "Ir a la tienda →") != null and UI.find_button(scene.ui, "Seguir sin tienda →") != null, "Destination: victory offers shop and direct continuation on one screen")

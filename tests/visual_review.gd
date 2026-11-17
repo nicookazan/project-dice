@@ -4,7 +4,7 @@ const Fixture = preload("res://tests/support/game_fixture.gd")
 ## Controlled review scenes, never used by the playable run.
 func _initialize() -> void:
 	var scene = load("res://main.tscn").instantiate()
-	scene.persistence_enabled = false
+	scene.profiles_enabled = false
 	scene.campaign_mode = false
 	root.add_child(scene)
 	await process_frame

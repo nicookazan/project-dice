@@ -8,7 +8,7 @@ var prefix := ""
 
 func _initialize() -> void:
 	scene = load("res://main.tscn").instantiate()
-	scene.persistence_enabled = false
+	scene.profiles_enabled = false
 	root.add_child(scene)
 	await process_frame
 	prefix = str(root.size.x) + "x" + str(root.size.y) + "-mano-"

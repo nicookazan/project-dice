@@ -9,7 +9,7 @@ var previous_pointer := Vector2.ZERO
 
 func _initialize() -> void:
 	scene = load("res://main.tscn").instantiate()
-	scene.persistence_enabled = false
+	scene.profiles_enabled = false
 	scene.preferences_enabled = false
 	scene.preferences.muted = true
 	root.add_child(scene)

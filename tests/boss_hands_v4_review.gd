@@ -10,7 +10,7 @@ var scene
 func _initialize() -> void:
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path("res://test-results/manos-v4"))
 	scene = load("res://main.tscn").instantiate()
-	scene.persistence_enabled = false
+	scene.profiles_enabled = false
 	root.add_child(scene)
 	await process_frame
 	for id in HandClips.CLIPS.keys():

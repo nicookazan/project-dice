@@ -7,7 +7,7 @@ var scene
 
 func _initialize() -> void:
 	scene = load("res://main.tscn").instantiate()
-	scene.persistence_enabled = false
+	scene.profiles_enabled = false
 	scene.preferences_enabled = false
 	scene.preferences.muted = true
 	scene.preferences.drag_groups = true

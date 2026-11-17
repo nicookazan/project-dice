@@ -31,6 +31,7 @@ const CupThrowTests = preload("res://tests/cup_throw_tests.gd")
 const HandGestureTests = preload("res://tests/hand_gesture_tests.gd")
 const ArteV4Tests = preload("res://tests/arte_v4_jefes_tienda_tests.gd")
 const LevelJumpTests = preload("res://tests/level_jump_tests.gd")
+const TutorialTests = preload("res://tests/tutorial_tests.gd")
 const StickerFlightTests = preload("res://tests/sticker_flight_tests.gd")
 const Ajustes2Tests = preload("res://tests/ajustes2_tests.gd")
 const Ajustes3Tests = preload("res://tests/ajustes3_tests.gd")
@@ -234,7 +235,7 @@ func _initialize() -> void:
 	check(not loss.next_hand() and not loss.close_encounter(), "loss cannot continue or collect")
 	# Scene smoke check exercises all rendered screens with the actual UI.
 	var scene = load("res://main.tscn").instantiate()
-	scene.persistence_enabled = false
+	scene.profiles_enabled = false
 	scene.campaign_mode = false
 	scene.preferences_enabled = false
 	scene.preferences.speed = 0
@@ -242,8 +243,10 @@ func _initialize() -> void:
 	await process_frame
 	check(scene.get_child_count() > 2, "scene instantiates")
 	check(scene.game.phase == "menu" and find_button(scene, "Continuar") == null, "boot opens menu without fake continue")
-	find_button(scene, "Nueva partida").pressed.emit()
-	check(scene.game.phase == "level_intro", "new run opens level announcement")
+	find_button(scene, "Nueva jugada").pressed.emit()
+	check(scene.pending_tutorial_choice and find_button(scene, "Sí, jugar el tutorial") != null, "new run asks about the tutorial")
+	find_button(scene, "No, ir a la campaña").pressed.emit()
+	check(scene.game.phase == "level_intro" and not scene.game.tutorial, "declining the tutorial opens the level announcement")
 	find_button(scene, "Empezar primer encuentro").pressed.emit()
 	var throw_button = find_button(scene, "TIRAR (3)")
 	check(throw_button != null and not throw_button.disabled, "initial throw button enabled")
@@ -544,6 +547,7 @@ func _initialize() -> void:
 	await HandGestureTests.run(scene, check)
 	await ArteV4Tests.run(scene, check)
 	LevelJumpTests.run(scene, check)
+	await TutorialTests.run(scene, check)
 	await StickerFlightTests.run(scene, check)
 	await Ajustes2Tests.run(scene, check)
 	await Ajustes3Tests.run(scene, check)
