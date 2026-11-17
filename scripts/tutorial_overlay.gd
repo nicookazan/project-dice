@@ -117,3 +117,29 @@ func add_glow(rect: Rect2) -> void:
 	var tween := glow.create_tween().set_loops()
 	tween.tween_property(glow, "modulate:a", 0.45, 0.5)
 	tween.tween_property(glow, "modulate:a", 1.0, 0.5)
+
+## Contorno que sigue a un control vivo (un dado que se mece, una fila de la lista) y se oculta mientras `visible_if` dé falso
+## (por ejemplo, mientras los dados todavía están en el aire). `fixed_size` centra un cuadrado fijo (los dados giran).
+var followers: Array = []
+
+func add_follow_glow(target: Control, visible_if: Callable, fixed_size := 0.0) -> void:
+	add_glow(Rect2())
+	followers.append({"glow": get_child(get_child_count() - 1), "target": target, "visible_if": visible_if, "fixed": fixed_size})
+
+func _process(_delta: float) -> void:
+	for entry in followers:
+		var glow: Control = entry.glow
+		var target: Control = entry.target
+		if not is_instance_valid(glow): continue
+		if not is_instance_valid(target) or not target.is_inside_tree() or not entry.visible_if.call():
+			glow.visible = false
+			continue
+		glow.visible = true
+		if entry.fixed > 0.0:
+			var center: Vector2 = target.get_global_transform() * (target.size / 2.0)
+			glow.position = center - Vector2(entry.fixed, entry.fixed) / 2.0
+			glow.size = Vector2(entry.fixed, entry.fixed)
+		else:
+			var rect := target.get_global_rect().grow(3)
+			glow.position = rect.position
+			glow.size = rect.size

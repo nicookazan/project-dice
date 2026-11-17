@@ -1349,10 +1349,13 @@ func render_tutorial_layer() -> void:
 	var blocking: bool = tutorial_current.get("blocking", false)
 	# Los pasos de acción no tapan nada ni piden «Continuar»: el cartel dice qué tocar y se toca.
 	overlay.setup(tutorial_current.notes, not blocking or tutorial_current.id not in tutorial_seen, gold, cream, blocking)
-	for zone in tutorial_current.get("glow_zones", []): overlay.add_glow(TutorialScript.ZONES[zone])
+	for zone in tutorial_current.get("glow_zones", []):
+		if zone == "play_first":
+			if is_instance_valid(plays_panel) and not plays_panel.rows.is_empty(): overlay.add_follow_glow(plays_panel.rows[0], func(): return not throwing)
+		else: overlay.add_glow(TutorialScript.ZONES[zone])
 	for id in tutorial_current.get("highlight", []):
 		var die = table_dice.get(id)
-		if is_instance_valid(die): overlay.add_glow(die.get_global_rect().grow(6))
+		if is_instance_valid(die): overlay.add_follow_glow(die, func(): return not throwing, 76.0)
 	overlay.dismissed.connect(func():
 		tutorial_seen.append(tutorial_current.id)
 		render())
