@@ -259,3 +259,20 @@ Versión 1 · 25 de octubre de 2026. Este registro evita bloquear todo el proyec
 4. **Valores por defecto del plan:** la oferta de un sticker en la tienda muestra el estilo del nivel que va a tener tras la compra; sin animación propia al pasar al nivel 10; la fase de cada dado sale de su lugar en la mano y no del azar; un elemento suspendido se ve quieto con la «S»; el arte viejo se conserva hasta que el autor apruebe cada PR.
 
 **Fuente:** [bocetos del 7 de noviembre](https://claude.ai/artifact/K55SgNyQyi45GDKj3dmFTz) y [plan en Notion](https://app.notion.com/p/412c28142b5581aa99a0d783a67077b9).
+
+## D18 — Pantalla inicial, partidas guardadas y tutorial
+
+**Estado:** requerimientos cerrados por el autor el 17/11/2026; las ocho decisiones por defecto del plan se aplicaron sin cambios (a confirmar por el autor). Abre una parte acotada del metaprogreso (F03).
+
+**Pasos afectados:** TU0–TU9 ([ficha](TU-tutorial.md)); toca 14 (menú), 15 (guardado), 10 (monedas) y 17 (jefes).
+
+**Decisiones:**
+
+1. Las jugadas no se guardan ni se continúan; lo único que se guarda son tres partidas con estadísticas, logros y monedas desbloqueadas.
+2. «El regalo del vendedor» (C58) es la única pasiva acumulable y la única moneda bloqueada; abarata monedas sueltas (no paquetes ni renovaciones): primero los porcentajes, después $1 por copia, piso de $1.
+3. El tutorial terminado no suma jugadas ni victorias: solo logro y moneda.
+4. El jefe del tutorial se llama «El Vendedor», vive fuera de `ROWS` y no entra al sorteo de la campaña; no da recompensa.
+5. **Desvío del plan:** `SaveStore`, `SaveValidator` y las migraciones v1–v9 no se retiraron: se conservan en memoria para las pruebas de reproducibilidad (17 suites las usan) y `main.gd` ya no las usa.
+6. **Desvío del plan:** los bocetos de TU0 no se hicieron; se integró con arte existente y una ficha provisional para C58, a la espera de la aprobación del autor.
+
+**Fuente:** [requerimientos](../fuentes/REQUERIMIENTOS-TUTORIAL-2026-11-17.md) y [plan en Notion](https://app.notion.com/p/41bc28142b5581629c82c90e7e08bccb).

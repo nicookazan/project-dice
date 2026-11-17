@@ -20,7 +20,7 @@ static func stickered_game(levels: Dictionary):
 static func run(scene, check: Callable) -> void:
 	scene.detail.hide()
 	scene.confirmation.hide()
-	scene.persistence_enabled = false
+	scene.profiles_enabled = false
 	scene.preferences_enabled = false
 	scene.preferences.speed = 0
 	# Los valores salen de la misma función que la puntuación.

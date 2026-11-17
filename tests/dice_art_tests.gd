@@ -55,7 +55,7 @@ static func run(scene, check: Callable) -> Dictionary:
 		counts[material] = values
 	check.call(Art.face("ruby", 0).atlas == Art.BLANK and Art.face("diamond", 0).region == Art.BLANK_REGION, "Dice art: unrolled state never displays a fabricated result")
 	scene.detail.hide()
-	scene.persistence_enabled = false
+	scene.profiles_enabled = false
 	scene.game = Game.new(901)
 	Fixture.set_values(scene.game, [1, 2, 3, 4, 6])
 	var materials := ["", "ruby", "sapphire", "emerald", "diamond"]

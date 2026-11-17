@@ -18,7 +18,7 @@ static func show(scene, game) -> Node:
 	return scene.ui.get_node_or_null("InspectBoss")
 
 static func run(scene, check: Callable) -> void:
-	scene.persistence_enabled = false
+	scene.profiles_enabled = false
 	# Los 21 jefes: el panel sale del catálogo, tanto en el jefe como desde un rival.
 	for row in Catalog.ROWS:
 		var boss: Dictionary = BossInfo.panel(forced_boss(row.id, true))

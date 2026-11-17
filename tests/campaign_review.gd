@@ -2,7 +2,6 @@ extends SceneTree
 const Tests = preload("res://tests/campaign_tests.gd")
 const Campaign = preload("res://scripts/campaign.gd")
 const Profile = preload("res://scripts/validation_profile.gd")
-const Store = preload("res://scripts/save_store.gd")
 const Boss = preload("res://scripts/boss_rules.gd")
 const Fixture = preload("res://tests/support/game_fixture.gd")
 const Flow = preload("res://tests/level_flow_tests.gd")
@@ -20,7 +19,7 @@ func win(game) -> void:
 
 func _initialize() -> void:
 	scene = load("res://main.tscn").instantiate()
-	scene.persistence_enabled = false
+	scene.profiles_enabled = false
 	root.add_child(scene)
 	await process_frame
 	prefix = str(root.size.x) + "x" + str(root.size.y) + "-campana-"
@@ -35,24 +34,7 @@ func _initialize() -> void:
 	await capture("tienda-tras-jefe")
 	Flow.click(scene, "Entrar al nivel 2 →")
 	await capture("anuncio-siguiente")
-	scene.save_store = Store.new("res://test-results/campaign-review/" + str(Time.get_ticks_usec()) + "/partida.json")
-	scene.persistence_enabled = true
-	scene.session_started = true
-	var created: Dictionary = scene.save_store.start(scene.checkpoint_data())
-	if not created.ok:
-		push_error(created.message)
-		quit(1)
-		return
-	scene.last_checkpoint = scene.checkpoint_data()
-	var before: Dictionary = scene.checkpoint_data()
-	Flow.click(scene, "Volver al menú")
-	Flow.click(scene, "Continuar")
-	if scene.checkpoint_data() != before:
-		push_error("Campaign review resume mismatch")
-		quit(1)
-		return
-	await capture("anuncio-reanudado")
-	scene.persistence_enabled = false
+	scene.profiles_enabled = false
 	scene.show_route()
 	await capture("recorrido-21")
 	scene.detail.hide()

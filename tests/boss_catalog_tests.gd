@@ -104,7 +104,7 @@ static func _catalog(check: Callable) -> void:
 	check.call(Catalog.PIVOT == [110, 160, 230, 320, 440, 600, 800], "Boss catalog: provisional P per level")
 	check.call(Catalog.ROWS.all(func(row): return row.implemented), "Boss catalog: all 21 entries have a power with engine hooks")
 	for power in Catalog.POWERS:
-		check.call(Catalog.ROWS.any(func(row): return row.target == power), "Boss catalog: power listed has a boss " + power)
+		check.call((power == "cash_drain" and Catalog.TUTORIAL_BOSS.target == power) or Catalog.ROWS.any(func(row): return row.target == power), "Boss catalog: power listed has a boss " + power)
 	check.call(Catalog.map_legacy_id("prueba_l3_2") == "l3_conde" and Catalog.map_legacy_id("prueba_l7_3") == "l7_dios_carcasas" and Catalog.map_legacy_id("l2_cebador") == "l2_cebador" and Catalog.map_legacy_id("prueba_l9_1") == "", "Boss catalog: legacy ids map by level and position")
 
 static func _campaign(check: Callable) -> void:

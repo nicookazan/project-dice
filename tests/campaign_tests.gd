@@ -12,11 +12,10 @@ const UI = preload("res://tests/interface_tests.gd")
 const PurchaseRoute = preload("res://tests/level_validation_tests.gd")
 
 static func reload_ui(scene, check: Callable, label: String) -> void:
-	var before: Dictionary = scene.checkpoint_data()
-	check.call(scene.save_error == "" and scene.save_store.inspect().get("active", false), "Campaign: valid durable checkpoint " + label + " / " + scene.save_error)
-	if scene.save_error != "": return
-	Flow.click(scene, "Volver al menú" if scene.game.phase == "level_intro" else "Guardar y volver al menú")
-	check.call(Flow.click(scene, "Continuar") and scene.checkpoint_data() == before, "Campaign: exact UI resume " + label)
+	## Las jugadas ya no se guardan; lo que queda verificable es que el estado en memoria se restaura exacto (azar incluido).
+	var data: Dictionary = scene.checkpoint_data()
+	var restored = Store.new("res://test-results/unused.json").restore_game(data)
+	check.call(restored != null and restored.snapshot() == data.game, "Campaign: in-memory snapshot restores exactly " + label)
 
 static func persistent_parts(game) -> Dictionary:
 	var dice: Array = []
@@ -40,8 +39,6 @@ static func run(scene, check: Callable) -> Dictionary:
 	scene.cancel_navigation()
 	scene.validation_profile = false
 	scene.campaign_mode = true
-	scene.persistence_enabled = true
-	scene.save_store = Store.new("res://test-results/campaign/" + str(Time.get_ticks_usec()) + "/partida.json")
 	scene.start_new_run(600)
 	check.call(scene.game.campaign.size() == 7 and scene.game.cash == 0 and scene.game.passives.is_empty(), "Campaign UI: default new run starts full provisional campaign with zero cash/coins")
 	# Strong explicit laboratory build makes all 21 objectives reachable without measuring balance.
@@ -90,7 +87,7 @@ static func run(scene, check: Callable) -> Dictionary:
 			var quote: Dictionary = scene.game.repair_quote(scene.repair_selection)
 			Flow.click(scene, "Reparar selección · $%d" % quote.cost)
 		if encounter == 20: break
-		check.call(scene.game.phase == "reward" and scene.save_store.inspect().active, "Campaign: each non-final victory reaches reward, not terminal win")
+		check.call(scene.game.phase == "reward", "Campaign: each non-final victory reaches reward, not terminal win")
 		reload_ui(scene, check, "paid encounter " + str(encounter + 1))
 		Flow.click(scene, "Ir a la tienda →")
 		if encounter == 0:
@@ -103,7 +100,7 @@ static func run(scene, check: Callable) -> Dictionary:
 			PurchaseRoute.buy_controlled(scene, "coin", "even", check)
 		reload_ui(scene, check, "generated shop " + str(encounter + 1))
 		var gear := persistent_parts(scene.game)
-		var uninterrupted = scene.save_store.restore_game(scene.checkpoint_data())
+		var uninterrupted = Store.new("res://test-results/unused.json").restore_game(scene.checkpoint_data())
 		uninterrupted.leave_shop()
 		if scene.game.rival == 2:
 			level_boundaries += 1
@@ -118,11 +115,11 @@ static func run(scene, check: Callable) -> Dictionary:
 		await scene.get_tree().process_frame
 	check.call(scene.game.phase == "won" and scene.game.level_index == 6 and scene.game.rival == 2 and scene.game.completed_encounters.size() == 21, "Campaign: exactly 21 encounters and final God victory")
 	check.call(level_boundaries == 6 and not scene.game.open_shop() and not scene.game.leave_shop() and not scene.game.has_next_encounter(), "Campaign: God closes version without level 8/store")
-	check.call(not scene.save_store.inspect().active and UI.text_in(scene.ui, "DIOS SUPERADO"), "Campaign UI: final victory visible and cannot be resumed")
+	check.call(UI.text_in(scene.ui, "DIOS SUPERADO"), "Campaign UI: final victory visible and cannot be resumed")
 	for index in range(7):
 		check.call(not Campaign.candidate(scene.game.campaign[index], scene.game.selected_bosses[str(index)]).is_empty(), "Campaign: selected boss belongs to own level pool " + str(index + 1))
 	var losses: Array = _test_losses_and_migration(check)
-	scene.persistence_enabled = false
+	scene.profiles_enabled = false
 	scene.campaign_mode = false
 	scene.session_started = false
 	return {"profile": Campaign.ID, "trace": trace, "comparisons": comparisons, "completed": 21, "level_boundaries": level_boundaries, "repairs": repairs, "losses": losses, "type": "controlled laboratory route, not balance evidence", "catalog_d07": "provisional", "save_version": Store.VERSION}

@@ -1,6 +1,6 @@
 extends RefCounted
 ## Preferences are independent of the run/save format and never use gameplay RNG.
-const DEFAULTS = {"muted": false, "dice_volume": 0.65, "club_volume": 0.20, "ambient_volume": 0.25, "effects_volume": 0.50, "speed": 1, "reduced_motion": false, "reduced_flashes": true, "high_contrast": false, "drag_groups": false, "plays_list": true}
+const DEFAULTS = {"muted": false, "dice_volume": 0.65, "club_volume": 0.20, "ambient_volume": 0.25, "effects_volume": 0.50, "speed": 1, "reduced_motion": false, "reduced_flashes": true, "high_contrast": false, "drag_groups": false, "plays_list": true, "last_profile": 0}
 var path: String
 var last_error := ""
 
@@ -14,7 +14,8 @@ static func valid(data: Variant) -> bool:
 		if DEFAULTS[key] is bool and not data[key] is bool: return false
 	for key in ["dice_volume", "club_volume", "ambient_volume", "effects_volume"]:
 		if not (data[key] is float or data[key] is int) or not is_finite(float(data[key])) or data[key] < 0 or data[key] > 1: return false
-	return data.speed is int and data.speed in [0, 1, 2]
+	# last_profile: última partida guardada usada (0 = ninguna todavía, 1–3 = ranura).
+	return data.speed is int and data.speed in [0, 1, 2] and data.last_profile is int and data.last_profile >= 0 and data.last_profile <= 3
 
 func load_values() -> Dictionary:
 	var config := ConfigFile.new()
@@ -25,6 +26,7 @@ func load_values() -> Dictionary:
 	var data = config.get_value("presentation", "values", {})
 	if data is Dictionary and not data.has("drag_groups"): data["drag_groups"] = false
 	if data is Dictionary and not data.has("plays_list"): data["plays_list"] = true
+	if data is Dictionary and not data.has("last_profile"): data["last_profile"] = 0
 	if not valid(data):
 		last_error = "Preferencias inválidas; se conserva el archivo hasta elegir opciones nuevas."
 		return DEFAULTS.duplicate()

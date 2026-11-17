@@ -13,6 +13,7 @@ const Purchases = preload("res://scripts/purchases.gd")
 const BossRules = preload("res://scripts/boss_rules.gd")
 const Campaign = preload("res://scripts/campaign.gd")
 const BossCatalog = preload("res://scripts/boss_catalog.gd")
+const Tutorial = preload("res://scripts/tutorial_script.gd")
 const INITIAL_ROLL := "initial_roll"
 const REROLL := "reroll"
 const HAND_SCORED := "hand_scored"
@@ -38,6 +39,11 @@ var selected_bosses: Dictionary = {}
 var completed_encounters: Array = []
 var cash := 0
 var debug_mode := false
+## Jugada de tutorial (docs/TUTORIAL.md): un nivel guiado con tiradas guionadas, tienda fija y el jefe vendedor.
+## Es estado de la jugada en memoria; no entra en `snapshot()`.
+var tutorial := false
+## Monedas bloqueadas que la partida guardada ya desbloqueó; las pone la interfaz al empezar la jugada y la tienda las respeta.
+var unlocked_coins: Array = []
 var hand := 1
 var points := 0
 var rolls_left := 3
@@ -125,6 +131,7 @@ func _init(seed_value: int = -1) -> void:
 
 func restart(seed_value: int = -1) -> void:
 	debug_mode = false
+	tutorial = false
 	if seed_value < 0:
 		rng.randomize()
 		run_seed = int(rng.randi())
@@ -274,8 +281,9 @@ func coin_context() -> Dictionary:
 func credit_limit() -> int:
 	return int(CoinEffects.sum_of(passives, "credit"))
 
-func offer_price(price: int) -> int:
-	return CoinEffects.discounted(price, passives, visit_discount)
+## `single_coin`: el precio es el de una moneda suelta (ahí también resta «El regalo del vendedor»).
+func offer_price(price: int, single_coin := false) -> int:
+	return CoinEffects.discounted(price, passives, visit_discount, single_coin)
 
 func free_reroll_ready() -> bool:
 	if rolls_made == 0: return false
@@ -407,6 +415,7 @@ func environment_id() -> String:
 	return "dia" if campaign.is_empty() else campaign[level_index].environment
 
 func boss_name() -> String:
+	if tutorial: return BossCatalog.TUTORIAL_BOSS.name
 	if campaign.is_empty(): return "Jefe"
 	return Campaign.candidate(campaign[level_index], selected_bosses[str(level_index)]).name
 
@@ -434,6 +443,17 @@ func begin_run(seed_value: int = -1, encounters: Array = [], candidates: Array =
 	_refresh_boss_state()
 	phase = "level_intro"
 	message = "Nivel de prueba: 40 → 70 → 110. " + BossRules.description(boss_rule)
+	return true
+
+## Jugada de tutorial: tres encuentros fijos (40, 70 y el jefe vendedor con 125). No usa la campaña ni sortea jefes.
+func begin_tutorial(seed_value: int = -1) -> bool:
+	restart(seed_value)
+	tutorial = true
+	level_encounters = Tutorial.ENCOUNTERS.duplicate(true)
+	boss_rule = BossCatalog.rule_of(BossCatalog.TUTORIAL_BOSS)
+	_refresh_boss_state()
+	phase = "level_intro"
+	message = "Tutorial: aprendé a jugar con el vendedor."
 	return true
 
 func begin_level() -> bool:
@@ -566,9 +586,15 @@ func _throw(rolled_ids: Array, kept_ids: Array, mode: String) -> void:
 	var free := mode == "free"
 	var initial := rolls_made == 0
 	var results: Array = []
+	# Tutorial, primer encuentro: salen los valores del guion y no se gasta azar de la jugada.
+	var scripted: Array = Tutorial.rolls_for(hand, rolls_made, rolled_ids.size()) if tutorial and rival == 0 else []
+	var scripted_at := 0
 	for die in dice:
 		if die.zone == "cup":
-			die.face_index = rng.randi_range(0, die.faces.size() - 1)
+			var wanted: int = scripted[scripted_at] if scripted_at < scripted.size() else 0
+			scripted_at += 1
+			if wanted > 0 and die.faces.has(wanted): die.face_index = die.faces.find(wanted)
+			else: die.face_index = rng.randi_range(0, die.faces.size() - 1)
 			die.value = DiceState.number_on_face(die, die.face_index)
 			die.zone = "reserve"
 			results.append({"id": die.id, "face_index": die.face_index, "number": die.value})
@@ -734,6 +760,10 @@ func close_encounter() -> bool:
 		payout["coins"] = collected
 		payout.total += collected
 	cash += payout.total
+	# El Vendedor (tutorial): al cerrar el encuentro se queda con toda la plata. No da recompensa.
+	if boss_power_on() and BossRules.is_power(boss_rule, "cash_drain"):
+		payout["drained"] = cash
+		cash = 0
 	impulses = []
 	Coins.advance(coin_inventory.equipped, "encounter_won")
 	if is_boss(): Coins.advance(coin_inventory.equipped, "boss_won")
@@ -773,10 +803,15 @@ func resolve_repairs(ids: Array) -> bool:
 func _generated_shop() -> Dictionary:
 	var state := Shop.empty_state()
 	var staged_rng: int = rng.state
+	if tutorial:
+		# Tienda del tutorial: siempre la misma, sin tocar el azar principal (ver `_generated_shop` y `open_shop`).
+		var fixed := RandomNumberGenerator.new()
+		fixed.seed = Tutorial.SHOP_SEED
+		staged_rng = fixed.state
 	var serial: int = shop_offer_sequence
 	var seen: Array = once_coins_seen.duplicate()
 	for section in ["coins", "components", "numbers", "stickers"]:
-		var generated := Shop.generate(section, shop_tables, sticker_catalog, passives, staged_rng, serial, seen)
+		var generated := Shop.generate(section, shop_tables, sticker_catalog, passives, staged_rng, serial, seen, [] if tutorial else unlocked_coins)
 		if not generated.valid: return {"valid": false}
 		state[section] = generated.section
 		staged_rng = generated.rng_state
@@ -789,7 +824,8 @@ func open_shop() -> bool:
 	var generated := _generated_shop()
 	if not generated.valid: return false
 	shop_state = generated.state
-	rng.state = generated.rng_state
+	if not tutorial: rng.state = generated.rng_state
+	else: cash = Tutorial.SHOP_CASH
 	shop_offer_sequence = generated.sequence
 	once_coins_seen = generated.once_seen
 	phase = "shop"
@@ -847,7 +883,7 @@ func commit_shop_offer(section: String, id: String) -> bool:
 	return false
 
 func _purchase_plan(section: String, offer: Dictionary, target: Dictionary) -> Dictionary:
-	var price: int = offer_price(offer.get("price", 0)) if offer.get("price") is int else -1
+	var price: int = offer_price(offer.get("price", 0), offer.get("kind") == "coin") if offer.get("price") is int else -1
 	return Purchases.prepare(section, offer, target, dice, global_points, cup.stickers, sticker_catalog, coin_inventory, coin_instance_sequence, cash, debug_mode, credit_limit(), price)
 
 func begin_purchase(section: String, id: String) -> Dictionary:

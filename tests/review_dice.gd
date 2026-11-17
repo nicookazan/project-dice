@@ -3,7 +3,7 @@ const Die = preload("res://scripts/die.gd")
 
 func _initialize() -> void:
 	var scene = load("res://main.tscn").instantiate()
-	scene.persistence_enabled = false
+	scene.profiles_enabled = false
 	scene.campaign_mode = false
 	root.add_child(scene)
 	await process_frame

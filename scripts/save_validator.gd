@@ -126,7 +126,7 @@ static func validate(data: Variant) -> String:
 			if def.is_empty() or coin.instance_id < 1 or coin.instance_id > g.coin_instance_sequence or coin.instance_id in instances: return "identidad de moneda inválida"
 			instances.append(coin.instance_id)
 			if list == inventory.equipped:
-				if def.type != "passive" or coin.coin_id in equipped: return "moneda equipada inválida"
+				if def.type != "passive" or (coin.coin_id in equipped and not Coins.stackable(coin.coin_id)): return "moneda equipada inválida"
 				equipped.append(coin.coin_id)
 			elif def.type != "consumable": return "moneda de un uso inválida"
 	var limits := Coins.capacity(equipped)

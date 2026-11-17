@@ -199,7 +199,7 @@ static func _test_migration(service, check: Callable) -> void:
 	check.call(Validator.validate(bad) != "", "Boss: unknown saved rule is rejected instead of replaced/resampled")
 
 static func _test_ui(scene, check: Callable) -> void:
-	scene.persistence_enabled = false
+	scene.profiles_enabled = false
 	scene.campaign_mode = false
 	scene.validation_profile = false
 	scene.detail.hide()

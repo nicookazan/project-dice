@@ -36,7 +36,7 @@ static func synth(cue: String, environment_id := "dia") -> AudioStreamWAV:
 			var local := fposmod(t, 0.075 if cue == "roll" else 0.13)
 			sample = (noise * 0.42 + sin(TAU * 180 * local) * 0.35) * exp(-local * 65) * maxf(0.0, 1.0 - t / duration)
 		else:
-			var frequency := 260.0 if cue == "score" else 420.0 if cue == "buy" else 520.0 if cue == "repair" else 180.0 if cue == "break" else 320.0
+			var frequency := 260.0 if cue == "score" else 420.0 if cue == "buy" else 520.0 if cue == "repair" else 180.0 if cue == "break" else 210.0 if cue == "speak" else 320.0
 			sample = (sin(TAU * frequency * t) * 0.26 + sin(TAU * frequency * 1.5 * t) * 0.10) * exp(-t * 15)
 			if cue == "break": sample += noise * 0.22 * exp(-t * 25)
 		var encoded := int(clampf(sample, -1, 1) * 32767)

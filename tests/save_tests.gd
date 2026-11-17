@@ -226,92 +226,23 @@ static func _test_invalid(check: Callable) -> void:
 	bad.game.dice[0].hand_effects["earth_points"] = NAN
 	check.call(Validator.validate(bad) != "", "Save: rejects nonfinite numeric state")
 
+## Las jugadas ya no se guardan (docs/PARTIDAS-GUARDADAS.md): esta suite conserva el códec en memoria que usan las pruebas
+## de reproducibilidad, y comprueba que la interfaz ya no ofrece continuar ni guardar y que nada se escribe en disco.
 static func _test_ui(scene, check: Callable) -> void:
-	scene.persistence_enabled = true
-	scene.save_store = store()
 	scene.game.return_to_menu()
 	scene.session_started = false
-	scene.refresh_save_status()
+	scene.pending_tutorial_choice = false
 	scene.render()
-	check.call(UI.find_button(scene.ui, "Continuar") == null, "Save UI: fresh menu hides continue")
-	Flow.click(scene, "Nueva partida")
-	check.call(scene.save_store.inspect().active and scene.save_store.inspect().data.game.phase == "level_intro", "Save UI: new game writes announcement checkpoint")
-	Flow.click(scene, "Empezar primer encuentro")
-	Flow.click(scene, "TIRAR (3)")
-	var saved: Dictionary = scene.checkpoint_data()
-	check.call(scene.save_store.inspect().data == saved, "Save UI: actual throw is saved after resolution")
-	scene.render()
-	check.call(scene.save_store.read_file(scene.save_store.path + ".bak").data.game.rolls_made == 0, "Save UI: redraw does not replace backup or write another checkpoint")
-	Flow.click(scene, "Guardar y volver al menú")
-	check.call(scene.game.phase == "menu" and UI.find_button(scene.ui, "Continuar") != null, "Save UI: menu preserves active save and offers Continue")
-	Flow.click(scene, "Continuar")
-	check.call(scene.checkpoint_data() == saved, "Save UI: Continue restores exact phase without throwing again")
-	scene.save_store.fail_at = "after_temp"
-	scene.selected = [0]
-	scene.render()
-	check.call(scene.save_error != "" and UI.find_button(scene.ui, "Error al guardar · reintentar") != null, "Save UI: write failure is visible without losing live state")
-	scene.save_store.fail_at = ""
-	Flow.click(scene, "Error al guardar · reintentar")
-	check.call(scene.save_error == "" and scene.save_store.inspect().data.ui.selected == [0], "Save UI: retry publishes current decision after failed write")
-	Flow.click(scene, "Abandonar partida")
-	scene.confirmation.get_cancel_button().pressed.emit()
-	check.call(scene.save_store.inspect().active, "Save UI: cancel abandonment keeps resumable save")
-	Flow.click(scene, "Abandonar partida")
-	scene.confirmation.get_ok_button().pressed.emit()
-	check.call(scene.game.phase == "menu" and not scene.save_store.inspect().active and UI.find_button(scene.ui, "Continuar") == null, "Save UI: confirmed abandonment closes save and hides Continue")
-	# A second scene simulates closing/reopening the application, using the same isolated file.
+	check.call(UI.find_button(scene.ui, "Continuar") == null and UI.find_button(scene.ui, "Nueva jugada") != null, "Save UI: the menu has Nueva jugada and no Continuar")
+	var before := FileAccess.file_exists(ProjectSettings.globalize_path("user://saves/partida-v1.json"))
 	scene.start_new_run(221)
 	Flow.click(scene, "Empezar primer encuentro")
 	Flow.click(scene, "TIRAR (3)")
-	saved = scene.checkpoint_data()
-	var reopened = load("res://main.tscn").instantiate()
-	reopened.save_store = scene.save_store
-	scene.get_tree().root.add_child(reopened)
-	check.call(reopened.game.phase == "menu" and UI.find_button(reopened.ui, "Continuar") != null, "Save UI: fresh app instance discovers checkpoint")
-	Flow.click(reopened, "Continuar")
-	check.call(reopened.checkpoint_data() == saved, "Save UI: app reopen resumes exact state")
-	reopened.persistence_enabled = false
-	reopened.queue_free()
-	# Persist pending UI selections, not just model dictionaries.
-	var repair = Game.new(222)
-	repair.dice[0].shell = "ruby"
-	repair.dice[0].shell_broken = true
-	Fixture.set_values(repair, [6, 6, 6, 6, 6])
-	repair.form_group([0, 1, 2, 3, 4])
-	repair.score_hand()
-	repair.close_encounter()
-	scene.game = repair
-	scene.last_checkpoint = {}
-	scene.selected = []
-	scene.render()
-	var boxes: Array = scene.ui.find_children("*", "CheckBox", true, false)
-	boxes[0].button_pressed = true
-	check.call(scene.save_store.inspect().data.ui.repair_selection == [0], "Save UI: selecting a shell checkpoints pending repair choice without charging")
-	Flow.click(scene, "Guardar y volver al menú")
-	Flow.click(scene, "Continuar")
-	check.call(scene.repair_selection == [0] and UI.find_button(scene.ui, "Reparar selección · $3") != null, "Save UI: Continue restores selected repair and quoted total")
-	Flow.click(scene, "Reparar selección · $3")
-	check.call(scene.save_store.inspect().data.game.repair_resolution.status == "repaired" and not scene.game.dice[0].shell_broken, "Save UI: confirmed repair checkpoints resolved choice and exact payment")
-	var pack = shop_game("pack", {"pack_kind": "choose_one", "items": ["trio", "full", "pair_loose"]})
-	pack.purchase_offer("stickers", "fixture:1")
-	scene.game = pack
-	scene.repair_selection = []
-	scene.render()
-	Flow.click(scene, "Cerrar panel")
-	saved = scene.checkpoint_data()
-	Flow.click(scene, "Guardar y volver al menú")
-	Flow.click(scene, "Continuar")
-	check.call(scene.checkpoint_data() == saved and not scene.pack_panel_open and scene.game.cash == 95, "Save UI: closed paid pack panel reopens without new candidates or payment")
-	Flow.click(scene, "Elegir sticker pendiente")
-	scene.ui.get_node("StickerChoice/Sticker_trio").pressed.emit()
-	check.call(scene.save_store.inspect().data.game.cup.stickers == {"trio": 1} and scene.game.cash == 95, "Save UI: loaded pack choice is saved once")
-	scene.start_new_run(9)
-	Flow.click(scene, "Empezar primer encuentro")
-	Flow.play_run(scene.game, scene)
-	check.call(scene.game.phase == "won" and scene.save_error == "" and not scene.save_store.inspect().active, "Save UI: natural full run autosaves each transition and closes save at victory")
-	Flow.click(scene, "Volver al menú")
-	check.call(UI.find_button(scene.ui, "Continuar") == null, "Save UI: victory cannot be resumed from older active backup")
-	scene.persistence_enabled = false
+	var after := FileAccess.file_exists(ProjectSettings.globalize_path("user://saves/partida-v1.json"))
+	check.call(before == after and UI.find_button(scene.ui, "Menú") != null, "Save UI: playing a run never writes the old save file")
+	Flow.click(scene, "Abandonar jugada")
+	check.call(scene.confirmation.visible, "Save UI: abandoning a run in progress asks for confirmation")
+	scene.confirmation.get_ok_button().pressed.emit()
+	check.call(scene.game.phase == "menu" and UI.find_button(scene.ui, "Continuar") == null, "Save UI: abandoning returns to the menu without a way to continue")
 	scene.campaign_mode = false
-	scene.save_error = ""
 	scene.session_started = false

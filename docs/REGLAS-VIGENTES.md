@@ -2,6 +2,8 @@
 
 Fecha: 25 de octubre de 2026. Este documento guía la implementación; no afirma que todos los sistemas estén programados. El estado comprobado está en [DESARROLLO.md](DESARROLLO.md).
 
+**Actualización del 17/11/2026 (D18):** las jugadas ya no se guardan ni se continúan; lo único que se guarda son tres partidas con estadísticas, logros y monedas desbloqueadas ([PARTIDAS-GUARDADAS](PARTIDAS-GUARDADAS.md)). Cada jugada nueva pregunta por el tutorial ([TUTORIAL](TUTORIAL.md)). Existe una moneda bloqueada, «El regalo del vendedor» (C58), acumulable. Donde este documento hable de guardar o continuar una jugada, manda lo nuevo.
+
 ## Fuentes y precedencia
 
 1. Decisiones posteriores de [PRD-PROTOTIPO](https://app.notion.com/p/404c28142b5581679265d602cec7e69b).

@@ -5,7 +5,7 @@ const UI = preload("res://tests/interface_tests.gd")
 static func run(scene, check: Callable) -> void:
 	scene.detail.hide()
 	scene.confirmation.hide()
-	scene.persistence_enabled = false
+	scene.profiles_enabled = false
 	scene.game = Shop.game_at_shop(622)
 	scene.game.passives = ["even", "odd"]
 	scene.game.consumable = "boost"

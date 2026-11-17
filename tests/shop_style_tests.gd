@@ -5,7 +5,7 @@ const Purchase = preload("res://tests/purchase_tests.gd")
 
 static func run(scene, check: Callable) -> Dictionary:
 	scene.detail.hide()
-	scene.persistence_enabled = false
+	scene.profiles_enabled = false
 	scene.preferences_enabled = false
 	scene.game = Shop.game_at_shop(162)
 	scene.game.passives = ["even", "odd"]

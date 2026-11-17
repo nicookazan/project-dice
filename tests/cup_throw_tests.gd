@@ -7,7 +7,7 @@ const UI = preload("res://tests/interface_tests.gd")
 static func run(scene, check: Callable) -> void:
 	scene.detail.hide()
 	scene.confirmation.hide()
-	scene.persistence_enabled = false
+	scene.profiles_enabled = false
 	scene.preferences_enabled = false
 	scene.preferences.reduced_motion = false
 	scene.preferences.speed = 1

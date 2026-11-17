@@ -37,7 +37,7 @@ Pasos 00–18 completos en alcance técnico; 19 (presentación/arte) reabierto p
 - Jugar: `Jugar.cmd` (Windows, busca `Godot*_win64.exe` en el Escritorio) / `./Jugar.command` (Mac) / abrir `project.godot` y F5.
 - Tests: `Probar.cmd`, o `<godot_console> --headless --path . --script res://tests/run_tests.gd` (exit ≠ 0 si falla; escribe `test-results/tests.json`).
 - Revisión visual: `godot --path . --script res://tests/<nombre>_review.gd`.
-- Modos: "Nueva partida debug" (daño y plata infinitos), `Nivel-corto.cmd` (40→70→110), `Validar-nivel.cmd` (perfil de prueba v1), `Jugar-jefe.cmd <id[,id]>` (fuerza jefes del catálogo); en la campaña, Menú → «Ir a otro nivel» salta a cualquiera de los siete niveles.
+- Modos: "Nueva jugada debug" (solo en builds de desarrollo; daño y plata infinitos; no escribe nada), `Nivel-corto.cmd` (40→70→110), `Validar-nivel.cmd` (perfil de prueba v1), `Jugar-jefe.cmd <id[,id]>` (fuerza jefes del catálogo); en la campaña, Menú → «Ir a otro nivel» salta a cualquiera de los siete niveles.
 
 ## Convenciones de trabajo
 
@@ -46,7 +46,7 @@ Pasos 00–18 completos en alcance técnico; 19 (presentación/arte) reabierto p
 - La previsión de puntos debe coincidir siempre con la anotación; el azar debe ser reproducible por semilla y exacto tras guardar/continuar (no re-sortear al cargar).
 - Redondeo: decimales se conservan y se redondea una sola vez al total de mano (0,5 hacia arriba).
 - Arte: respetar el pixel art existente y el diseño maestro de dados (`docs/DISENO-MAESTRO-DADOS.md`, imagen marfil frontal). No sustituir por geometría provisional. Registrar prompts/procedencia.
-- Guardado versionado (hoy v9) con migraciones; nunca sobrescribir archivos inválidos. Guardados y preferencias van en `%APPDATA%/DiosNoJuegaALosDados/`, fuera de Git.
+- Las jugadas no se guardan (D18): solo se guardan tres partidas de metaprogreso (`scripts/profile_store.gd`, v1, ver `docs/PARTIDAS-GUARDADAS.md`); nunca sobrescribir archivos inválidos. `SaveStore` y las migraciones v1–v9 quedan solo para las pruebas en memoria. Partidas y preferencias van en `%APPDATA%/DiosNoJuegaALosDados/`, fuera de Git.
 - No publicar ni distribuir externamente sin instrucción explícita. Rama principal: `main` (única de larga vida); cada cambio va en `feature/<nombre>` con PR contra `main`.
 - Fuera de alcance salvo pedido: compra/venta de dados, más de 5 dados, destrucción del dado, usos seguros de cristal, dos tiradas por mano, victoria automática por generala servida, nivel 8/CMD.
 

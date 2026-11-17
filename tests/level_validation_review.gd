@@ -15,7 +15,7 @@ func verify(condition: bool, message: String) -> void:
 
 func _initialize() -> void:
 	scene = load("res://main.tscn").instantiate()
-	scene.persistence_enabled = false
+	scene.profiles_enabled = false
 	scene.campaign_mode = false
 	root.add_child(scene)
 	await process_frame
@@ -23,7 +23,6 @@ func _initialize() -> void:
 	Tests.folder = "res://test-results/integral-review/" + str(Time.get_ticks_usec())
 	Tests.isolate(scene, true)
 	scene.game.return_to_menu()
-	scene.refresh_save_status()
 	scene.render()
 	await capture("menu-perfil")
 	scene.start_new_run(1)
@@ -74,7 +73,7 @@ func _initialize() -> void:
 	Tests.natural_run(scene, 0, true, "lost", verify)
 	await capture("derrota-natural")
 	print("INTEGRAL REVIEW: 9 captures; failures=", failures)
-	scene.persistence_enabled = false
+	scene.profiles_enabled = false
 	scene.campaign_mode = false
 	quit(0 if failures == 0 else 1)
 

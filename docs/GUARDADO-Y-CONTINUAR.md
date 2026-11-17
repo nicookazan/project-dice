@@ -1,5 +1,7 @@
 # Guardado versionado y Continuar
 
+> **Reemplazado el 17/11/2026 (D18):** las jugadas ya no se guardan ni se continúan; el guardado pasó a ser de *partidas* (estadísticas, logros, monedas desbloqueadas): ver [PARTIDAS-GUARDADAS](PARTIDAS-GUARDADAS.md). Este documento queda como historia del guardado de la jugada, cuyo código (`SaveStore`, validación y migraciones) sigue en el repo solo para las pruebas de reproducibilidad en memoria; la interfaz ya no tiene «Continuar» ni «Guardar y salir».
+
 Actualización del 30/10/2026: formato actual **v6**. Se eliminan las mejoras locales de puntos. Al leer v1–v5, sus bonos acumulados se suman al mapa global de cada número y desaparecen los mapas por dado. Las ofertas pendientes antiguas se convierten en globales dentro de los límites de su rareza; una selección local todavía sin pagar se cancela sin cobrar. El saldo, RNG e historia anotada se conservan. El archivo original sigue intacto hasta guardar un nuevo checkpoint.
 
 Actualización del 30/10/2026: formato actual **v5**, con la marca de partida debug. «Continuar» conserva las ayudas de una partida debug; las partidas v1–v4 se cargan como normales. Las rutas se mantienen y no se sobrescribe el archivo al leerlo. Ver [Modo debug](MODO-DEBUG.md).

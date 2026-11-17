@@ -107,7 +107,12 @@ static func gem_rule(equipped: Array, rule: String) -> bool:
 	return false
 
 ## `visit_rate` (U16) se multiplica con el Descuento (C45) y se redondea una sola vez: precio × 0,8 × 0,5.
-static func discounted(price: int, equipped: Array, visit_rate := 0.0) -> int:
+## `single_coin` marca el precio de una moneda suelta: ahí, después de los porcentajes, cada copia de «El regalo del vendedor»
+## resta $1 y el precio nunca baja de $1. Los paquetes, las renovaciones y las demás ofertas no lo usan.
+static func discounted(price: int, equipped: Array, visit_rate := 0.0, single_coin := false) -> int:
 	var rate := minf(sum_of(equipped, "discount"), 0.9)
 	var factor := (1.0 - rate) * (1.0 - clampf(visit_rate, 0.0, 0.9))
-	return price if factor >= 1.0 else int(floor(price * factor + 0.5))
+	var result: int = price if factor >= 1.0 else int(floor(price * factor + 0.5))
+	var flat := int(sum_of(equipped, "coin_discount_flat")) if single_coin else 0
+	if flat > 0 and price > 0: result = maxi(result - flat, 1)
+	return result

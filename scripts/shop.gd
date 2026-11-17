@@ -91,8 +91,9 @@ static func staged_coin_pool(pool: Array, tables: Dictionary, rng: RandomNumberG
 	var chosen_rarity: String = rarities[0].rarity if rarities.size() == 1 else pick(rarities, rng).rarity
 	return of_type.filter(func(item): return Coins.rarity_of(item.effect.coin_id) == chosen_rarity)
 
+## `unlocked`: monedas bloqueadas (Coins.LOCKED) que la partida guardada ya desbloqueó; las demás bloqueadas no salen.
 static func generate(section: String, tables: Dictionary, stickers: Dictionary, owned: Array,
-		rng_state: int, sequence: int, once_seen: Array = []) -> Dictionary:
+		rng_state: int, sequence: int, once_seen: Array = [], unlocked: Array = []) -> Dictionary:
 	if section not in SIZES or section == "cup": return {"valid": false}
 	var source = tables.get(section, [])
 	if not source is Array: return {"valid": false}
@@ -101,7 +102,8 @@ static func generate(section: String, tables: Dictionary, stickers: Dictionary, 
 	var pool: Array = []
 	for data in source:
 		if not valid_candidate(section, data, stickers): return {"valid": false}
-		if section == "coins" and data.effect.coin_id in Coins.PASSIVES and data.effect.coin_id in owned: continue
+		if section == "coins" and Coins.locked(data.effect.coin_id) and data.effect.coin_id not in unlocked: continue
+		if section == "coins" and data.effect.coin_id in Coins.PASSIVES and data.effect.coin_id in owned and not Coins.stackable(data.effect.coin_id): continue
 		if section == "coins" and Coins.once_per_run(data.effect.coin_id) and data.effect.coin_id in seen: continue
 		pool.append(data)
 	var result: Dictionary = empty_state()[section]
@@ -222,6 +224,7 @@ static func clean_passive_offers(state: Dictionary, owned: Array) -> Dictionary:
 		var offer: Dictionary = cleaned.coins.slots[index]
 		var id: String = offer.get("effect", {}).get("coin_id", "")
 		if id not in Coins.PASSIVES: continue
+		if Coins.stackable(id): continue
 		if id in seen: cleaned.coins.slots[index] = {}
 		else: seen.append(id)
 	return cleaned
