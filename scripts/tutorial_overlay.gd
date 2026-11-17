@@ -36,12 +36,12 @@ func setup(step_notes: Array, show_notes: bool, gold: Color, cream: Color, block
 	z_index = 200
 	mouse_filter = Control.MOUSE_FILTER_STOP if open and blocking else Control.MOUSE_FILTER_IGNORE
 	if open:
-		if blocking:
-			var dim := ColorRect.new()
-			dim.color = Color(0.02, 0.03, 0.06, 0.55)
-			dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-			dim.mouse_filter = Control.MOUSE_FILTER_IGNORE
-			add_child(dim)
+		# Velo sobre toda la pantalla: en los pasos de acción es más suave y no tapa el mouse.
+		var dim := ColorRect.new()
+		dim.color = Color(0.02, 0.03, 0.06, 0.55 if blocking else 0.4)
+		dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		dim.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		add_child(dim)
 		for entry in notes:
 			var zone: Rect2 = Tutorial.ZONES.get(entry.zone, Rect2(560, 300, 320, 200))
 			var frame := Panel.new()
