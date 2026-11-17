@@ -51,6 +51,10 @@ static func run(scene, check: Callable) -> void:
 	hand = show(scene, god)
 	check.call(god.is_boss() and BossInfo.is_god(god) and hand != null and hand.position == Backdrop.GOD_RECT.position, "Boss panel: God's triangle has its own button")
 	hand.pressed.emit()
+	# El guardián primero hace su animación (hand_gesture_tests la recorre); acá se lee la ficha directamente.
+	if scene.background.props.busy("guardian"):
+		scene.background.props.stop_all()
+		scene.inspect_boss_hand()
 	check.call(scene.detail.title == "Dios" and ("Objetivo: %d puntos" % Campaign.candidate(god.campaign[6], god.selected_bosses["6"]).target) in scene.detail_text, "Boss panel: God shows the drawn rule and its target")
 	var referee = CatalogTests.red_card_game(700, ["even", "odd"])
 	hand = show(scene, referee)

@@ -355,12 +355,7 @@ func begin_campaign(seed_value: int = -1, definitions: Array = []) -> bool:
 func _enter_campaign_level() -> void:
 	var level: Dictionary = campaign[level_index]
 	var key := str(level_index)
-	if not selected_bosses.has(key): selected_bosses[key] = _drawable_candidates(level)[rng.randi_range(0, _drawable_candidates(level).size() - 1)].id
-	if development_bosses:
-		for forced in forced_boss_ids:
-			var forced_row := BossCatalog.entry(forced)
-			if not forced_row.is_empty() and forced_row.level == level_index + 1 and Campaign.candidate(level, forced).size() > 0 and selected_bosses[key] != forced:
-				selected_bosses[key] = forced
+	_choose_level_boss(level_index)
 	var chosen := Campaign.candidate(level, selected_bosses[key])
 	level_encounters = Campaign.encounters(level, chosen)
 	boss_rule = chosen.rule.duplicate(true)
@@ -368,6 +363,40 @@ func _enter_campaign_level() -> void:
 	_start_encounter()
 	phase = "level_intro"
 	message = "Campaña de prueba · nivel %d / 7. %s" % [level_index + 1, BossRules.description(boss_rule)]
+
+## Sortea (una sola vez) el jefe del nivel `index`; en desarrollo, un jefe forzado de ese nivel lo reemplaza.
+func _choose_level_boss(index: int) -> void:
+	var level: Dictionary = campaign[index]
+	var key := str(index)
+	if not selected_bosses.has(key): selected_bosses[key] = _drawable_candidates(level)[rng.randi_range(0, _drawable_candidates(level).size() - 1)].id
+	if development_bosses:
+		for forced in forced_boss_ids:
+			var forced_row := BossCatalog.entry(forced)
+			if not forced_row.is_empty() and forced_row.level == index + 1 and Campaign.candidate(level, forced).size() > 0 and selected_bosses[key] != forced:
+				selected_bosses[key] = forced
+
+## Fases en las que se puede saltar a otro nivel: no en el menú ni con una compra o un paquete pagado a medio resolver.
+const LEVEL_JUMP_BLOCKED := ["menu", "purchase_target", "sticker_choice", "coin_choice"]
+
+func can_jump_to_level(index: int) -> bool:
+	return not campaign.is_empty() and index >= 0 and index < campaign.size() and phase not in LEVEL_JUMP_BLOCKED
+
+## Salta al comienzo del nivel `index` (adelante o atrás) sin jugar los encuentros del medio. Se conservan plata, dados,
+## monedas y stickers; se pierde el encuentro en curso. Los niveles anteriores quedan como superados (sorteando su jefe
+## si nunca se entró) y los posteriores se olvidan, para que el recorrido y el guardado sigan siendo coherentes.
+func jump_to_level(index: int) -> bool:
+	if not can_jump_to_level(index): return false
+	for later in selected_bosses.keys():
+		if int(later) > index: selected_bosses.erase(later)
+	completed_encounters = []
+	for skipped in range(index):
+		_choose_level_boss(skipped)
+		for encounter in Campaign.encounters(campaign[skipped], Campaign.candidate(campaign[skipped], selected_bosses[str(skipped)])):
+			completed_encounters.append(encounter.id)
+	level_index = index
+	_enter_campaign_level()
+	message = "Saltaste al nivel %d / %d. %s" % [index + 1, campaign.size(), BossRules.description(boss_rule)]
+	return true
 
 func _drawable_candidates(level: Dictionary) -> Array:
 	## Sin jefes con poder en el nivel (hasta terminar la fase D) se usa el pool completo para no romper la campaña.
