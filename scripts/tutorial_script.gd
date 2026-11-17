@@ -71,7 +71,9 @@ static func _first_encounter(ctx: Dictionary) -> Dictionary:
 	var throw_ids: Array = [2, 3, 4] if hand == 1 else [4]
 	if rolls_made == 1:
 		if cup.is_empty():
-			var text := "Elegí los dados que querés volver a tirar. Los dos 4 se quedan: tocá los otros tres." if hand == 1 else "Vamos por un full: tocá el dado suelto (el último) para tirarlo de nuevo."
+			var text := "Elegí los dados que querés volver a tirar. Los dos 4 se quedan: tocá los otros tres y mandalos al vaso." if hand == 1 else "Vamos por un full: tocá el dado suelto (el último) para tirarlo de nuevo y mandalo al vaso."
+			if Array(selected).size() > 0 and selection_matches(throw_ids, selected):
+				return {"id": "h%d_to_cup" % hand, "notes": [note("Listo. Apretá «Al vaso →» o arrastrá esos dados al vaso, a la derecha.", "to_cup", "above")], "allow": ["select", "to_cup"], "select": throw_ids, "to_cup_select": throw_ids, "highlight": throw_ids, "glow_zones": ["to_cup", "cup"]}
 			return {"id": "h%d_select_throw" % hand, "notes": [note(text, "table", "above")], "allow": ["select", "to_cup"], "select": throw_ids, "to_cup_select": throw_ids, "highlight": throw_ids}
 		return {"id": "h%d_roll_1" % hand, "notes": [note("Ya están en el vaso. Tirá otra vez: los dados que dejaste en la mesa se conservan.", "roll", "above")], "allow": ["roll"], "select": []}
 	var group_ids: Array = [0, 1, 2] if hand == 1 else [0, 1, 2, 3, 4]
