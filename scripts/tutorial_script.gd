@@ -18,7 +18,7 @@ const ROLLS := [[[4, 4, 2, 6, 3], [4, 1, 5]], [[6, 6, 3, 3, 2], [3]]]
 const ZONES := {
 	"roll": Rect2(1082, 681, 312, 47), "group": Rect2(375, 681, 210, 47), "to_cup": Rect2(597, 681, 157, 47),
 	"score": Rect2(40, 681, 292, 47), "table": Rect2(712, 324, 350, 330), "cup": Rect2(1082, 324, 358, 330),
-	"groups": Rect2(366, 324, 330, 330), "notebook": Rect2(22, 25, 310, 630), "boss_hand": Rect2(560, 20, 330, 160),
+	"groups": Rect2(366, 324, 330, 330), "play_first": Rect2(384, 360, 296, 40), "notebook": Rect2(22, 25, 310, 630), "boss_hand": Rect2(560, 20, 330, 160),
 	"close": Rect2(375, 626, 236, 42), "next_hand": Rect2(725, 626, 262, 42), "choice_shop": Rect2(338, 565, 366, 56),
 	"inventory": Rect2(40, 740, 700, 130), "thermos": Rect2(1180, 130, 220, 260), "advance": Rect2(1025, 25, 380, 93),
 	"numbers": Rect2(538, 252, 367, 179), "components": Rect2(929, 252, 388, 179), "coins": Rect2(525, 442, 380, 179),
@@ -78,7 +78,7 @@ static func _first_encounter(ctx: Dictionary) -> Dictionary:
 		return {"id": "h%d_roll_1" % hand, "notes": [note("Ya están en el vaso. Tirá otra vez: los dados que dejaste en la mesa se conservan.", "roll", "above")], "allow": ["roll"], "select": []}
 	var group_ids: Array = [0, 1, 2] if hand == 1 else [0, 1, 2, 3, 4]
 	var group_text := "Salió otro 4: tenés un trío. Armalo con esos tres dados." if hand == 1 else "¡Salió el 3! Tenés tres 3 y dos 6: un full. Armalo con los cinco dados."
-	return {"id": "h%d_group" % hand, "notes": [note(group_text, "table", "above"), note("Se arma tocando la jugada posible de la izquierda (%s), o eligiendo los dados y apretando Armar grupo." % ("Trío" if hand == 1 else "Full"), "groups", "left")], "allow": ["select", "group"], "select": group_ids, "group_select": group_ids, "highlight": group_ids}
+	return {"id": "h%d_group" % hand, "notes": [note(group_text, "table", "above"), note("Se arma tocando la jugada posible de la izquierda (%s), o eligiendo los dados y apretando Armar grupo." % ("Trío" if hand == 1 else "Full"), "groups", "left")], "allow": ["select", "group"], "select": group_ids, "group_select": group_ids, "highlight": group_ids, "glow_zones": ["play_first", "group"]}
 
 static func _shop() -> Dictionary:
 	return {"id": "shop", "notes": [
