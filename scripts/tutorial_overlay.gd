@@ -24,19 +24,24 @@ static func bubble_rect(zone: Rect2, side: String, size: Vector2) -> Rect2:
 	at.y = clampf(at.y, 8.0, SCREEN.y - size.y - 8.0)
 	return Rect2(at, size)
 
-func setup(step_notes: Array, show_notes: bool, gold: Color, cream: Color) -> void:
+var gold_color := Color.GOLD
+
+## `blocking`: con «Continuar» y tapando el mouse (pantallas informativas); si no, solo señala y deja tocar lo que pide el cartel.
+func setup(step_notes: Array, show_notes: bool, gold: Color, cream: Color, blocking := true) -> void:
+	gold_color = gold
 	notes = step_notes
 	open = show_notes and not notes.is_empty()
 	name = "TutorialOverlay"
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	z_index = 200
-	mouse_filter = Control.MOUSE_FILTER_STOP if open else Control.MOUSE_FILTER_IGNORE
+	mouse_filter = Control.MOUSE_FILTER_STOP if open and blocking else Control.MOUSE_FILTER_IGNORE
 	if open:
-		var dim := ColorRect.new()
-		dim.color = Color(0.02, 0.03, 0.06, 0.55)
-		dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-		dim.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		add_child(dim)
+		if blocking:
+			var dim := ColorRect.new()
+			dim.color = Color(0.02, 0.03, 0.06, 0.55)
+			dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+			dim.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			add_child(dim)
 		for entry in notes:
 			var zone: Rect2 = Tutorial.ZONES.get(entry.zone, Rect2(560, 300, 320, 200))
 			var frame := Panel.new()
@@ -74,14 +79,15 @@ func setup(step_notes: Array, show_notes: bool, gold: Color, cream: Color) -> vo
 			bubble.add_theme_stylebox_override("panel", skin)
 			bubble.mouse_filter = Control.MOUSE_FILTER_IGNORE
 			add_child(bubble)
-		continue_button = Button.new()
-		continue_button.name = "TutorialContinue"
-		continue_button.text = "Continuar"
-		continue_button.size = Vector2(200, 48)
-		continue_button.position = Vector2(SCREEN.x - 224, SCREEN.y - 76)
-		for state in ["normal", "hover", "pressed"]: continue_button.add_theme_stylebox_override(state, UiSkin.button(state, true))
-		continue_button.pressed.connect(func(): dismissed.emit())
-		add_child(continue_button)
+		if blocking:
+			continue_button = Button.new()
+			continue_button.name = "TutorialContinue"
+			continue_button.text = "Continuar"
+			continue_button.size = Vector2(200, 48)
+			continue_button.position = Vector2(SCREEN.x - 224, SCREEN.y - 76)
+			for state in ["normal", "hover", "pressed"]: continue_button.add_theme_stylebox_override(state, UiSkin.button(state, true))
+			continue_button.pressed.connect(func(): dismissed.emit())
+			add_child(continue_button)
 	elif not notes.is_empty():
 		help_button = Button.new()
 		help_button.name = "TutorialHelp"
@@ -93,3 +99,21 @@ func setup(step_notes: Array, show_notes: bool, gold: Color, cream: Color) -> vo
 		for state in ["normal", "hover", "pressed"]: help_button.add_theme_stylebox_override(state, UiSkin.button(state, true))
 		help_button.pressed.connect(func(): reopened.emit())
 		add_child(help_button)
+
+## Contorno dorado que late sobre algo que hay que tocar (un dado). No tapa el mouse.
+func add_glow(rect: Rect2) -> void:
+	var glow := Panel.new()
+	glow.name = "Glow"
+	glow.position = rect.position
+	glow.size = rect.size
+	var edge := StyleBoxFlat.new()
+	edge.bg_color = Color(1, 0.9, 0.5, 0.22)
+	edge.border_color = gold_color
+	edge.set_border_width_all(4)
+	edge.set_corner_radius_all(10)
+	glow.add_theme_stylebox_override("panel", edge)
+	glow.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(glow)
+	var tween := glow.create_tween().set_loops()
+	tween.tween_property(glow, "modulate:a", 0.45, 0.5)
+	tween.tween_property(glow, "modulate:a", 1.0, 0.5)

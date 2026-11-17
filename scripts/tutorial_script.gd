@@ -53,7 +53,7 @@ static func step(ctx: Dictionary) -> Dictionary:
 	if rival == 2 and phase == "play" and int(ctx.get("hand", 1)) == 1 and int(ctx.get("rolls_made", 0)) == 0:
 		return {"id": "boss_intro", "notes": [
 			note("Cada jefe tiene una mecánica propia. Esta es la del vendedor: al terminar te saca toda la plata.", "notebook"),
-			note("Tocá la mano del jefe para ver su poder en cualquier momento.", "boss_hand", "below")], "allow": ["all"], "select": []}
+			note("Tocá la mano del jefe para ver su poder en cualquier momento.", "boss_hand", "below")], "blocking": true, "allow": ["all"], "select": []}
 	return {}
 
 static func _first_encounter(ctx: Dictionary) -> Dictionary:
@@ -72,11 +72,11 @@ static func _first_encounter(ctx: Dictionary) -> Dictionary:
 	if rolls_made == 1:
 		if cup.is_empty():
 			var text := "Elegí los dados que querés volver a tirar. Los dos 4 se quedan: tocá los otros tres." if hand == 1 else "Vamos por un full: tocá el dado suelto (el último) para tirarlo de nuevo."
-			return {"id": "h%d_select_throw" % hand, "notes": [note(text, "table", "above")], "allow": ["select", "to_cup"], "select": throw_ids, "to_cup_select": throw_ids}
+			return {"id": "h%d_select_throw" % hand, "notes": [note(text, "table", "above")], "allow": ["select", "to_cup"], "select": throw_ids, "to_cup_select": throw_ids, "highlight": throw_ids}
 		return {"id": "h%d_roll_1" % hand, "notes": [note("Ya están en el vaso. Tirá otra vez: los dados que dejaste en la mesa se conservan.", "roll", "above")], "allow": ["roll"], "select": []}
 	var group_ids: Array = [0, 1, 2] if hand == 1 else [0, 1, 2, 3, 4]
-	var group_text := "Salió otro 4: tenés un trío. Elegí esos tres dados y armá el grupo." if hand == 1 else "¡Salió el 3! Tenés tres 3 y dos 6: un full. Elegí los cinco dados y armá el grupo."
-	return {"id": "h%d_group" % hand, "notes": [note(group_text, "table", "above"), note("Se va armando acá, con su categoría.", "groups", "right")], "allow": ["select", "group"], "select": group_ids, "group_select": group_ids}
+	var group_text := "Salió otro 4: tenés un trío. Armalo con esos tres dados." if hand == 1 else "¡Salió el 3! Tenés tres 3 y dos 6: un full. Armalo con los cinco dados."
+	return {"id": "h%d_group" % hand, "notes": [note(group_text, "table", "above"), note("Se arma tocando la jugada posible de la izquierda (%s), o eligiendo los dados y apretando Armar grupo." % ("Trío" if hand == 1 else "Full"), "groups", "left")], "allow": ["select", "group"], "select": group_ids, "group_select": group_ids, "highlight": group_ids}
 
 static func _shop() -> Dictionary:
 	return {"id": "shop", "notes": [
@@ -84,8 +84,7 @@ static func _shop() -> Dictionary:
 		note("Stickers: potencian una categoría y se pegan en el termo.", "stickers", "below"),
 		note("Números y caras: mejoran un número o cambian una cara de un dado.", "numbers", "left"),
 		note("Componentes: gemas, elementos y materiales, para uno de tus cinco dados.", "components", "above"),
-		note("Monedas: pasivas que cambian las reglas, o de un solo uso. Podés vender las tuyas arrastrándolas al maletín.", "coins", "left"),
-		note("Cuando termines, andá al próximo rival. El siguiente encuentro es sin guía.", "advance", "below")], "allow": ["all"], "select": []}
+		note("Monedas: pasivas que cambian las reglas, o de un solo uso. Podés vender las tuyas arrastrándolas al maletín.", "coins", "left")], "blocking": true, "allow": ["all"], "select": []}
 
 ## ¿La acción está permitida en este paso? "all" deja todo; sin paso (o sin notas esperadas) no se bloquea nada.
 static func allows(current: Dictionary, action: String) -> bool:

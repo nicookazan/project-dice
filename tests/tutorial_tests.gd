@@ -238,7 +238,7 @@ static func _test_tutorial_steps(check: Callable) -> void:
 	var shop := Tutorial.step({"phase": "shop", "rival": 0})
 	var zones_ok := true
 	for entry in shop.notes: zones_ok = zones_ok and Tutorial.ZONES.has(entry.zone)
-	check.call(shop.id == "shop" and shop.notes.size() >= 6 and zones_ok and Tutorial.allows(shop, "anything"), "Guion: la tienda tiene un cartel por sección (stickers, números, componentes, monedas) y deja comprar")
+	check.call(shop.id == "shop" and shop.notes.size() >= 5 and shop.get("blocking", false) and zones_ok and Tutorial.allows(shop, "anything"), "Guion: la tienda tiene un cartel por sección (stickers, números, componentes, monedas) y deja comprar")
 	check.call(Tutorial.step({"phase": "play", "rival": 1, "hand": 1, "rolls_made": 0}).is_empty() and Tutorial.step({"phase": "play", "rival": 1}).is_empty(), "Guion: el segundo encuentro es sin guía")
 	check.call(Tutorial.step({"phase": "play", "rival": 2, "hand": 1, "rolls_made": 0}).id == "boss_intro" and Tutorial.step({"phase": "play", "rival": 2, "hand": 1, "rolls_made": 1}).is_empty(), "Guion: los carteles del jefe aparecen una vez al empezar su encuentro")
 	# Ningún paso queda sin salida: toda combinación de estado de las dos manos tiene un paso que permite algo.
@@ -430,7 +430,7 @@ static func _dismiss(scene) -> void:
 
 ## Juega el primer encuentro siguiendo solo lo que permite cada paso del guion y comprueba los bloqueos.
 static func _play_tutorial_first_encounter(scene, check: Callable) -> void:
-	check.call(scene.tutorial_step().id == "h1_roll_0" and scene.tutorial_notes_open() and _find(scene.ui, "TutorialOverlay").open, "Tutorial: la primera mesa abre sus carteles")
+	check.call(scene.tutorial_step().id == "h1_roll_0" and not scene.tutorial_notes_open() and _find(scene.ui, "TutorialOverlay").open and _find(scene.ui, "TutorialOverlay").mouse_filter == Control.MOUSE_FILTER_IGNORE and _find(scene.ui, "TutorialOverlay").continue_button == null, "Tutorial: los carteles de la mesa señalan sin tapar ni pedir Continuar")
 	scene.toggle_die(0)
 	check.call(scene.selected.is_empty() and not scene.tutorial_allows("score") and not scene.tutorial_allows("group"), "Tutorial: con una acción obligatoria pendiente las demás quedan bloqueadas")
 	var throw_button = UI.find_button(scene.ui, "TIRAR (3)")

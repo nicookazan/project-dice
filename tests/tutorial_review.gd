@@ -23,6 +23,8 @@ func _initialize() -> void:
 	await capture("4-mesa-carteles")
 	scene.tutorial_seen.append("h1_roll_0")
 	scene.render()
+	scene.game.roll()
+	scene.render()
 	await capture("5-mesa-con-signo")
 	scene.game.points = 50
 	scene.game.phase = "hand_result"

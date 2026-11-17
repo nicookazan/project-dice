@@ -11,7 +11,7 @@ Una jugada de un solo nivel, idéntica en objetivos al nivel 1: **40** (rival 1)
 
 ## Carteles
 
-- `scripts/tutorial_overlay.gd`: una capa con un cartel de texto junto a cada zona (`TutorialScript.ZONES`, coordenadas lógicas 1440 × 900). **Un solo «Continuar»** cierra todos los de esa pantalla; después queda un botón **«?»** al costado para volver a verlos. Mientras están abiertos tapan el mouse y el teclado del juego.
+- `scripts/tutorial_overlay.gd`: una capa con un cartel de texto junto a cada zona (`TutorialScript.ZONES`, coordenadas lógicas 1440 × 900). **Un solo «Continuar»** cierra todos los de una pantalla informativa (tienda, jefe); después queda un botón **«?»**. Los pasos de acción (primer encuentro) no tapan nada ni piden «Continuar»: el cartel dice qué tocar, los dados a elegir brillan (`highlight`) y se avanza haciéndolo.
 - El **paso actual** se calcula del estado visible (`TutorialScript.step(ctx)`: fase, encuentro, mano, tiradas, grupos, dados en el vaso, selección), no se guarda. `Main.tutorial_seen` recuerda qué carteles ya se cerraron en la jugada.
 - **Acciones obligatorias**: cada paso lista las acciones permitidas (`allow`); las demás quedan bloqueadas (botones deshabilitados y atajos de teclado ignorados), el mismo patrón con que los jefes bloquean movimientos. Los pasos que piden una selección exacta (`to_cup_select`, `group_select`) solo dejan «Al vaso» / «Armar grupo» con esos dados. «Desarmar» no aparece.
 

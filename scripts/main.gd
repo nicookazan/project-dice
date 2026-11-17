@@ -114,7 +114,9 @@ var thief_node: Control
 var throw_blocker: Control
 
 func _ready() -> void:
-	if preferences_enabled: preferences = preference_store.load_values()
+	if preferences_enabled:
+		preferences = preference_store.load_values()
+		preferences["drag_groups"] = false # Siempre arranca desactivada; se activa desde Opciones.
 	audio = PresentationAudio.new()
 	add_child(audio)
 	var theme_value := Theme.new()
@@ -1344,7 +1346,12 @@ func render_tutorial_layer() -> void:
 	tutorial_current = tutorial_step()
 	if tutorial_current.is_empty() or tutorial_current.notes.is_empty(): return
 	var overlay := TutorialOverlay.new()
-	overlay.setup(tutorial_current.notes, tutorial_current.id not in tutorial_seen, gold, cream)
+	var blocking: bool = tutorial_current.get("blocking", false)
+	# Los pasos de acción no tapan nada ni piden «Continuar»: el cartel dice qué tocar y se toca.
+	overlay.setup(tutorial_current.notes, not blocking or tutorial_current.id not in tutorial_seen, gold, cream, blocking)
+	for id in tutorial_current.get("highlight", []):
+		var die = table_dice.get(id)
+		if is_instance_valid(die): overlay.add_glow(die.get_global_rect().grow(6))
 	overlay.dismissed.connect(func():
 		tutorial_seen.append(tutorial_current.id)
 		render())
@@ -1354,7 +1361,7 @@ func render_tutorial_layer() -> void:
 	ui.add_child(overlay)
 
 func tutorial_notes_open() -> bool:
-	return game.tutorial and not tutorial_current.is_empty() and not tutorial_current.notes.is_empty() and tutorial_current.id not in tutorial_seen
+	return game.tutorial and not tutorial_current.is_empty() and tutorial_current.get("blocking", false) and tutorial_current.id not in tutorial_seen
 
 func render_notebook() -> void:
 	var note := panel(ui, Rect2(22, 25, 310, 630), Color("f3e6c7"), Color("856a47"))
@@ -1628,14 +1635,6 @@ func render_table() -> void:
 	content.position = Vector2(366, 324) - felt.position
 	content.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	group_area.add_child(content)
-	var drag_toggle := CheckButton.new()
-	drag_toggle.text = "Armar grupos arrastrando"
-	drag_toggle.position = Vector2(370, 270)
-	drag_toggle.size = Vector2(325, 38)
-	drag_toggle.add_theme_font_size_override("font_size", 16)
-	drag_toggle.button_pressed = preferences.drag_groups
-	drag_toggle.toggled.connect(func(value): set_preference("drag_groups", value))
-	ui.add_child(drag_toggle)
 	var plays: Array = PlaysPanel.best_plays(game) if preferences.plays_list else []
 	if preferences.drag_groups:
 		if plays.is_empty(): label(content, "Arrastrá los dados acá", Vector2(16, 12), 16, cream, 290)
