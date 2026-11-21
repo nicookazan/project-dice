@@ -21,6 +21,21 @@ const NAMES := {
 	"steel": "Hierro", "copper": "Cobre", "rust_iron": "Hierro oxidado", "rust_copper": "Cobre oxidado", "gold": "Oro",
 	"emerald": "Esmeralda", "ruby": "Rubí", "sapphire": "Zafiro", "diamond": "Diamante",
 	"fire": "Fuego", "water": "Agua", "electric": "Electricidad", "earth": "Tierra", "wind": "Viento"}
+const HINTS := {
+	"steel": "+3 puntos cada vez que se conserva al relanzar otros dados. Si se relanza, vuelve a 0.",
+	"copper": "+0,5 al multiplicador cada vez que se relanza.",
+	"emerald": "Duplica los puntos propios del dado.",
+	"sapphire": "Suma +2 al multiplicador del grupo.",
+	"ruby": "Multiplica ×1,5 el multiplicador, después de las sumas.",
+	"diamond": "Añade una copia del resultado final del grupo.",
+	"fire": "Cara 4, 5 o 6 en una combinación desde par: +5 puntos.",
+	"water": "Cara 1, 2 o 3 en una combinación desde par: +5 puntos.",
+	"electric": "+3 puntos por cada otro dado de su grupo con igual número.",
+	"earth": "+2 puntos por cada otro dado conservado al relanzar otros dados.",
+	"wind": "+0,5 al multiplicador por relanzamiento propio; pide combinación desde par."}
+const HINT_GAP := 6.0
+const HINT_PAD := Vector2(26.0, 8.0)
+const HINT_FONT_SIZE := 16
 const FELT_TOP := 322.0
 const FELT_HEIGHT := 88.0
 const FELT_FILL := Color(0.17, 0.03, 0.07, 0.96)
@@ -32,6 +47,10 @@ var felt_panel: Polygon2D
 var felt_border: Line2D
 var shop_panel: PanelContainer
 var label: RichTextLabel
+var shop_hint_panel: PanelContainer
+var hint_panel: Polygon2D
+var hint_border: Line2D
+var hint_label: RichTextLabel
 
 func _ready() -> void:
 	name = "DieCard"
@@ -51,7 +70,11 @@ func _ready() -> void:
 	for side in [SIDE_LEFT, SIDE_TOP, SIDE_RIGHT, SIDE_BOTTOM]: skin.set_content_margin(side, SHOP_MARGIN)
 	shop_panel.add_theme_stylebox_override("panel", skin)
 	add_child(shop_panel)
-	label = RichTextLabel.new()
+	shop_hint_panel = PanelContainer.new()
+	shop_hint_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	shop_hint_panel.add_theme_stylebox_override("panel", skin.duplicate())
+	add_child(shop_hint_panel)
+	label =RichTextLabel.new()
 	label.bbcode_enabled = true
 	label.fit_content = true
 	label.scroll_active = false
@@ -61,6 +84,22 @@ func _ready() -> void:
 	label.add_theme_font_size_override("normal_font_size", 18)
 	label.add_theme_color_override("default_color", Color(COLORS.text))
 	add_child(label)
+	hint_panel = Polygon2D.new()
+	hint_panel.color = FELT_FILL
+	add_child(hint_panel)
+	hint_border = Line2D.new()
+	hint_border.closed = true
+	hint_border.width = 2.0
+	hint_border.default_color = FELT_EDGE
+	add_child(hint_border)
+	hint_label = RichTextLabel.new()
+	hint_label.bbcode_enabled = true
+	hint_label.scroll_active = false
+	hint_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	hint_label.add_theme_font_override("normal_font", Tip.pixel_font())
+	hint_label.add_theme_font_size_override("normal_font_size", HINT_FONT_SIZE)
+	hint_label.add_theme_color_override("default_color", Color(COLORS.text))
+	add_child(hint_label)
 	hide()
 
 ## Muestra la ficha de `die`. En la tienda, `anchor` es el rectángulo del dado y la ficha va arriba.
@@ -75,6 +114,7 @@ func show_for(die: Dictionary, global_points: Dictionary, boss_context: Dictiona
 		shop_panel.hide()
 		label.position = Vector2(FeltLayout.left(felt_top + FELT_HEIGHT) + 26.0, felt_top + 8.0)
 		label.size = Vector2(FeltLayout.RIGHT - label.position.x - 14.0, 76.0)
+		show_hints(die, boss_context, felt_top)
 	else:
 		felt_panel.hide()
 		felt_border.hide()
@@ -85,7 +125,70 @@ func show_for(die: Dictionary, global_points: Dictionary, boss_context: Dictiona
 		shop_panel.position = Vector2(x, anchor.position.y - SHOP_SIZE.y - 10.0)
 		label.position = shop_panel.position + Vector2(SHOP_MARGIN, SHOP_MARGIN)
 		label.size = SHOP_SIZE - Vector2(SHOP_MARGIN, SHOP_MARGIN) * 2.0
+		show_shop_hints(die, boss_context)
 	show()
+
+func show_shop_hints(die: Dictionary, boss_context: Dictionary) -> void:
+	var lines := hint_lines(die, boss_context)
+	if lines.rich.is_empty():
+		hide_hints()
+		return
+	hint_panel.hide()
+	hint_border.hide()
+	var inner := SHOP_SIZE.x - SHOP_MARGIN * 2.0
+	var text_height := Tip.pixel_font().get_multiline_string_size("\n".join(lines.plain), HORIZONTAL_ALIGNMENT_LEFT, inner, HINT_FONT_SIZE).y + 6.0
+	var height := text_height + SHOP_MARGIN * 2.0
+	shop_hint_panel.custom_minimum_size = Vector2(SHOP_SIZE.x, height)
+	shop_hint_panel.size = Vector2(SHOP_SIZE.x, height)
+	shop_hint_panel.position = Vector2(shop_panel.position.x, shop_panel.position.y - height - HINT_GAP)
+	shop_hint_panel.show()
+	hint_label.text = "\n".join(lines.rich)
+	hint_label.position = shop_hint_panel.position + Vector2(SHOP_MARGIN, SHOP_MARGIN)
+	hint_label.size = Vector2(inner, text_height)
+	hint_label.show()
+
+func hint_lines(die: Dictionary, boss_context: Dictionary) -> Dictionary:
+	var rich: Array[String] = []
+	var plain: Array[String] = []
+	for entry in [["material", die.get("material", "")], ["shell", die.get("shell", "")], ["element", die.get("element", "")]]:
+		var id: String = entry[1]
+		var key := Materials.base_of(id) if entry[0] == "material" and NAMES.has(id) else id
+		if not NAMES.has(id) or not HINTS.has(key): continue
+		if BossRules.suspended(boss_context, entry[0], key): continue
+		if entry[0] == "shell" and die.get("shell_broken", false): continue
+		rich.append("%s: %s" % [color_text(id, NAMES[id]), HINTS[key]])
+		plain.append("%s: %s" % [NAMES[id], HINTS[key]])
+	return {"rich": rich, "plain": plain}
+
+## Ventana sobre la ficha con lo que hace cada modificador del dado (mismo ancho que la ficha).
+func show_hints(die: Dictionary, boss_context: Dictionary, felt_top: float) -> void:
+	shop_hint_panel.hide()
+	var lines := hint_lines(die, boss_context)
+	var rich: Array = lines.rich
+	var plain: Array = lines.plain
+	if rich.is_empty():
+		hide_hints()
+		return
+	var bottom := felt_top - HINT_GAP
+	var x_left := FeltLayout.left(bottom) + HINT_PAD.x
+	var width := FeltLayout.RIGHT - x_left - 14.0
+	var text_height := Tip.pixel_font().get_multiline_string_size("\n".join(plain), HORIZONTAL_ALIGNMENT_LEFT, width, HINT_FONT_SIZE).y + 6.0
+	var top := bottom - maxf(text_height + HINT_PAD.y * 2.0, 50.0)
+	var points := FeltLayout.band(top, bottom)
+	hint_panel.polygon = points
+	hint_border.points = points
+	hint_label.text = "\n".join(rich)
+	hint_label.position = Vector2(FeltLayout.left(top) + HINT_PAD.x, top + HINT_PAD.y)
+	hint_label.size = Vector2(FeltLayout.RIGHT - hint_label.position.x - 14.0, text_height)
+	hint_panel.show()
+	hint_border.show()
+	hint_label.show()
+
+func hide_hints() -> void:
+	hint_panel.hide()
+	hint_border.hide()
+	shop_hint_panel.hide()
+	hint_label.hide()
 
 # ---------- contenido ----------
 
