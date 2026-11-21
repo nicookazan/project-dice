@@ -39,6 +39,7 @@ WINE = (150, 30, 50)
 CUP_GREEN = ramp("0c321a", "1a5a2e", "2e8a44", "4aa860")
 # cuadro de la copa del mundo (marco dorado; interior 34×42)
 COPA_FRAME = (538, 56, 44, 52)
+COPA_INNER = (34, 42)     # interior del marco: ancho, alto
 
 
 def halo(x: int, y: int) -> int:
@@ -218,6 +219,57 @@ def _star(cv: Canvas, cx: float, cy: float, R: float) -> None:
     cv.put(int(cx), int(cy - R * 0.3), GOLD[6])
 
 
+def _star_mask(cx: float, cy: float, R: float, w: int, h: int) -> np.ndarray:
+    pts = []
+    for k in range(10):
+        a = -math.pi / 2 + k * math.pi / 5
+        r = R if k % 2 == 0 else R * 0.45
+        pts.append((cx + math.cos(a) * r, cy + math.sin(a) * r))
+    m = Image.new("L", (w, h), 0)
+    ImageDraw.Draw(m).polygon(pts, fill=255)
+    return np.array(m) > 0
+
+
+def _star_off(cv: Canvas, cx: float, cy: float, R: float) -> None:
+    """Estrella apagada (bronce opaco, sin brillo): las tres del cuadro de la copa son clicables y se prenden con
+    copa_estrellas() (el estilo A elegido por el autor entre bocetos, 21/11/2026)."""
+    for y, x in zip(*np.nonzero(_star_mask(cx, cy, R, cv.w, cv.h))):
+        cv.put(x, y, GOLD[1] if x + 0.5 >= cx else GOLD[2])
+
+
+STAR_R = 3.8
+STAR_CELL = 13        # lado de la celda de cada estrella encendida (la estrella más los destellos)
+
+
+def star_centers(iw: int) -> list[tuple[float, float]]:
+    cx = iw / 2
+    return [(cx - 9.5, 6.0), (cx, 4.5), (cx + 9.5, 6.0)]
+
+
+def copa_estrellas() -> Canvas:
+    """Estrellas encendidas del cuadro de la copa: una fila por estrella, dos cuadros por fila (con y sin destellos en
+    cruz, que titilan). Cada celda de STAR_CELL px está centrada en el píxel (int(cx), int(cy)) de su estrella."""
+    from scipy import ndimage
+    cv = Canvas(STAR_CELL * 2, STAR_CELL * 3)
+    half = STAR_CELL // 2
+    for row, (cx, cy) in enumerate(star_centers(COPA_INNER[0])):
+        lx, ly = cx - (int(cx) - half), cy - (int(cy) - half)          # centro de la estrella dentro de su celda
+        mask = _star_mask(lx, ly, STAR_R, STAR_CELL, STAR_CELL)
+        edge = mask & ~ndimage.binary_erosion(mask, border_value=0)
+        for frame in range(2):
+            ox, oy = frame * STAR_CELL, row * STAR_CELL
+            for y, x in zip(*np.nonzero(mask)):
+                cv.put(ox + x, oy + y, GOLD[6] if x + 0.5 < lx else GOLD[5])
+            for y, x in zip(*np.nonzero(edge)):
+                cv.put(ox + x, oy + y, GOLD[3])
+            if frame == 0:
+                for d in (2, 3):
+                    for dx, dy in ((d + 2, 0), (-d - 2, 0), (0, d + 2), (0, -d - 2)):
+                        cv.put(ox + int(lx) + dx, oy + int(ly) + dy, (255, 250, 220))
+            cv.put(ox + int(lx), oy + int(ly), (255, 255, 255))
+    return cv
+
+
 def _trophy(cv: Canvas, cx: float, top: int) -> np.ndarray:
     """Copa del mundo derecha: globo con continentes, dos figuras en espiral, cintura fina, bandas verdes y pie."""
     gr = 6.6
@@ -289,7 +341,7 @@ def copa_cuadro(iw: int, ih: int) -> Canvas:
             band = WHITE if ih / 3 <= y < ih * 2 / 3 else CELESTE
             cv.put(x, y, band[3] if f > 0.66 else (band[2] if f > 0.2 else band[1]))
     for sx, sy in ((cx - 9.5, 6.0), (cx, 4.5), (cx + 9.5, 6.0)):
-        _star(cv, sx, sy, 3.8)
+        _star_off(cv, sx, sy, STAR_R)
     solid = _trophy(cv, cx, 10)
     # sombra de la copa sobre la bandera, abajo a la derecha
     sh = np.roll(np.roll(solid, 1, 0), 1, 1) & ~solid
@@ -369,6 +421,11 @@ def main() -> None:
     os.makedirs(PREVIEW, exist_ok=True)
     room, bars = salon(), parteluces()
     room.save(OUT + "salon-v3.png")
+    copa_estrellas().save(OUT + "copa-estrellas-v4.png")
+    probe = Canvas(COPA_FRAME[2] + 2, COPA_FRAME[3] + 2)
+    ix, iy, iw, ih = texturas.marco(probe, 1, 1, COPA_FRAME[2], COPA_FRAME[3])
+    for k, (cx, cy) in enumerate(star_centers(iw)):
+        print(f"estrella {k}: origen lógico en el salón ({COPA_FRAME[0] + ix - 1 + int(cx) - STAR_CELL // 2}, {COPA_FRAME[1] + iy - 1 + int(cy) - STAR_CELL // 2})")
     bars.save(OUT + "parteluces-v3.png")
     preview = room.image()
     preview.alpha_composite(bars.image())

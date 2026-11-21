@@ -7,6 +7,7 @@ const FeltLayout = preload("res://scripts/felt_layout.gd")
 const TableDragOverlay = preload("res://scripts/table_drag_overlay.gd")
 const CupEntry = preload("res://scripts/cup_entry.gd")
 const DieCard = preload("res://scripts/die_card.gd")
+const Confetti = preload("res://scripts/confetti.gd")
 const PlaysPanel = preload("res://scripts/plays_panel.gd")
 const StickerTip = preload("res://scripts/sticker_tip.gd")
 const ShopThermos = preload("res://scripts/shop_thermos.gd")
@@ -139,6 +140,7 @@ func _ready() -> void:
 	background = Backdrop.new()
 	background.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(background)
+	background.copa_stars_complete.connect(_celebrate_copa)
 	detail = AcceptDialog.new()
 	detail.exclusive = true
 	detail.title = "Libreta · detalle de cálculo"
@@ -1059,6 +1061,13 @@ func signal_action(sound: String, text_value: String) -> void:
 	feedback_text = text_value
 	feedback_remaining = 3.0
 	audio.cue(sound)
+
+## Las tres estrellas de la copa prendidas: confeti de victoria (se omite con «Reducir movimiento» o velocidad cero).
+func _celebrate_copa() -> void:
+	if preferences.reduced_motion or preferences.speed == 0: return
+	var confetti := Confetti.new()
+	confetti.speed = float(preferences.speed)
+	add_child(confetti)
 
 func _process(delta: float) -> void:
 	step_throw(delta)
