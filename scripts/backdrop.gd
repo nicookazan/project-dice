@@ -27,6 +27,14 @@ const MULLIONS_V3 = preload("res://assets/art/pixel-v3/parteluces-v3.png")
 const THERMOS_TABLE_V3 = preload("res://assets/art/pixel-v3/termo-mesa-v3.png")
 const MATE_V3 = preload("res://assets/art/pixel-v3/mate-v3.png")
 const CUP_V3 = preload("res://assets/art/pixel-v3/vaso-v3.png")
+## Las tres estrellas del cuadro de la copa (salón) se prenden con un clic y, con las tres prendidas, salta el confeti
+## (`copa_stars_complete`; lo dibuja main.gd). Estilo A de los bocetos: el cuadro trae las estrellas apagadas (bronce) y
+## `copa-estrellas-v4.png` las encendidas (make_salon.py: una fila por estrella, dos cuadros con y sin destellos).
+const COPA_STARS = preload("res://assets/art/pixel-v3/copa-estrellas-v4.png")
+const COPA_STAR_ORIGINS := [Vector2(544, 61), Vector2(554, 59), Vector2(563, 61)]
+const COPA_STAR_CELL := 13
+const COPA_STAR_BLINK_SECONDS := 0.35
+const COPA_STAR_HIT := 36.0
 const CLOUD_V3 = preload("res://assets/art/pixel-v3/nube-v3.png")
 const HAND_V3 = preload("res://assets/art/pixel-v3/mano-v3.png")
 const BOSS_HANDS = preload("res://assets/art/pixel-v3/manos-jefes-v3.png")
@@ -54,6 +62,9 @@ const StickerDefinitions = preload("res://scripts/stickers.gd")
 const BarProps = preload("res://scripts/bar_props.gd")
 const WindowFx = preload("res://scripts/window_fx.gd")
 ## Sifones, bandera y termo que reaccionan al clic (animaciones de presentación).
+signal copa_stars_complete
+var copa_lit: Array[bool] = [false, false, false]
+var copa_hits: Array[Control] = []
 var props := BarProps.new()
 ## Fondos animados de las ventanas (TX2): textura aparte que solo existe con movimiento y en ambientes animados.
 var window_fx: SubViewport
@@ -116,6 +127,7 @@ func configure(profile: Dictionary, preferences: Dictionary) -> void:
 	# Las animaciones solo existen sobre la mesa y con movimiento: cualquier otro cambio las corta.
 	if shop_mode != last_shop_mode or not motion: props.stop_all()
 	last_shop_mode = shop_mode
+	for hit in copa_hits: hit.visible = not shop_mode
 	queue_redraw()
 	if is_instance_valid(pour_layer): pour_layer.queue_redraw()
 
@@ -161,6 +173,33 @@ func _ready() -> void:
 	pour_layer.z_index = 5
 	pour_layer.draw.connect(_draw_pour_layer)
 	add_child(pour_layer)
+	for i in COPA_STAR_ORIGINS.size():
+		var hit := Control.new()
+		hit.name = "CopaStar%d" % i
+		var center: Vector2 = (COPA_STAR_ORIGINS[i] + Vector2(COPA_STAR_CELL, COPA_STAR_CELL) / 2.0) * 2.0
+		hit.position = center - Vector2(COPA_STAR_HIT, COPA_STAR_HIT) / 2.0
+		hit.size = Vector2(COPA_STAR_HIT, COPA_STAR_HIT)
+		hit.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+		hit.visible = not shop_mode
+		hit.gui_input.connect(_on_copa_star_input.bind(i))
+		add_child(hit)
+		copa_hits.append(hit)
+
+func _on_copa_star_input(event: InputEvent, index: int) -> void:
+	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT: light_copa_star(index)
+
+## Prende la estrella `index`; al prender la tercera avisa una sola vez.
+func light_copa_star(index: int) -> void:
+	if copa_lit[index]: return
+	copa_lit[index] = true
+	queue_redraw()
+	if copa_lit.all(func(on: bool): return on): copa_stars_complete.emit()
+
+func _draw_copa_stars() -> void:
+	var frame := int(elapsed / COPA_STAR_BLINK_SECONDS) % 2 if motion else 0
+	var cell := Vector2(COPA_STAR_CELL, COPA_STAR_CELL)
+	for i in COPA_STAR_ORIGINS.size():
+		if copa_lit[i]: draw_texture_rect_region(COPA_STARS, Rect2(COPA_STAR_ORIGINS[i] * 2.0, cell * 2.0), Rect2(Vector2(frame, i) * cell, cell))
 
 func _draw_pour_layer() -> void:
 	var f := props.frame("thermos")
@@ -216,6 +255,7 @@ func _draw() -> void:
 	if shop_mode: draw_texture_rect_region(cup_art, cup_patch, Rect2(cup_patch.position * cup_scale, cup_patch.size * cup_scale))
 	# Pixel-v3 club room (walls, lamps, pictures, chairs); windows are drawn over it.
 	else: draw_texture_rect(SALON_V3, Rect2(0, 0, 1440, 300), false)
+	if not shop_mode: _draw_copa_stars()
 	var panels := {"dia": 0, "tarde": 1, "noche": 2, "espacio": 3, "agujero_negro": 4, "cielo": 5}
 	var cell := Vector2(EXTERIORS.get_size()) / Vector2(2, 3)
 	var index: int = panels.get(environment_id, 0)
