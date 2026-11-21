@@ -94,5 +94,6 @@ static func run(scene, check: Callable) -> void:
 	var first := cloud.get_region(Rect2i(0, 0, Backdrop.VENDOR_CLOUD_FRAME.x, Backdrop.VENDOR_CLOUD_FRAME.y))
 	var second := cloud.get_region(Rect2i(Backdrop.VENDOR_CLOUD_FRAME.x * 2, 0, Backdrop.VENDOR_CLOUD_FRAME.x, Backdrop.VENDOR_CLOUD_FRAME.y))
 	check.call(not first.is_invisible() and first.get_data() != second.get_data(), "Shop cloud: frames are drawn and differ from each other")
+	check.call(Backdrop.VENDOR_HAND_DY.size() == Backdrop.VENDOR_CLOUD_FRAMES and Backdrop.VENDOR_HAND_DY.all(func(d): return absi(d) <= 2), "Shop cloud: the hand follows the cloud with one small step per frame")
 	var hand := Image.load_from_file("res://assets/art/pixel-v3/vendedor-mano-v4.png")
 	check.call(Backdrop.VENDOR_HAND_ORIGIN.x + hand.get_width() <= 720.0 and Backdrop.VENDOR_HAND_ORIGIN.y + hand.get_height() <= 450.0, "Shop cloud: the seller's hand sits inside the 720x450 scene")

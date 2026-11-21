@@ -51,6 +51,15 @@ def main(folder: str) -> None:
     Image.fromarray(still[hy0:hy1, hx0:hx1]).save(OUT + "vendedor-mano-v4.png")
     cv = make_tienda.scene()
     cv.save(OUT + "tienda-v3.png")
+    # La mano sube y baja con la nube y nada más: cuánto se corre el borde de abajo del cuerpo de cada cuadro respecto de
+    # su promedio (en px lógicos, redondeado). Es la tabla VENDOR_HAND_DY de scripts/backdrop.gd.
+    from scipy import ndimage
+    bottoms = []
+    for l in layers:
+        g = ndimage.binary_opening(l[..., 3] > 0, structure=np.ones((5, 5)))
+        bottoms.append(np.mean([np.nonzero(g[:, x])[0].max() for x in range(20, 170) if g[:, x].any()]))
+    dy = [int(round(b - np.mean(bottoms))) for b in bottoms]
+    print("VENDOR_HAND_DY =", dy)
     print(f"nube: {n} cuadros de {w}x{h}, {COLS} columnas; origen lógico ({x0}, {y0})")
     print(f"mano: {hx1 - hx0}x{hy1 - hy0}; origen lógico ({hx0}, {hy0})")
 

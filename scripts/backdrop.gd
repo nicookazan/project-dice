@@ -13,6 +13,9 @@ const VENDOR_CLOUD_FRAMES := 40
 const VENDOR_CLOUD_ORIGIN := Vector2(0, 213)
 const VENDOR_CLOUD_SECONDS := 0.25
 const VENDOR_HAND_ORIGIN := Vector2(142, 250)
+## La mano sube y baja con la nube y no hace nada más: cuánto se corre (px lógicos) el borde de abajo del cuerpo de la
+## nube en cada cuadro. La imprime tools/art/make_vendedor_nube.py.
+const VENDOR_HAND_DY := [0, 0, 0, -1, -1, -1, -1, 0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, -1, -1, -1, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, -1, -1, -1, 0, 0, 0, 0, 1]
 const EXTERIORS = preload("res://assets/art/pixel-v3/exteriores-v3.png")
 const TABLE_PROPS = preload("res://assets/art/environment-v2/mesa-proporciones-v3.png")
 const CLEAN_TABLE = preload("res://assets/art/environment-v2/mesa-libreta-frontal-v1.png")
@@ -198,7 +201,7 @@ func _draw() -> void:
 		var cloud_frame := int(elapsed / VENDOR_CLOUD_SECONDS) % VENDOR_CLOUD_FRAMES if motion else 0
 		var cloud_cell := Vector2(cloud_frame % VENDOR_CLOUD_COLS, cloud_frame / VENDOR_CLOUD_COLS) * Vector2(VENDOR_CLOUD_FRAME)
 		draw_texture_rect_region(VENDOR_CLOUD, Rect2(VENDOR_CLOUD_ORIGIN * 2.0, Vector2(VENDOR_CLOUD_FRAME) * 2.0), Rect2(cloud_cell, Vector2(VENDOR_CLOUD_FRAME)))
-		draw_texture_rect(VENDOR_HAND, Rect2(VENDOR_HAND_ORIGIN * 2.0, VENDOR_HAND.get_size() * 2.0), false)
+		draw_texture_rect(VENDOR_HAND, Rect2((VENDOR_HAND_ORIGIN + Vector2(0, VENDOR_HAND_DY[cloud_frame])) * 2.0, VENDOR_HAND.get_size() * 2.0), false)
 		props.draw_flag(self, "shop_flag")
 		return
 	draw_texture_rect(ART if shop_mode else CLEAN_TABLE, Rect2(0, 0, 1440, 900), false)
