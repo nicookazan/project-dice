@@ -50,7 +50,7 @@ Marcas: **Final** (aprobado por el autor, no se toca), **Placeholder** (provisor
 
 | Archivo(s) | Uso | Propuesta |
 | --- | --- | --- |
-| `pixel-v3/tienda-v3.png` (generado por `make_tienda.py` y `vendedor.py`) | Tienda y vendedor. **El vendedor se parece a una persona real: bloquea publicar** | A rediseñar (TX7) |
+| `pixel-v3/tienda-v3.png` (generado por `make_tienda.py`), `vendedor-nube-v4.png` y `vendedor-mano-v4.png` (`make_vendedor_nube.py`) | Tienda sin vendedor, nube animada y mano del vendedor (TX7, 21/11/2026) | Hecho; falta la aprobación del autor dentro del juego |
 | `shop-salesman-v1.png`, `shop-items-v1.png` | Materia prima y referencia de la tienda; sin cita | Referencia; sacar `shop-salesman-v1` al terminar TX7 |
 
 ## Cómo seguir

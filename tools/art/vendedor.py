@@ -267,5 +267,7 @@ def draw(cv, layer: str = "all") -> dict[str, np.ndarray]:
     m = out[..., 3] > 0
     if layer == "front":
         m &= M["hand_a"] | M["hand_b"] | M["cuff_a"] | M["cuff_b"] | M["cufflink"]
+    elif layer == "cuffs":      # tienda con nube (TX7): solo los puños de la mano que señala; la nube los tapa
+        m &= M["cuff_b"] | M["cufflink"]
     cv.a[m] = out[m]
     return M

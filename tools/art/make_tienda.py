@@ -334,9 +334,10 @@ def icons() -> Canvas:
 def scene() -> Canvas:
     cv = Canvas(W, H, fill=WALL[2])
     room(cv)
-    vendedor.draw(cv, "back")
+    # TX7: ya no hay vendedor. Solo quedan los puños de la mano que señala (los tapa la nube animada, que se dibuja en
+    # backdrop.gd) y el maletín; la mano misma es otro sprite (make_vendedor_nube.py).
     maletin.draw(cv)
-    vendedor.draw(cv, "front")
+    vendedor.draw(cv, "cuffs")
     bottom_band(cv)
     return cv
 

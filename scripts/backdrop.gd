@@ -2,6 +2,17 @@ extends Control
 const ART = preload("res://assets/art/club-table-v2.png")
 const SHOP_ART = preload("res://assets/art/shop-table-v1.png")
 const SELLER_ART = preload("res://assets/art/pixel-v3/tienda-v3.png")
+## El vendedor es una nube con una mano (TX7, make_vendedor_nube.py): la tienda se dibuja sin vendedor y encima van la nube
+## animada (40 cuadros del video del autor, 4 por segundo, en bucle; coordenadas lógicas de 720×450 → pantalla ×2) y la
+## mano original, quieta, delante de la nube. Sin movimiento se ve el primer cuadro, sin volutas.
+const VENDOR_CLOUD = preload("res://assets/art/pixel-v3/vendedor-nube-v4.png")
+const VENDOR_HAND = preload("res://assets/art/pixel-v3/vendedor-mano-v4.png")
+const VENDOR_CLOUD_FRAME := Vector2i(270, 138)
+const VENDOR_CLOUD_COLS := 8
+const VENDOR_CLOUD_FRAMES := 40
+const VENDOR_CLOUD_ORIGIN := Vector2(0, 213)
+const VENDOR_CLOUD_SECONDS := 0.25
+const VENDOR_HAND_ORIGIN := Vector2(142, 250)
 const EXTERIORS = preload("res://assets/art/pixel-v3/exteriores-v3.png")
 const TABLE_PROPS = preload("res://assets/art/environment-v2/mesa-proporciones-v3.png")
 const CLEAN_TABLE = preload("res://assets/art/environment-v2/mesa-libreta-frontal-v1.png")
@@ -184,6 +195,10 @@ func _draw() -> void:
 	if shop_mode:
 		# The salesman and his case replace the entire playing table and props.
 		draw_texture_rect(SELLER_ART, Rect2(0, 0, 1440, 900), false)
+		var cloud_frame := int(elapsed / VENDOR_CLOUD_SECONDS) % VENDOR_CLOUD_FRAMES if motion else 0
+		var cloud_cell := Vector2(cloud_frame % VENDOR_CLOUD_COLS, cloud_frame / VENDOR_CLOUD_COLS) * Vector2(VENDOR_CLOUD_FRAME)
+		draw_texture_rect_region(VENDOR_CLOUD, Rect2(VENDOR_CLOUD_ORIGIN * 2.0, Vector2(VENDOR_CLOUD_FRAME) * 2.0), Rect2(cloud_cell, Vector2(VENDOR_CLOUD_FRAME)))
+		draw_texture_rect(VENDOR_HAND, Rect2(VENDOR_HAND_ORIGIN * 2.0, VENDOR_HAND.get_size() * 2.0), false)
 		props.draw_flag(self, "shop_flag")
 		return
 	draw_texture_rect(ART if shop_mode else CLEAN_TABLE, Rect2(0, 0, 1440, 900), false)
