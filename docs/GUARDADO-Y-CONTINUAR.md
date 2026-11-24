@@ -81,3 +81,7 @@ Las ofertas ya generadas conservan su precio hasta renovarse; la reventa cambia 
 ### Etapa de monedas: fases y campos en uso (MON4–MON8)
 
 Sin subir la versión (sigue v9): el campo `pending_coin_pack` es no vacío si y solo si la fase es `coin_choice`; `boss_shield_active` solo vale en la fase `play` contra un jefe; `once_coins_seen` guarda las monedas "una vez por partida" ya generadas; `visit_discount`, `hand_mult_bonus` y `hand_points_bonus` los usan U16, U10 y U11. La fase `coin_choice` figura en todas las listas de fases activas. Una mano 3 solo es válida con Mano extra en juego. La tabla de la tienda guardada trae `coin_packs` solo si es estándar (la migración la agrega). Un guardado hecho antes de agregarse una moneda no la ofrece: para probar, usar partida nueva.
+
+## Versión 10 (La Semilla, 24/11/2026)
+
+La migración `seed_v10` (`scripts/save_migrations.gd`) suma `shop_gifts` (regalos de la mano con el maletín) y `seeded` (jugada con semilla elegida) y, si la jugada está en el nivel 7 con tres encuentros, agrega La Semilla como cuarto. Es idempotente y no toca semilla, azar, plata, inventario ni ofertas. Ver `docs/LA-SEMILLA.md`.

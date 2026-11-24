@@ -44,6 +44,19 @@ const BossInfo = preload("res://scripts/boss_info.gd")
 const Preferences = preload("res://scripts/presentation_preferences.gd")
 const Presentation = preload("res://scripts/presentation_state.gd")
 const PresentationAudio = preload("res://scripts/presentation_audio.gd")
+const SeedDisplay = preload("res://scripts/seed_display.gd")
+const Campaign = preload("res://scripts/campaign.gd")
+## Final de La Semilla (docs/LA-SEMILLA.md). `finale_shown`: etapa ya presentada en esta sesión; `finale_anim`: animación
+## en curso («death», «collapse» o «travel»), que bloquea la mesa hasta terminar.
+var finale_shown := ""
+var finale_anim := ""
+var finale_seen_session := false
+var seed_display: Control
+var showing_credits := false
+## Después de los créditos: las recompensas por ganar (todavía sin definir).
+var showing_rewards := false
+## Se sube con cada pantalla de créditos para que un temporizador viejo no avance la nueva.
+var credits_token := 0
 var preferences_enabled := true
 var preference_store = Preferences.new()
 var preferences: Dictionary = Preferences.DEFAULTS.duplicate()
@@ -143,6 +156,7 @@ func _ready() -> void:
 	background.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(background)
 	background.copa_stars_complete.connect(_celebrate_copa)
+	background.finale_finished.connect(_on_finale_finished)
 	detail = AcceptDialog.new()
 	detail.exclusive = true
 	detail.title = "Libreta · detalle de cálculo"
@@ -593,7 +607,8 @@ func forced_boss_arguments() -> Array:
 		if argument.begins_with("--boss="): return Array(argument.trim_prefix("--boss=").split(",")).filter(func(id): return id != "")
 	return []
 
-func start_new_run(seed_value: int = -1, debug_run := false, tutorial_run := false) -> void:
+## `seeded_run`: jugada con semilla elegida (reintentar la misma al perder): al terminar no suma nada a la partida guardada.
+func start_new_run(seed_value: int = -1, debug_run := false, tutorial_run := false, seeded_run := false) -> void:
 	if is_instance_valid(background): background.thermos_configured = false
 	presentation.observed.clear()
 	feedback_remaining = 0
@@ -609,7 +624,12 @@ func start_new_run(seed_value: int = -1, debug_run := false, tutorial_run := fal
 	else: game.begin_run(seed_value)
 	if validation_profile or campaign_mode or tutorial_run: ValidationProfile.apply(game)
 	game.debug_mode = debug_run
+	game.seeded = seeded_run and not tutorial_run
 	game.unlocked_coins = unlocked_coins_of_profile(debug_run)
+	finale_shown = ""
+	finale_anim = ""
+	showing_credits = false
+	showing_rewards = false
 	session_started = true
 	clear_run_save()
 	run_recorded = false
@@ -657,6 +677,8 @@ func unlocked_coins_of_profile(debug_run := false) -> Array:
 func record_finished_run() -> void:
 	run_recorded = true
 	clear_run_save()
+	# Con la semilla elegida no se suma nada: ni jugadas ni victorias ni nivel ni desbloqueos.
+	if game.seeded: return
 	if not profiles_enabled or profile_slot == 0: return
 	var level: int = game.level_index + 1 if not game.campaign.is_empty() else 1
 	var result: Dictionary = profile_store.record_run(profile_slot, {"won": game.phase == "won", "level": level, "tutorial": game.tutorial, "debug": game.debug_mode})
@@ -704,6 +726,11 @@ func continue_run() -> void:
 	tutorial_seen.clear()
 	game = restored
 	game.debug_mode = false
+	# Al volver a una tienda no se repite lo que ya pasó (la muerte del guardián): se muestra la etapa quieta.
+	finale_shown = Presentation.finale_stage(game)
+	finale_anim = ""
+	showing_credits = false
+	showing_rewards = false
 	game.unlocked_coins = unlocked_coins_of_profile(false)
 	campaign_mode = not game.campaign.is_empty()
 	var ui_state: Dictionary = found.data.get("ui", {})
@@ -935,10 +962,10 @@ func _notification(what: int) -> void:
 
 func route_text() -> String:
 	if not game.campaign.is_empty():
-		var lines: Array[String] = ["CAMPAÑA DE PRUEBA · %d / 21 encuentros superados" % game.completed_encounters.size(), "Objetivos fijos, catálogo provisional. Solo se avanza al siguiente encuentro.", ""]
+		var lines: Array[String] = ["CAMPAÑA DE PRUEBA · %d / %d encuentros superados" % [game.completed_encounters.size(), game.campaign_route().size()], "Objetivos fijos, catálogo provisional. Solo se avanza al siguiente encuentro.", ""]
 		for stop in game.campaign_route():
 			lines.append("Nivel %d · %s · %s · %s" % [stop.level, stop.name, str(stop.target) + " puntos" if stop.target > 0 else "objetivo del jefe por anunciar", stop.status])
-			if stop.position == 3: lines.append("  " + stop.rule)
+			if stop.position >= 3: lines.append("  " + stop.rule)
 		lines.append("\nRegla de este nivel: " + BossRules.description(game.boss_rule))
 		return "\n".join(lines)
 	var lines: Array[String] = ["Nivel de prueba · " + " → ".join(game.level_encounters.map(func(encounter): return str(encounter.target))), ""]
@@ -1217,7 +1244,7 @@ func render_menu() -> void:
 	var column := panel(ui, Rect2(36, 120, 440, 640), Color("0d1728"), gold)
 	column.name = "MainMenu"
 	label(column, "DIOS NO JUEGA\nA LOS DADOS", Vector2(28, 24), 34, gold, 390)
-	var subtitle := "Siete niveles · 21 encuentros · hasta Dios" if campaign_mode else "Un nivel de prueba · dos rivales y un jefe"
+	var subtitle := "Siete niveles · 22 encuentros · hasta La Semilla" if campaign_mode else "Un nivel de prueba · dos rivales y un jefe"
 	label(column, subtitle, Vector2(28, 118), 17, cream, 390)
 	if pending_tutorial_choice:
 		label(column, "¿QUERÉS JUGAR\nEL TUTORIAL?", Vector2(28, 168), 28, gold, 390)
@@ -1302,6 +1329,7 @@ func render() -> void:
 	save_shop_checkpoint()
 	background.stickers = game.cup.stickers.duplicate()
 	if is_instance_valid(background): background.configure(profile, preferences)
+	_update_finale(profile)
 	if is_instance_valid(audio): audio.configure(preferences, profile.environment)
 	var cue: Dictionary = presentation.observe(game)
 	if not cue.is_empty(): signal_action(cue.sound, cue.text)
@@ -1329,6 +1357,9 @@ func render() -> void:
 	ui.add_child(die_card)
 	sticker_tip = StickerTip.new()
 	ui.add_child(sticker_tip)
+	if showing_credits:
+		render_credits()
+		return
 	if game.phase in ["menu", "level_intro"]:
 		render_entry()
 		render_tutorial_layer()
@@ -1346,6 +1377,7 @@ func render() -> void:
 	render_table()
 	render_inventory()
 	render_actions()
+	render_seed()
 	finish_render()
 
 func finish_render() -> void:
@@ -1353,7 +1385,7 @@ func finish_render() -> void:
 	var thermos_rect: Rect2 = Backdrop.SHOP_THERMOS_RECT if background.shop_mode else (Backdrop.STOLEN_THERMOS_RECT if game.thermos_stolen() else Backdrop.THERMOS_RECT)
 	var thermos_button := button(ui, "", thermos_rect, inspect_thermos)
 	thermos_button.name = "InspectThermos"
-	if not background.shop_mode:
+	if not background.shop_mode and background.finale_stage != "matrix":
 		for prop in ["flag", "soda_left", "soda_right"]:
 			var zone := BarProps.make_zone(prop, background.props)
 			zone.clicked.connect(func(): background.props.play(prop))
@@ -1375,7 +1407,8 @@ func finish_render() -> void:
 	if not background.shop_mode: render_boss_hand()
 	if background.shop_mode: label(ui, purchase_error if not purchase_error.is_empty() else game.message, Vector2(38, 864), 17, cream, 1360)
 	if game.phase != "repair": repair_selection.clear()
-	if game.phase in ["reward", "won", "lost", "repair"]: render_result()
+	# Ganarle a La Semilla no muestra cartel: la mesa se cae y vienen los créditos.
+	if game.phase in ["reward", "won", "lost", "repair"] and not (game.phase == "won" and background.finale_stage == "ending"): render_result()
 	elif game.phase == "purchase_target": render_purchase_target()
 	elif game.phase == "sticker_choice":
 		if pack_panel_open: render_pack_choice()
@@ -1388,6 +1421,8 @@ func finish_render() -> void:
 			pack_panel_open = true
 			render())
 	render_tutorial_layer()
+	if finale_anim != "": render_finale_blocker()
+	if finale_anim == "ending": _animate_ending_ui()
 
 ## Estado visible que usa el guion para elegir el paso (ver TutorialScript.step).
 func tutorial_context() -> Dictionary:
@@ -1996,10 +2031,11 @@ func shop_card(parent: Node, section: String, index: int, rect: Rect2) -> void:
 	object_hover.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
 	object_hover.tooltip_text = text[0] + "\n" + text[1]
 	card.add_child(object_hover)
-	var unavailable: bool = game.phase != "shop" or not game.can_afford(game.offer_price(offer.price, offer.get("kind") == "coin")) or not Purchases.valid_offer(section, offer, game.sticker_catalog)
+	var unavailable: bool = game.phase != "shop" or not game.can_afford(game.charged_price(offer)) or not Purchases.valid_offer(section, offer, game.sticker_catalog)
 	if offer.kind == "coin": unavailable = unavailable or not Coins.can_store(game.coin_inventory, offer.effect.coin_id)
 	var id: String = offer.offer_id
-	var purchase := button(card, "$%d" % game.offer_price(offer.price, offer.get("kind") == "coin"), Rect2((rect.size.x - minf(102, rect.size.x - 8)) / 2, 109, minf(102, rect.size.x - 8), 30), func():
+	var price_text := "Gratis" if offer.offer_id in game.shop_gifts else "$%d" % game.charged_price(offer)
+	var purchase := button(card, price_text, Rect2((rect.size.x - minf(102, rect.size.x - 8)) / 2, 109, minf(102, rect.size.x - 8), 30), func():
 		var previous_stickers: Dictionary = game.cup.stickers.duplicate(true)
 		var icon_center: Vector2 = card.get_global_rect().position + Vector2(rect.size.x / 2.0, 55.0)
 		var result: Dictionary = game.begin_purchase(section, id)
@@ -2024,7 +2060,8 @@ func shop_card(parent: Node, section: String, index: int, rect: Rect2) -> void:
 		target.mouse_exited.connect(func(): offer_ring.hover(false))
 	object_hover.activated.connect(func():
 		if not purchase.disabled: purchase.pressed.emit())
-	purchase.add_theme_font_size_override("font_size", 20 if compact else 22)
+	# «Gratis» (regalo de la mano con el maletín) es más largo que un precio: más chico para que entre en la etiqueta.
+	purchase.add_theme_font_size_override("font_size", 13 if offer.offer_id in game.shop_gifts else (20 if compact else 22))
 	for state in ["normal", "hover", "pressed", "disabled"]: purchase.add_theme_stylebox_override(state, StyleBoxEmpty.new())
 	# El precio va escrito sobre la etiqueta de cartón que cuelga del gancho.
 	purchase.add_theme_color_override("font_color", ShopFixtures.TAG_INK)
@@ -2100,6 +2137,7 @@ func render_shop() -> void:
 		var width: float = (zones[section].size.x - 24) / count
 		for index in range(count): shop_card(zone, section, index, Rect2(12 + index * width, 28, width, 145))
 		var stock: Dictionary = game.shop_state.get(section, {"slots": [], "configured": false})
+		if game.is_seed_shop_visit(): continue # la mano con el maletín solo tiene la tanda completa (abajo)
 		var renew := button(zone, "", Rect2(header_x, -2, 32, 30), func(): act(func(): game.refresh_shop(section_id)), game.phase != "shop" or not stock.configured or not game.can_afford(game.renewal_price(section_id)))
 		renew.name = "Refresh"
 		renew.tooltip_text = "Renovar %s · $%d\nCambia solo las ofertas de esta zona.\nEl costo aumenta solo para esta zona durante esta visita." % [renew_names[section], game.renewal_price(section_id)]
@@ -2109,6 +2147,14 @@ func render_shop() -> void:
 		retry_icon.size = Vector2(28, 30)
 		renew.add_child(retry_icon)
 	var next_label := "Entrar al nivel %d →" % (game.level_index + 2) if game.rival + 1 == game.level_encounters.size() and game.has_next_encounter() else "Ir al %s →" % ("jefe" if game.rival + 1 < game.level_encounters.size() and game.is_boss(game.rival + 1) else "siguiente rival")
+	if game.is_seed_shop_visit():
+		next_label = "Enfrentar a La Semilla →"
+		# La mano con el maletín: un regalo por sección; la tanda nueva cuesta siempre lo mismo y ya se paga.
+		var restock := button(ui, "Otra tanda · $%d" % Campaign.SEED_SHOP_RESTOCK_PRICE, Rect2(1025, 170, 380, 40), func(): act(game.restock_seed_shop), game.phase != "shop" or not game.can_afford(Campaign.SEED_SHOP_RESTOCK_PRICE))
+		restock.name = "SeedRestock"
+		restock.tooltip_text = "La mano trae otra tanda de un ítem por sección.\nCuesta siempre $%d y lo nuevo ya no es gratis." % Campaign.SEED_SHOP_RESTOCK_PRICE
+		restock.add_theme_font_size_override("font_size", 16)
+		shop_caption(ui, "UN REGALO POR SECCIÓN" if not game.shop_gifts.is_empty() else "LA MANO YA NO REGALA", Rect2(1025, 214, 380, 22), 13, gold)
 	var next_button := button(ui, next_label, Rect2(1025, 25, 380, 93), func(): act(game.leave_shop), game.phase != "shop", true)
 	next_button.name = "ShopAdvance"
 	next_button.add_theme_font_size_override("font_size", 18)
@@ -2214,7 +2260,7 @@ func render_purchase_target() -> void:
 	var offer: Dictionary = pending.offer
 	var text: Array = shop_offer_text(offer)
 	shop_caption(modal, text[0].to_upper(), Rect2(32, 24, 796, 38), 28, gold)
-	shop_caption(modal, "Precio: $%d   ·   Saldo: %s" % [game.offer_price(offer.price), money_text(game.cash)], Rect2(32, 68, 796, 28), 18)
+	shop_caption(modal, "Precio: $%d   ·   Saldo: %s" % [game.charged_price(offer), money_text(game.cash)], Rect2(32, 68, 796, 28), 18)
 	shop_caption(modal, "1. ELEGÍ UN DADO", Rect2(32, 114, 796, 26), 18, gold)
 	var target: Dictionary = pending.target
 	for id in range(5):
@@ -2252,7 +2298,7 @@ func render_purchase_target() -> void:
 	var hint := "Reemplaza solo esta familia. Las otras mejoras se conservan."
 	if offer.kind == "face": hint = "La cara elegida pasará a tener un %d." % offer.effect.number
 	shop_caption(modal, hint, Rect2(32, 500, 796, 32), 17)
-	button(modal, "Confirmar · $%d" % game.offer_price(offer.price), Rect2(64, 554, 732, 46), func():
+	button(modal, "Confirmar · $%d" % game.charged_price(offer), Rect2(64, 554, 732, 46), func():
 		var result: Dictionary = game.confirm_purchase()
 		purchase_error = "" if result.ok else result.message
 		render(), not preview.ok, true)
@@ -2352,15 +2398,19 @@ func render_result() -> void:
 	if game.phase == "lost":
 		label(modal, "ESTA VEZ, GANÓ EL AZAR", Vector2(36, 33), 29, gold)
 		label(modal, "%d / %d puntos\n\n%s: se agotaron las manos sin llegar al objetivo.\nPodés volver a intentar con la misma semilla\no empezar una nueva jugada." % [game.points, game.target(), "Nivel %d, encuentro %d" % [game.level_index + 1, game.rival + 1] if not game.campaign.is_empty() else "Rival %d" % (game.rival + 1)], Vector2(36, 103), 21, cream, 560)
-		button(modal, "Reintentar misma semilla", Rect2(36, 306, 566, 49), func(): start_new_run(game.run_seed), false, true)
+		button(modal, "Reintentar misma semilla", Rect2(36, 306, 566, 49), func(): start_new_run(game.run_seed, false, false, true), false, true).tooltip_text = "Con la misma semilla la jugada no suma nada a tu partida guardada."
 		button(modal, "Nueva jugada", Rect2(36, 371, 566, 45), new_run_from_result)
 	else:
-		label(modal, "DIOS SUPERADO" if game.phase == "won" and not game.campaign.is_empty() else "JEFE SUPERADO" if game.phase == "won" else "ENCUENTRO GANADO", Vector2(36, 30), 32, gold)
-		if game.phase == "won": label(modal, "VICTORIA · 21 ENCUENTROS COMPLETADOS" if not game.campaign.is_empty() else "VICTORIA · NIVEL DE PRUEBA COMPLETADO", Vector2(36, 69), 16, cream)
+		label(modal, "LA SEMILLA DERROTADA" if game.phase == "won" and not game.campaign.is_empty() else "JEFE SUPERADO" if game.phase == "won" else "ENCUENTRO GANADO", Vector2(36, 30), 32, gold)
+		if game.phase == "won": label(modal, ("VICTORIA · %d ENCUENTROS COMPLETADOS" % game.campaign_route().size()) if not game.campaign.is_empty() else "VICTORIA · NIVEL DE PRUEBA COMPLETADO", Vector2(36, 69), 16, cream)
 		var p: Dictionary = game.payout
 		label(modal, "%d / %d puntos\n\nVictoria                              $%d\nManos sobrantes                  $%d\nExceso de puntos                 $%d\nIntereses                             $%d\n\nTOTAL COBRADO                  $%d" % [game.points, game.target(), p.base, p.hands, p.excess, p.interest, p.total], Vector2(36, 90), 21, cream)
 		if p.get("coins", 0) > 0: label(modal, "Incluye $%d de Cobrador." % p.coins, Vector2(36, 330), 16, gold)
-		button(modal, "Prototipo completado · volver a jugar", Rect2(36, 371, 566, 49), new_run_from_result, false, true)
+		if game.phase == "won" and not game.campaign.is_empty():
+			# Premio al ganar: mecánica posterior (docs/LA-SEMILLA.md). Por ahora, créditos y vuelta al inicio.
+			var credits := button(modal, "Ver créditos →", Rect2(36, 371, 566, 49), show_credits, false, true)
+			credits.name = "ShowCredits"
+		else: button(modal, "Prototipo completado · volver a jugar", Rect2(36, 371, 566, 49), new_run_from_result, false, true)
 	button(modal, "Volver al menú", Rect2(36, 437, 566, 36), func(): request_navigation("menu"))
 
 ## Desde la pantalla de victoria o derrota: vuelve al menú y hace la pregunta del tutorial de la jugada nueva.
@@ -2394,7 +2444,7 @@ func render_encounter_choice() -> void:
 	modal.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	modal.theme = theme.duplicate()
 	modal.theme.default_font = ItemTooltip.pixel_font()
-	shop_caption(modal, "ENCUENTRO GANADO", Rect2(32, 25, 796, 42), 30, gold)
+	shop_caption(modal, "GUARDIÁN VENCIDO" if game.is_seed_shop_visit() else "ENCUENTRO GANADO", Rect2(32, 25, 796, 42), 30, gold)
 	shop_caption(modal, "%d / %d puntos" % [game.points, game.target()], Rect2(32, 75, 796, 30), 20)
 	var p: Dictionary = game.payout
 	var names := ["Victoria", "Manos sobrantes", "Exceso de puntos", "Intereses"]
@@ -2412,7 +2462,8 @@ func render_encounter_choice() -> void:
 	shop_caption(modal, "TOTAL COBRADO: $%d   ·   SALDO: %s" % [p.total, money_text(game.cash)], Rect2(32, total_y, 796, 34), 20, gold)
 	shop_caption(modal, "¿CÓMO QUERÉS SEGUIR?", Rect2(32, 335, 796, 32), 22, gold)
 	var next_text := "Próximo: %s" % ("jefe" if game.is_boss(game.rival + 1) else "rival %d" % [game.rival + 2]) if game.rival + 1 < game.level_encounters.size() else "Entrar al nivel %d" % [game.level_index + 2]
-	shop_caption(modal, "Comprá mejoras para tus dados.", Rect2(42, 390, 374, 28), 16)
+	if game.is_seed_shop_visit(): next_text = "Próximo: La Semilla"
+	shop_caption(modal, "La mano con el maletín regala uno de cada sección." if game.is_seed_shop_visit() else "Comprá mejoras para tus dados.", Rect2(42, 390, 374, 28), 16)
 	shop_caption(modal, next_text, Rect2(444, 390, 374, 28), 16)
 	var visit := button(modal, "Ir a la tienda →", Rect2(48, 435, 366, 56), func(): act(game.open_shop), not tutorial_allows("open_shop"), true)
 	var advance := button(modal, "Seguir sin tienda →", Rect2(446, 435, 366, 56), func(): act(game.skip_shop), game.tutorial)
@@ -2466,6 +2517,9 @@ func render_repairs() -> void:
 ## Clic en la mano del fondo: cada jefe hace su animación. Los guardianes de Dios hacen la suya y al terminar muestran
 ## su información (sin movimiento, la muestran enseguida). El poder del jefe se lee en la libreta y al pasar el mouse.
 func click_hand() -> void:
+	if game.is_seed():
+		inspect_boss_hand()
+		return
 	if not (BossInfo.is_god(game) and game.is_boss()):
 		background.props.play_hand(background.hand_boss)
 		return
@@ -2480,7 +2534,9 @@ func click_hand() -> void:
 func render_boss_hand() -> void:
 	var info := BossInfo.panel(game)
 	var guardian_hand: bool = BossInfo.is_god(game) and game.is_boss()
-	var hand_button := button(ui, "", Backdrop.GOD_RECT if guardian_hand else Backdrop.HAND_RECT, click_hand)
+	var hand_rect: Rect2 = Backdrop.GOD_RECT if guardian_hand else Backdrop.HAND_RECT
+	if game.is_seed(): hand_rect = SeedDisplay.final_box(str(game.run_seed).length())
+	var hand_button := button(ui, "", hand_rect, click_hand)
 	hand_button.name = "InspectBoss"
 	hand_button.tooltip_text = "" if info.is_empty() else info.alt
 	if not guardian_hand:
@@ -2495,3 +2551,174 @@ func inspect_boss_hand() -> void:
 	var info := BossInfo.panel(game)
 	if info.is_empty(): return
 	present_detail(info.title, info.text, true)
+
+
+# ---------------------------------------------------------------- La Semilla
+
+## La semilla en la mesa: chica arriba a la izquierda durante toda la jugada; en el encuentro contra La Semilla, la terminal
+## (que viaja desde la chica mientras dura la animación «travel»). El tutorial no la muestra.
+func render_seed() -> void:
+	if game.tutorial or not session_started: return
+	seed_display = SeedDisplay.new()
+	seed_display.name = "SeedDisplay"
+	ui.add_child(seed_display)
+	if game.is_seed() and finale_anim not in ["death", "collapse"]:
+		seed_display.top_level = true # en la victoria se apaga en su lugar, no cae con la mesa
+		seed_display.setup(game.run_seed, "terminal", finale_anim == "travel", preferences)
+		seed_display.intro_finished.connect(_on_seed_intro_finished)
+	else: seed_display.setup(game.run_seed, "small", false, preferences)
+
+func finale_motion() -> bool:
+	return not preferences.reduced_motion and preferences.speed != 0
+
+## Arranca las animaciones del final cuando la jugada entra en una etapa nueva (nunca al continuar una partida).
+func _update_finale(profile: Dictionary) -> void:
+	var stage: String = profile.get("finale", "")
+	if stage == finale_shown: return
+	var previous := finale_shown
+	finale_shown = stage
+	if not finale_motion() or not session_started:
+		finale_anim = ""
+		if stage == "ending" and session_started: showing_credits = true
+		return
+	# El guardián sigue vivo (con el bar crujiendo) mientras está la mano con el maletín; muere al salir de la tienda,
+	# justo antes del derrumbe.
+	if stage == "matrix" and previous != "matrix":
+		finale_anim = "death"
+		background.play_finale("death")
+	elif stage == "ending":
+		# Victoria: tiembla todo, la mesa cae, la semilla y la Matrix se apagan; después, solos, los créditos.
+		finale_anim = "ending"
+		background.play_finale("ending")
+
+func _on_finale_finished(anim: String) -> void:
+	if anim != finale_anim: return
+	if anim == "death":
+		finale_anim = "collapse"
+		background.play_finale("collapse")
+	elif anim == "ending":
+		finale_anim = ""
+		showing_credits = true
+	else: finale_anim = "travel" if anim == "collapse" else ""
+	render()
+
+func _on_seed_intro_finished() -> void:
+	if finale_anim != "travel": return
+	finale_anim = ""
+	mark_finale_seen()
+	render()
+
+## Mientras corre la animación no se puede tocar la mesa. Desde la segunda vez (en esta partida guardada) se puede omitir.
+func render_finale_blocker() -> void:
+	var blocker := Control.new()
+	blocker.name = "FinaleBlocker"
+	blocker.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	blocker.mouse_filter = Control.MOUSE_FILTER_STOP
+	blocker.z_index = 95
+	blocker.top_level = true # no cae con la mesa en la victoria
+	blocker.position = Vector2.ZERO
+	blocker.size = Vector2(1440, 900)
+	ui.add_child(blocker)
+	# La muerte de La Semilla (victoria) no se puede omitir.
+	if finale_seen() and finale_anim != "ending":
+		var skip := button(blocker, "Omitir animación", Rect2(570, 600, 300, 44), skip_finale)
+		skip.name = "SkipFinale"
+
+func skip_finale() -> void:
+	background.finale.stop()
+	finale_anim = ""
+	render()
+
+## Ya se vio el final entero alguna vez: en la partida guardada activa o, sin partida, en esta sesión.
+func finale_seen() -> bool:
+	if finale_seen_session: return true
+	if not profiles_enabled or profile_slot == 0: return false
+	var found: Dictionary = profile_store.read(profile_slot)
+	return found.ok and bool(found.data.get(ProfileStore.SEED_FINALE_KEY, false))
+
+func mark_finale_seen() -> void:
+	finale_seen_session = true
+	if profiles_enabled and profile_slot != 0 and not game.debug_mode: profile_store.mark_seed_finale_seen(profile_slot)
+
+func show_credits() -> void:
+	showing_credits = true
+	render()
+
+## Victoria: la interfaz de la mesa (libreta, botones, bandeja) tiembla y cae con la mesa; la semilla se apaga.
+## Mismos tiempos que `SeedFinale` (cuadros de 90 ms): tiembla hasta el 22, cae desde el 12 y se apaga del 22 al 38.
+func _animate_ending_ui() -> void:
+	var fall := ui.create_tween()
+	for i in 12:
+		var dx := float((i * 7) % 7 - 3) * 2.0
+		var dy := float((i * 5) % 7 - 3) * 2.0
+		fall.tween_property(ui, "position", Vector2(dx, dy), 0.09)
+	fall.tween_property(ui, "position", Vector2(0, 900), 1.6).set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
+	# Los números de la semilla se apagan parpadeando: cada vez prenden menos y quedan apagados más tiempo.
+	if is_instance_valid(seed_display):
+		var blink := seed_display.create_tween()
+		blink.tween_interval(20 * 0.09)
+		for step in [[0.08, 0.30], [0.10, 0.22], [0.14, 0.16], [0.18, 0.10], [0.24, 0.07], [0.30, 0.04]]:
+			blink.tween_property(seed_display, "modulate:a", 0.0, 0.0)
+			blink.tween_interval(step[0])
+			blink.tween_property(seed_display, "modulate:a", 1.0, 0.0)
+			blink.tween_interval(step[1])
+		blink.tween_property(seed_display, "modulate:a", 0.0, 0.0)
+
+## Créditos provisionales: el contenido se arma más adelante (docs/LA-SEMILLA.md).
+const CREDITS := ["DIOS NO JUEGA A LOS DADOS", "", "Créditos provisionales", "", "Se completan más adelante.", "", "Gracias por jugar."]
+
+## Créditos después de vencer a La Semilla (aparecen solos); después, las recompensas y la vuelta al inicio.
+func render_credits() -> void:
+	if showing_rewards:
+		render_rewards()
+		return
+	credits_token += 1
+	var token := credits_token
+	var backdrop := panel(ui, Rect2(0, 0, 1440, 900), Color.BLACK)
+	backdrop.name = "Credits"
+	var lines := VBoxContainer.new()
+	lines.position = Vector2(320, 140)
+	lines.size = Vector2(800, 560)
+	lines.alignment = BoxContainer.ALIGNMENT_CENTER
+	backdrop.add_child(lines)
+	for i in CREDITS.size():
+		var line := Label.new()
+		line.text = CREDITS[i]
+		line.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		line.add_theme_font_size_override("font_size", 34 if i == 0 else 20)
+		line.add_theme_color_override("font_color", Color("5cff6a") if i == 0 else cream)
+		lines.add_child(line)
+	var next := button(backdrop, "Continuar", Rect2(570, 760, 300, 50), show_rewards, false, true)
+	next.name = "CreditsNext"
+	next.grab_focus()
+	# Si nadie toca nada, a los pocos segundos pasan solas las recompensas.
+	if is_inside_tree(): get_tree().create_timer(CREDITS_SECONDS).timeout.connect(func():
+		if showing_credits and not showing_rewards and token == credits_token: show_rewards())
+
+const CREDITS_SECONDS := 8.0
+
+func show_rewards() -> void:
+	showing_rewards = true
+	render()
+
+## Recompensas por ganarle a La Semilla: mecánica posterior, todavía sin definir.
+func render_rewards() -> void:
+	var backdrop := panel(ui, Rect2(0, 0, 1440, 900), Color.BLACK)
+	backdrop.name = "Rewards"
+	var title := label(backdrop, "RECOMPENSAS", Vector2(320, 300), 34, Color("5cff6a"), 800)
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	var body := label(backdrop, "Las recompensas por ganarle a La Semilla todavía no están definidas.", Vector2(320, 380), 20, cream, 800)
+	body.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	var back := button(backdrop, "Volver al inicio", Rect2(570, 760, 300, 50), back_to_start, false, true)
+	back.name = "CreditsBack"
+	back.grab_focus()
+
+func back_to_start() -> void:
+	showing_credits = false
+	showing_rewards = false
+	selected.clear()
+	repair_selection.clear()
+	purchase_error = ""
+	game.return_to_menu()
+	session_started = false
+	render()

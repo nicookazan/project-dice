@@ -39,3 +39,7 @@ Contrato del 17/11/2026 (ficha [TU-tutorial](pasos/TU-tutorial.md), fases TU1–
 ## Pruebas
 
 `tests/tutorial_tests.gd` (crear, leer, registrar jugadas y tutorial, archivo dañado/alterado, escritura interrumpida, borrar, preferencias, panel de Opciones con la doble confirmación, abandono sin escritura, debug sin escritura, partidas independientes).
+
+## Final de La Semilla visto (24/11/2026)
+
+Clave opcional `seed_finale_seen` (sí/no): se escribe al ver entero el final de La Semilla y habilita «Omitir animación». Un archivo sin la clave sigue siendo válido y no cambia la versión. Una jugada con semilla elegida (por ejemplo «Reintentar misma semilla») no suma nada a la partida guardada. Ver `docs/LA-SEMILLA.md`.

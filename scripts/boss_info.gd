@@ -7,6 +7,9 @@ const Coins = preload("res://scripts/coins.gd")
 
 ## Datos del jefe del nivel actual, aunque el encuentro actual sea un rival.
 static func boss_entry(game) -> Dictionary:
+	if not game.campaign.is_empty() and game.is_seed():
+		var guardian: Dictionary = Campaign.candidate(game.campaign[game.level_index], game.selected_bosses.get(str(game.level_index), ""))
+		return {"name": Campaign.SEED_NAME, "rule": game.boss_rule, "target": game.target(), "reward": guardian.get("base_reward", Campaign.NORMAL_REWARD)}
 	if not game.campaign.is_empty() and game.selected_bosses.has(str(game.level_index)):
 		var chosen: Dictionary = Campaign.candidate(game.campaign[game.level_index], game.selected_bosses[str(game.level_index)])
 		if not chosen.is_empty(): return {"name": chosen.name, "rule": chosen.rule, "target": chosen.target, "reward": chosen.base_reward}
@@ -43,7 +46,7 @@ static func panel(game) -> Dictionary:
 	if entry.is_empty(): return {}
 	if game.is_boss():
 		var lines := boss_lines(game, entry)
-		var title: String = "Dios" if is_god(game) else entry.name
+		var title: String = entry.name if game.is_seed() else ("Dios" if is_god(game) else entry.name)
 		var alt := "%s · %s. Tocá la mano para ver el poder." % [title, entry.rule.name]
 		return {"title": title, "text": "\n".join(lines), "alt": alt}
 	var rival_lines: Array[String] = ["Rival común: objetivo %d." % game.target(), "", "Próximo jefe: %s · %s" % [entry.name, entry.rule.get("name", "")]]

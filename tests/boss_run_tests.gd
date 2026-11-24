@@ -19,7 +19,7 @@ static func run(check: Callable) -> Dictionary:
 		while game.phase != "won" and steps < 30:
 			steps += 1
 			if game.phase == "level_intro": game.begin_level()
-			if game.is_boss():
+			if game.is_boss() and not game.is_seed():
 				var expected: String = forced[game.level_index]
 				if game.selected_bosses[str(game.level_index)] != expected or game.boss_rule.id != expected: consistent = false
 				if expected not in seen: seen.append(expected)
@@ -33,7 +33,7 @@ static func run(check: Callable) -> Dictionary:
 			if game.phase == "reward":
 				if game.has_next_encounter() and not game.open_shop(): consistent = false
 				if game.phase == "shop" and not game.leave_shop(): consistent = false
-		check.call(game.phase == "won" and steps == 21 and game.completed_encounters.size() == 21, "Boss run %d: the 21 encounters complete (%d steps)" % [slot, steps])
+		check.call(game.phase == "won" and steps == 22 and game.completed_encounters.size() == 22, "Boss run %d: the 22 encounters complete, La Semilla included (%d steps)" % [slot, steps])
 		check.call(consistent, "Boss run %d: forced bosses, boss rules and every checkpoint stay consistent" % slot)
 	check.call(seen.size() == 21, "Boss run: every one of the 21 bosses was played at least once")
 	var unforced = Game.new(809)

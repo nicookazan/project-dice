@@ -108,7 +108,7 @@ static func bosses_v8(game: Dictionary) -> String:
 	game.campaign = levels
 	game.selected_bosses = selected
 	game.completed_encounters = completed
-	game.level_encounters = Campaign.encounters(levels[game.level_index], chosen)
+	game.level_encounters = Campaign.encounters(levels[game.level_index], chosen, game.level_index == levels.size() - 1)
 	game.boss_rule = chosen.rule.duplicate(true)
 	# El objetivo del jefe cambia con el catálogo: un cobro ya acreditado no se invalida.
 	if game.get("phase") in ["reward", "repair", "won", "shop", "purchase_target", "sticker_choice", "coin_choice"] and game.get("points") is int and game.get("rival") is int and game.rival < game.level_encounters.size():
@@ -119,4 +119,18 @@ static func bosses_v8(game: Dictionary) -> String:
 			for coin in game.coin_inventory.equipped:
 				if coin is Dictionary: ids.append(str(coin.get("coin_id", "")))
 		game.boss_state = BossRules.draw_state(game.boss_rule, int(game.get("run_seed", 0)), game.level_index, game.rival, ids)
+	return ""
+
+## v9 -> v10 (La Semilla): el último nivel suma el encuentro 22 después del guardián. Solo agrega ese encuentro al recorrido
+## del nivel en curso si falta; semilla, azar, plata, inventario y ofertas no se tocan. Idempotente.
+static func seed_v10(game: Dictionary) -> String:
+	const Campaign = preload("res://scripts/campaign.gd")
+	if not game.has("shop_gifts"): game["shop_gifts"] = []
+	if not game.has("seeded"): game["seeded"] = false
+	if not game.get("campaign") is Array or game.campaign.is_empty(): return ""
+	if not game.get("level_index") is int or not game.get("level_encounters") is Array or not game.get("selected_bosses") is Dictionary: return "campaña anterior inválida"
+	if game.level_index != game.campaign.size() - 1 or game.level_encounters.size() != 3: return ""
+	var chosen := Campaign.candidate(game.campaign[game.level_index], str(game.selected_bosses.get(str(game.level_index), "")))
+	if chosen.is_empty(): return "jefe del último nivel desconocido"
+	game.level_encounters = Campaign.encounters(game.campaign[game.level_index], chosen, true)
 	return ""

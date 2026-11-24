@@ -61,6 +61,14 @@ const StickerArt = preload("res://scripts/sticker_art.gd")
 const StickerDefinitions = preload("res://scripts/stickers.gd")
 const BarProps = preload("res://scripts/bar_props.gd")
 const WindowFx = preload("res://scripts/window_fx.gd")
+const SeedFinale = preload("res://scripts/seed_finale.gd")
+## Final de La Semilla: «beaten» (guardián vencido, todavía vivo y sin grietas) o «matrix» (encuentro contra La Semilla).
+## Las animaciones de muerte y derrumbe las pide main.gd con `play_finale` y avisan al terminar.
+signal finale_finished(anim: String)
+var finale := SeedFinale.new()
+var finale_stage := ""
+## Guardián del nivel (0–2) aunque el encuentro en curso sea La Semilla: es el que muere al salir de la mano.
+var finale_guardian := -1
 ## Sifones, bandera y termo que reaccionan al clic (animaciones de presentación).
 signal copa_stars_complete
 var copa_lit: Array[bool] = [false, false, false]
@@ -119,6 +127,9 @@ func configure(profile: Dictionary, preferences: Dictionary) -> void:
 	hand_row = BossCatalog.hand_row(profile.get("boss_id", "")) if actor != "god" else -1
 	hand_boss = profile.get("boss_id", "") if actor != "god" and HandClips.CLIPS.has(profile.get("boss_id", "")) else ""
 	level = profile.level
+	finale_stage = profile.get("finale", "")
+	if finale_stage != "": finale.setup(int(profile.get("seed", 0)))
+	finale_guardian = BossCatalog.guardian(profile.get("guardian_id", ""))
 	motion = not preferences.reduced_motion and preferences.speed != 0
 	speed = preferences.speed
 	props.motion = motion
@@ -127,7 +138,7 @@ func configure(profile: Dictionary, preferences: Dictionary) -> void:
 	# Las animaciones solo existen sobre la mesa y con movimiento: cualquier otro cambio las corta.
 	if shop_mode != last_shop_mode or not motion: props.stop_all()
 	last_shop_mode = shop_mode
-	for hit in copa_hits: hit.visible = not shop_mode
+	for hit in copa_hits: hit.visible = not shop_mode and finale_stage != "matrix"
 	queue_redraw()
 	if is_instance_valid(pour_layer): pour_layer.queue_redraw()
 
@@ -147,7 +158,17 @@ func _configure_window_fx(profile: Dictionary) -> void:
 		fx_key = key
 	window_fx.render_target_update_mode = SubViewport.UPDATE_ALWAYS
 
+## Arranca una animación del final («death» o «collapse»); `finale_finished` avisa cuando termina.
+func play_finale(anim: String) -> void:
+	finale.start(anim)
+	if anim == "ending": finale.ending_tick = int(elapsed / SeedFinale.FRAME)
+	queue_redraw()
+
 func _process(delta: float) -> void:
+	if finale.anim != "":
+		var name := finale.anim
+		if finale.step(delta * maxf(speed, 1)): finale_finished.emit(name)
+		queue_redraw()
 	if props.any_busy():
 		props.step(delta)
 		queue_redraw()
@@ -246,6 +267,8 @@ func _draw() -> void:
 		draw_texture_rect(VENDOR_HAND, Rect2(VENDOR_HAND_ORIGIN * 2.0 + Vector2(0, bob), VENDOR_HAND.get_size() * 2.0), false)
 		props.draw_flag(self, "shop_flag")
 		return
+	var shake := finale.shake()
+	if shake != Vector2.ZERO: draw_set_transform(shake)
 	draw_texture_rect(ART if shop_mode else CLEAN_TABLE, Rect2(0, 0, 1440, 900), false)
 	if shop_mode:
 		# Reuse the original club/hand above the table; only the shop table changes.
@@ -258,6 +281,19 @@ func _draw() -> void:
 	if shop_mode: draw_texture_rect_region(cup_art, cup_patch, Rect2(cup_patch.position * cup_scale, cup_patch.size * cup_scale))
 	# Pixel-v3 club room (walls, lamps, pictures, chairs); windows are drawn over it.
 	else: draw_texture_rect(SALON_V3, Rect2(0, 0, 1440, 300), false)
+	# La Semilla: el bar ya no está. Negro con la Matrix detrás de la mesa, el termo, el mate y el vaso.
+	if finale_stage in ["matrix", "ending"] and finale.anim not in ["death", "collapse"]:
+		draw_rect(Rect2(0, 0, 1440, 900), Color.BLACK)
+		if finale.anim == "ending":
+			# Victoria: la Matrix se apaga y la mesa se parte hacia abajo.
+			finale.draw_matrix(self, int(elapsed / SeedFinale.FRAME), 1.0, motion, finale.ending_tick)
+			_draw_falling_table()
+			finale.draw_dust(self)
+		elif finale_stage == "matrix":
+			finale.draw_matrix(self, int(elapsed / SeedFinale.FRAME), 1.0, motion)
+			_draw_table_and_props()
+			draw_rect(Rect2(0, 836, 1440, 64), Color.BLACK)
+		return
 	if not shop_mode: _draw_copa_stars()
 	var panels := {"dia": 0, "tarde": 1, "noche": 2, "espacio": 3, "agujero_negro": 4, "cielo": 5}
 	var cell := Vector2(EXTERIORS.get_size()) / Vector2(2, 3)
@@ -282,6 +318,20 @@ func _draw() -> void:
 		props.draw_flag(self)
 		props.draw_soda(self, "soda_left")
 		props.draw_soda(self, "soda_right")
+	if not shop_mode and finale.anim == "collapse": finale.draw_collapse(self)
+	_draw_table_and_props()
+	if not shop_mode and finale.anim == "collapse":
+		finale.draw_dust(self)
+		if finale.frame() >= 26.0: draw_rect(Rect2(0, 836, 1440, 64), Color.BLACK)
+	if finale.anim == "death":
+		finale.draw_death(self, finale_guardian)
+		return
+	# En La Semilla el guardián ya murió: no queda nadie en el cielo. Vencido, sigue ahí hasta salir de la mano.
+	if finale_stage in ["matrix", "ending"]: return
+	_draw_actor()
+
+## Mesa (madera, paño, frente), termo, mate y vaso: lo único que queda en pie en el final de La Semilla.
+func _draw_table_and_props() -> void:
 	# Pixel-v3 table (wood, felt, front, floor) over the old plate; the room above it stays.
 	if not shop_mode: draw_texture_rect(TABLE_V3, Rect2(0, 272, 1440, 628), false)
 	# Only replace the prop strip: all dice areas, the hand and the original
@@ -303,14 +353,35 @@ func _draw() -> void:
 	var sway := 2.0 * roundf(sin(thermos_t * TAU * 2.0) * 3.0) if motion and thermos_t > 0.0 and thermos_t < 1.0 else 0.0
 	if pour_frame < 0:
 		var thermos_origin := THERMOS_ORIGIN.lerp(STOLEN_THERMOS_POS, lift) + Vector2(sway, thermos_bob)
-		draw_set_transform(thermos_origin, 0.0, Vector2.ONE * lerpf(1.0, STOLEN_THERMOS_SCALE, lift))
+		draw_set_transform(thermos_origin + finale.shake(), 0.0, Vector2.ONE * lerpf(1.0, STOLEN_THERMOS_SCALE, lift))
 		draw_texture_rect(THERMOS_TABLE_V3, Rect2(Vector2.ZERO, Vector2(144, 350)), false)
 		# Every sticker sits on its own fixed spot of the thermos (same layout as the shop).
 		for id in StickerDefinitions.NAMES:
 			if stickers.has(id): StickerArt.draw_on_thermos(self, Vector2.ZERO, id, 86.0, 46.0, int(stickers[id]))
-		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+		draw_set_transform(finale.shake(), 0.0, Vector2.ONE)
 	draw_texture_rect(MATE_V3, Rect2(1088, 310, 136, 236), false)
 	if not cup_hidden: draw_texture_rect(CUP_V3, Rect2(1280, 426, 144, 188), false)
+
+## Victoria contra La Semilla: la mesa en seis franjas que caen por separado; el mate, el termo y el vaso caen con la
+## franja en la que están apoyados.
+func _draw_falling_table() -> void:
+	var strip := 1440.0 / SeedFinale.TABLE_STRIPS
+	for i in SeedFinale.TABLE_STRIPS:
+		var drop := finale.strip_drop(i) * 2.0
+		if drop > 900.0: continue
+		draw_texture_rect_region(TABLE_V3, Rect2(i * strip, 272 + drop, strip, 628), Rect2(i * strip / 2.0, 0, strip / 2.0, 314))
+	var mate_drop := finale.strip_drop(int(1088 / strip)) * 2.0
+	var right_drop := finale.strip_drop(int(1280 / strip)) * 2.0
+	draw_set_transform(THERMOS_ORIGIN + finale.shake() + Vector2(0, right_drop), 0.0, Vector2.ONE)
+	draw_texture_rect(THERMOS_TABLE_V3, Rect2(Vector2.ZERO, Vector2(144, 350)), false)
+	for id in StickerDefinitions.NAMES:
+		if stickers.has(id): StickerArt.draw_on_thermos(self, Vector2.ZERO, id, 86.0, 46.0, int(stickers[id]))
+	draw_set_transform(finale.shake(), 0.0, Vector2.ONE)
+	draw_texture_rect(MATE_V3, Rect2(1088, 310 + mate_drop, 136, 236), false)
+	if not cup_hidden: draw_texture_rect(CUP_V3, Rect2(1280, 426 + right_drop, 144, 188), false)
+
+## La mano del jefe (o el guardián de Dios) en el cielo.
+func _draw_actor() -> void:
 	# God remains a provisional silhouette; ordinary hands retain existing art.
 	var center := Vector2(667, 105 + (sin(elapsed * 1.1) * 3 if motion else 0))
 	if actor == "god" and guardian >= 0:

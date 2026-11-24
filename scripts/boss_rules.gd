@@ -28,15 +28,22 @@ static func valid_rule(rule: Variant) -> bool:
 		"repeat_half": return rule.get("target") is String and not rule.target.is_empty() and Array(rule.target.split(",")).all(func(name): return name in CATEGORIES)
 	return false
 
+## Un nivel tiene un jefe; el último puede sumar La Semilla (`seed`) como cuarto y último encuentro.
 static func valid_encounters(encounters: Variant) -> bool:
-	if not encounters is Array or encounters.is_empty() or encounters.size() > 3: return false
+	if not encounters is Array or encounters.is_empty() or encounters.size() > 4: return false
 	var ids: Array = []
 	var bosses := 0
-	for encounter in encounters:
-		if not encounter is Dictionary or encounter.size() != 3 or not encounter.get("id") is String or encounter.id == "" or encounter.id in ids or encounter.get("kind") not in ["normal", "boss"] or not encounter.get("target") is int or encounter.target < 1: return false
+	for index in range(encounters.size()):
+		var encounter = encounters[index]
+		if not encounter is Dictionary or encounter.size() != 3 or not encounter.get("id") is String or encounter.id == "" or encounter.id in ids or encounter.get("kind") not in ["normal", "boss", "seed"] or not encounter.get("target") is int or encounter.target < 1: return false
+		if encounter.kind == "seed" and (index != 3 or encounters.size() != 4): return false
 		ids.append(encounter.id)
 		if encounter.kind == "boss": bosses += 1
-	return bosses == 1
+	return bosses == 1 and (encounters.size() < 4 or encounters[3].kind == "seed")
+
+## Encuentro con poder de jefe: el jefe del nivel o La Semilla.
+static func has_power(kind: String) -> bool:
+	return kind in ["boss", "seed"]
 
 static func valid_pool(pool: Array) -> bool:
 	if pool.is_empty(): return false

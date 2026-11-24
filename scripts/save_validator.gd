@@ -78,7 +78,7 @@ static func validate(data: Variant) -> String:
 	if g.hand_mult_bonus < 0 or g.hand_mult_bonus > 1000 or g.hand_points_bonus < 0 or g.hand_points_bonus > 1000000 or g.visit_discount < 0.0 or g.visit_discount > 0.9: return "bonos de moneda fuera de rango"
 	if g.once_coins_seen.size() > 100 or not g.once_coins_seen.all(func(id): return id is String and Coins.DATA.has(id)): return "monedas de una vez inválidas"
 	if (g.phase == "coin_choice") != (not g.pending_coin_pack.is_empty()): return "paquete de monedas pendiente inconsistente"
-	if not BossRules.valid_state(g.boss_rule, g.boss_state, g.level_encounters[g.rival].kind == "boss"): return "estado del jefe inválido"
+	if not BossRules.valid_state(g.boss_rule, g.boss_state, BossRules.has_power(g.level_encounters[g.rival].kind)): return "estado del jefe inválido"
 	for key in ["event_sequence", "coin_instance_sequence", "shop_offer_sequence", "sticker_offer_sequence"]:
 		if g[key] < 0: return "secuencia negativa"
 	if g.reroll_prices.size() != 4: return "contadores de renovación incompletos"
@@ -111,8 +111,8 @@ static func validate(data: Variant) -> String:
 		if not group is Dictionary or not ids(group.get("ids")) or not group.get("category") is String or not group.get("locked") is bool: return "grupo inválido"
 	if not g.groups.is_empty() and not Rules.validate_groups(g.dice, g.groups, CoinEffects.rules(g.passives)).is_empty(): return "agrupación inconsistente"
 	# Escudo de jefe (U14): solo vive durante la mano en juego contra un jefe, y apaga la regla de categorías prohibidas.
-	if g.boss_shield_active and (g.phase != "play" or g.level_encounters[g.rival].kind != "boss"): return "escudo de jefe fuera de lugar"
-	if g.level_encounters[g.rival].kind == "boss" and not g.boss_shield_active:
+	if g.boss_shield_active and (g.phase != "play" or not BossRules.has_power(g.level_encounters[g.rival].kind)): return "escudo de jefe fuera de lugar"
+	if BossRules.has_power(g.level_encounters[g.rival].kind) and not g.boss_shield_active:
 		for group in g.groups:
 			if BossRules.forbidden(BossRules.context(g.boss_rule, true, g.boss_state, g.hand), group.category): return "categoría prohibida por jefe"
 	var inventory: Dictionary = g.coin_inventory
@@ -141,7 +141,7 @@ static func validate(data: Variant) -> String:
 	if g.free_reroll_tokens < 0 or g.free_reroll_tokens > 20 or g.free_renewals < 0 or g.free_renewals > 20: return "contadores de moneda inválidos"
 	if g.passives != equipped or g.consumable != (inventory.consumables[0].coin_id if not inventory.consumables.is_empty() else ""): return "vistas de inventario inconsistentes"
 	# Mano extra (C52): el límite sale de las monedas y del jefe; fuera de la partida en curso la mano es solo un recuerdo.
-	var hand_limit: int = Game.hand_limit_of(g.passives, g.boss_rule, g.level_encounters[g.rival].kind == "boss" and not g.boss_shield_active, g.boss_state, g.hand)
+	var hand_limit: int = Game.hand_limit_of(g.passives, g.boss_rule, BossRules.has_power(g.level_encounters[g.rival].kind) and not g.boss_shield_active, g.boss_state, g.hand)
 	if g.phase in ["play", "hand_result", "lost"] and g.hand > hand_limit: return "mano fuera del límite"
 	if not g.last_score.is_empty() and not score(g.last_score): return "resultado incompleto"
 	if g.phase in ["hand_result", "reward", "repair", "won", "lost"] and g.last_score.is_empty(): return "falta resultado anotado"
@@ -162,6 +162,10 @@ static func validate(data: Variant) -> String:
 				if not offer.get("offer_id") is String or offer.offer_id in offer_ids or not Purchases.valid_offer(section, offer, g.sticker_catalog): return "oferta inconsistente"
 				offer_ids.append(offer.offer_id)
 	if g.phase in ["shop", "purchase_target", "sticker_choice", "coin_choice"] and g.shop_state.is_empty(): return "falta tienda"
+	# Regalos de la mano con el maletín: solo en la visita que separa al guardián de La Semilla, y como mucho uno por sección.
+	if g.shop_gifts.size() > 4 or not g.shop_gifts.all(func(id): return id is String): return "regalos de tienda inválidos"
+	var seed_visit: bool = not g.campaign.is_empty() and g.rival + 1 < g.level_encounters.size() and g.level_encounters[g.rival + 1].kind == "seed"
+	if not g.shop_gifts.is_empty() and (not seed_visit or g.phase not in ["shop", "purchase_target", "sticker_choice", "coin_choice"]): return "regalos fuera de la mano con el maletín"
 	if g.phase == "purchase_target":
 		var p: Dictionary = g.pending_purchase
 		if not p.get("section") is String or not p.get("offer_id") is String or not p.get("offer") is Dictionary or not p.get("target") is Dictionary or not g.shop_state.has(p.section): return "compra pendiente incompleta"

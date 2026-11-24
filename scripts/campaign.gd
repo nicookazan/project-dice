@@ -4,6 +4,13 @@ const Boss = preload("res://scripts/boss_rules.gd")
 const Catalog = preload("res://scripts/boss_catalog.gd")
 const ID := "hasta-dios-jefes-v1"
 const NORMAL_REWARD := 8
+## La Semilla (docs/LA-SEMILLA.md): encuentro 22, después del guardián del último nivel. Datos provisionales (D07/D11).
+const SEED_ID := "la_semilla"
+const SEED_NAME := "La Semilla"
+## Objetivo = objetivo del guardián × 1,5, redondeado una sola vez (0,5 hacia arriba).
+const SEED_TARGET_MULTIPLIER := 1.5
+## La mano con el maletín (tienda antes del derrumbe): un ítem por sección gratis; cada tanda nueva cuesta esto, siempre igual.
+const SEED_SHOP_RESTOCK_PRICE := 5
 
 static func prototype() -> Array:
 	var targets := [[40, 70], [70, 110], [110, 160], [160, 230], [230, 320], [320, 440], [440, 600]]
@@ -32,8 +39,30 @@ static func candidate(level: Dictionary, id: String) -> Dictionary:
 		if entry.id == id: return entry.duplicate(true)
 	return {}
 
-static func encounters(level: Dictionary, chosen: Dictionary) -> Array:
-	return [{"id": level.id + "_r1", "kind": "normal", "target": level.targets[0]}, {"id": level.id + "_r2", "kind": "normal", "target": level.targets[1]}, {"id": chosen.id, "kind": "boss", "target": chosen.target}]
+## `last`: el último nivel suma a La Semilla después de su jefe (el guardián).
+static func encounters(level: Dictionary, chosen: Dictionary, last := false) -> Array:
+	var plan := [{"id": level.id + "_r1", "kind": "normal", "target": level.targets[0]}, {"id": level.id + "_r2", "kind": "normal", "target": level.targets[1]}, {"id": chosen.id, "kind": "boss", "target": chosen.target}]
+	if last: plan.append({"id": SEED_ID, "kind": "seed", "target": seed_target(chosen.target)})
+	return plan
+
+static func seed_target(guardian_target: int) -> int:
+	return int(floor(guardian_target * SEED_TARGET_MULTIPLIER + 0.5))
+
+## Poder de La Semilla: uno de los jefes que tocaron en la jugada, sorteado con un generador aparte (semilla + "la_semilla").
+## No toca el azar principal y da siempre lo mismo para la misma semilla y los mismos jefes.
+static func seed_rule(levels: Array, selected: Dictionary, run_seed: int) -> Dictionary:
+	var pool: Array = []
+	var ids: Array = []
+	for index in range(levels.size()):
+		if not selected.has(str(index)): continue
+		var chosen := candidate(levels[index], selected[str(index)])
+		if chosen.is_empty() or chosen.rule.id in ids: continue
+		ids.append(chosen.rule.id)
+		pool.append(chosen.rule)
+	if pool.is_empty(): return {}
+	var generator := RandomNumberGenerator.new()
+	generator.seed = ("%d:%s" % [run_seed, SEED_ID]).hash()
+	return pool[generator.randi_range(0, pool.size() - 1)].duplicate(true)
 
 static func valid_progress(game: Dictionary) -> bool:
 	if game.campaign.is_empty(): return game.level_index == 0 and game.selected_bosses.is_empty() and game.completed_encounters.is_empty()
@@ -44,11 +73,14 @@ static func valid_progress(game: Dictionary) -> bool:
 		if not game.selected_bosses.get(key) is String: return false
 		var chosen := candidate(game.campaign[index], game.selected_bosses[key])
 		if chosen.is_empty(): return false
-		var plan := encounters(game.campaign[index], chosen)
+		var plan := encounters(game.campaign[index], chosen, index == game.campaign.size() - 1)
 		if index < game.level_index:
 			for encounter in plan: completed.append(encounter.id)
 		else:
-			if game.level_encounters != plan or game.boss_rule != chosen.rule: return false
+			if game.level_encounters != plan or game.rival >= plan.size(): return false
+			# En La Semilla el poder es el sorteado entre los jefes de la jugada; en el resto, el del jefe del nivel.
+			var rule: Dictionary = seed_rule(game.campaign, game.selected_bosses, game.run_seed) if plan[game.rival].kind == "seed" else chosen.rule
+			if game.boss_rule != rule: return false
 			var count: int = game.rival + (1 if game.phase in ["reward", "repair", "shop", "purchase_target", "sticker_choice", "coin_choice", "won"] else 0)
 			for i in range(count): completed.append(plan[i].id)
 	return completed == game.completed_encounters

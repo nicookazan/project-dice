@@ -34,7 +34,7 @@ static func run(scene, check: Callable) -> Dictionary:
 	first.passives = ["even", "odd"]
 	check.call(first.level_encounters == fixed_targets and first.campaign == definitions, "Campaign: inventory power never adapts fixed targets")
 	var before: Dictionary = first.snapshot()
-	check.call(not first.leave_shop() and not first.open_shop() and first.campaign_route().size() == 21 and first.snapshot() == before, "Campaign: route cannot skip or resample encounters")
+	check.call(not first.leave_shop() and not first.open_shop() and first.campaign_route().size() == 22 and first.snapshot() == before, "Campaign: route cannot skip or resample encounters")
 	scene.detail.hide()
 	scene.cancel_navigation()
 	scene.validation_profile = false
@@ -113,11 +113,23 @@ static func run(scene, check: Callable) -> Dictionary:
 			check.call(scene.game.boss_rule == rule_before and scene.game.selected_bosses == chosen_before, "Campaign: normal advance keeps announced boss stable")
 		check.call(scene.game.snapshot() == uninterrupted.snapshot(), "Campaign: next encounter/boss draw equals uninterrupted execution after reload")
 		await scene.get_tree().process_frame
-	check.call(scene.game.phase == "won" and scene.game.level_index == 6 and scene.game.rival == 2 and scene.game.completed_encounters.size() == 21, "Campaign: exactly 21 encounters and final God victory")
-	check.call(level_boundaries == 6 and not scene.game.open_shop() and not scene.game.leave_shop() and not scene.game.has_next_encounter(), "Campaign: God closes version without level 8/store")
-	check.call(UI.text_in(scene.ui, "DIOS SUPERADO"), "Campaign UI: final victory visible and cannot be resumed")
+	# El guardián (encuentro 21) ya no cierra la versión: sigue La Semilla (docs/LA-SEMILLA.md).
+	check.call(scene.game.phase == "reward" and scene.game.level_index == 6 and scene.game.rival == 2 and scene.game.completed_encounters.size() == 21 and scene.game.is_seed_shop_visit(), "Campaign: the guardian (encounter 21) leads to La Semilla")
+	Flow.click(scene, "Seguir sin tienda →")
+	check.call(scene.game.is_seed() and scene.game.phase == "play", "Campaign: La Semilla is played right after the guardian")
+	scene.game.debug_mode = true
+	scene.game.roll()
+	scene.game.score_hand()
+	scene.game.debug_mode = false
+	scene.game.close_encounter()
+	if scene.game.phase == "repair": scene.game.resolve_repairs([])
+	scene.render()
+	check.call(scene.game.phase == "won" and scene.game.level_index == 6 and scene.game.rival == 3 and scene.game.completed_encounters.size() == 22, "Campaign: exactly 22 encounters and final La Semilla victory")
+	check.call(level_boundaries == 6 and not scene.game.open_shop() and not scene.game.leave_shop() and not scene.game.has_next_encounter(), "Campaign: La Semilla closes version without level 8/store")
+	check.call(scene.ui.get_node_or_null("Credits") != null and scene.showing_credits, "Campaign UI: beating La Semilla goes to the credits and cannot be resumed")
 	for index in range(7):
 		check.call(not Campaign.candidate(scene.game.campaign[index], scene.game.selected_bosses[str(index)]).is_empty(), "Campaign: selected boss belongs to own level pool " + str(index + 1))
+	scene.back_to_start()
 	var losses: Array = _test_losses_and_migration(check)
 	scene.profiles_enabled = false
 	scene.campaign_mode = false
