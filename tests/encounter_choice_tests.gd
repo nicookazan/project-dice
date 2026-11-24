@@ -61,7 +61,7 @@ static func run(scene, check: Callable) -> void:
 	campaign.cup.stickers = {"trio": 2, "full": 1}
 	var intros := 0
 	var wins := 0
-	for encounter in range(21):
+	for encounter in range(22):
 		if campaign.phase == "level_intro":
 			intros += 1
 			campaign.begin_level()
@@ -70,6 +70,6 @@ static func run(scene, check: Callable) -> void:
 		wins += 1
 		if campaign.phase == "repair": campaign.resolve_repairs([])
 		if campaign.phase == "reward": campaign.skip_shop()
-	check.call(wins == 21 and intros == 7 and campaign.phase == "won" and campaign.completed_encounters.size() == 21 and campaign.shop_offer_sequence == 0, "Destination: all 21 encounters can skip shops, preserving seven level announcements and terminal God victory")
+	check.call(wins == 22 and intros == 7 and campaign.phase == "won" and campaign.completed_encounters.size() == 22 and campaign.shop_offer_sequence == 0, "Destination: all 22 encounters can skip shops, preserving seven level announcements and terminal La Semilla victory")
 	before = campaign.snapshot()
 	check.call(not campaign.skip_shop() and campaign.snapshot() == before and campaign.cup.stickers == {"trio": 2, "full": 1}, "Destination: final victory offers no further advance and retains purchased stickers")

@@ -276,3 +276,23 @@ Versión 1 · 25 de octubre de 2026. Este registro evita bloquear todo el proyec
 6. **Desvío del plan:** los bocetos de TU0 no se hicieron; se integró con arte existente y una ficha provisional para C58, a la espera de la aprobación del autor.
 
 **Fuente:** [requerimientos](../fuentes/REQUERIMIENTOS-TUTORIAL-2026-11-17.md) y [plan en Notion](https://app.notion.com/p/41bc28142b5581629c82c90e7e08bccb).
+
+## D19 — La Semilla, jefe final
+
+**Estado:** cerrada por el autor el 24/11/2026 (diseño y bocetos A1, B1 y C2 + C3). Implementada en `feature/la-semilla`.
+
+**Pasos afectados:** 21 ([ficha](21-la-semilla.md)); toca 17 (jefes), 18 (campaña), 19 (presentación), 11 (tienda) y el guardado (v10).
+
+**Decisiones:**
+
+1. La Semilla es el encuentro 22, después del guardián del cielo (cualquiera de los tres). Perderle pierde la jugada. Ganarle no muestra cartel: tiembla todo, la mesa se rompe hacia abajo, la Matrix se queda sin líneas, los números de la semilla se apagan parpadeando (sin poder omitirlo) y aparecen solos los créditos; después, las recompensas (mecánica posterior, sin definir) y la pantalla de inicio.
+2. Objetivo: el del guardián × 1,5. Manos y tiradas estándar.
+3. Tiene **un solo poder**, sorteado entre los de los jefes de la jugada. Se descartó sumar un segundo poder a mitad de vida: el motor admite una sola regla por encuentro y no se agrega ese trabajo.
+4. La mano con el maletín aparece cuando cruje el bar, antes del derrumbe: un ítem por sección y todos gratis; el restock cuesta $5 siempre y lo nuevo ya no es gratis.
+5. La semilla se ve completa, arriba a la izquierda sobre la libreta; en el final viaja al centro en un recuadro llamativo. No se muestra en el tutorial.
+6. La cinemática se ve entera la primera vez; después se puede omitir la animación (no la tienda). El guardián no muere al vencerlo: sigue en el cielo mientras está la mano con el maletín y muere al salir de la tienda, justo antes del derrumbe.
+7. Una jugada con semilla elegida (repetida al perder o ingresada a mano) no suma nada a la partida guardada.
+8. La Matrix usa de todo (armenias, katakana), pero sobre todo números y letras latinas.
+9. Rayos de los guardianes: blancos y semitransparentes. Música y efectos, más adelante (D10).
+
+**Fuente:** [diseño en Notion](https://app.notion.com/p/422c28142b55807f8c72f79c1a366033) y [plan](https://app.notion.com/p/422c28142b558089aaeccc27942b4245).

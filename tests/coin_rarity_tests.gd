@@ -27,7 +27,7 @@ static func run(check: Callable) -> void:
 		var data := Coins.definition(row[0])
 		check.call(data.rarity == row[1] and data.price == row[2] and data.resale == row[3], "MON2: %s es %s, cuesta $%d y se vende por $%d" % [row[0], row[1], row[2], row[3]])
 	check.call(Coins.definition("pair_pts").rarity == "common" and Coins.definition("flat_mult").rarity == "rare", "MON2: las monedas que no cambian conservan su rareza")
-	check.call(SaveStore.VERSION == 9, "MON2: el guardado está en la versión 9")
+	check.call(SaveStore.VERSION >= 9, "MON2: el guardado está en la versión 9 o posterior")
 
 	var game = Game.new(91)
 	game.passives = ["full"]

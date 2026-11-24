@@ -47,7 +47,7 @@ static func run(scene, check: Callable) -> void:
 	Profile.apply(campaign)
 	campaign.debug_mode = true
 	var won := 0
-	for encounter in range(21):
+	for encounter in range(22):
 		if campaign.phase == "level_intro": campaign.begin_level()
 		campaign.roll()
 		if not campaign.score_hand() or not campaign.close_encounter(): break
@@ -55,7 +55,7 @@ static func run(scene, check: Callable) -> void:
 		if campaign.phase == "repair": campaign.resolve_repairs([])
 		if campaign.phase == "reward": campaign.open_shop()
 		if campaign.phase == "shop": campaign.leave_shop()
-	check.call(won == 21 and campaign.phase == "won" and campaign.debug_mode and campaign.completed_encounters.size() == 21, "Debug: one hand per encounter traverses all seven levels and defeats God")
+	check.call(won == 22 and campaign.phase == "won" and campaign.debug_mode and campaign.completed_encounters.size() == 22, "Debug: one hand per encounter traverses all seven levels and defeats La Semilla")
 
 	var old_campaign: bool = scene.campaign_mode
 	scene.campaign_mode = true

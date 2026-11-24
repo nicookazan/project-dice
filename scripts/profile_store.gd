@@ -7,6 +7,8 @@ const FORMAT := "dios-no-juega-partida-guardada"
 const VERSION := 1
 const SLOTS := 3
 const KEYS := ["plays", "wins", "best_level", "achievements", "unlocked_coins"]
+## Opcional (no cambia la versión): ya se vio entero el final de La Semilla, así que se puede omitir la animación.
+const SEED_FINALE_KEY := "seed_finale_seen"
 var directory: String
 var fail_at := "" # Inyección de fallos, solo para pruebas.
 
@@ -17,7 +19,9 @@ static func empty_data() -> Dictionary:
 	return {"plays": 0, "wins": 0, "best_level": 0, "achievements": [], "unlocked_coins": []}
 
 static func valid_data(data: Variant) -> bool:
-	if not data is Dictionary or data.size() != KEYS.size(): return false
+	if not data is Dictionary: return false
+	var optional := 1 if data.has(SEED_FINALE_KEY) else 0
+	if data.size() != KEYS.size() + optional or (optional == 1 and not data[SEED_FINALE_KEY] is bool): return false
 	for key in KEYS:
 		if not data.has(key): return false
 	for key in ["plays", "wins", "best_level"]:
@@ -128,6 +132,16 @@ func record_run(slot: int, run: Dictionary) -> Dictionary:
 		if run.get("won", false): data.wins += 1
 		data.best_level = maxi(data.best_level, clampi(int(run.get("level", 0)), 0, 7))
 	data.unlocked_coins = Achievements.unlocked_coins(data.achievements)
+	return _write(slot, data)
+
+## Marca que ya se vio entero el final de La Semilla. Si la ranura está dañada no se toca.
+func mark_seed_finale_seen(slot: int) -> Dictionary:
+	if not valid_slot(slot): return error("slot", "Ranura inexistente.")
+	var found := read(slot)
+	if not found.ok: return found
+	var data: Dictionary = found.data.duplicate(true)
+	if data.get(SEED_FINALE_KEY, false): return {"ok": true, "data": data}
+	data[SEED_FINALE_KEY] = true
 	return _write(slot, data)
 
 ## Resumen en texto de una ranura para la interfaz.

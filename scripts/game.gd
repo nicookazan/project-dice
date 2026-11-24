@@ -95,6 +95,10 @@ var pending_coin_pack: Dictionary = {}
 var shop_tables: Dictionary = Shop.default_tables()
 var shop_state: Dictionary = {}
 var shop_offer_sequence := 0
+## Ofertas regaladas de la visita en curso (la mano con el maletín antes de La Semilla): se compran a $0.
+var shop_gifts: Array = []
+## Jugada con semilla elegida (repetida al perder o ingresada a mano): al terminar no suma nada a la partida guardada.
+var seeded := false
 # Legacy coin ID view for fixtures; canonical stock is shop_state.
 var offers: Array:
 	get:
@@ -150,6 +154,8 @@ func restart(seed_value: int = -1) -> void:
 	coin_instance_sequence = 0
 	shop_tables = Shop.default_tables()
 	shop_offer_sequence = 0
+	shop_gifts = []
+	seeded = false
 	dice = DiceState.create_dice()
 	global_points = {}
 	cup = {"material": "leather", "stickers": {}}
@@ -172,6 +178,7 @@ func _start_encounter() -> void:
 	payout = {}
 	last_score = {}
 	shop_state = {}
+	shop_gifts = []
 	reroll_prices = {"coins": 1, "components": 1, "numbers": 1, "stickers": 1}
 	events = []
 	breakage_by_hand = {}
@@ -230,6 +237,7 @@ func snapshot() -> Dictionary:
 		"sticker_offer_sequence": sticker_offer_sequence, "pending_sticker_pack": pending_sticker_pack,
 		"coin_inventory": coin_inventory, "coin_instance_sequence": coin_instance_sequence,
 		"shop_tables": shop_tables, "shop_state": shop_state, "shop_offer_sequence": shop_offer_sequence,
+		"shop_gifts": shop_gifts, "seeded": seeded,
 		"pending_purchase": pending_purchase, "purchase_receipts": purchase_receipts, "last_purchase_result": last_purchase_result
 	}.duplicate(true)
 
@@ -334,8 +342,17 @@ func _after_hand_scored(event: Dictionary) -> void:
 func target() -> int:
 	return level_encounters[rival].target
 
+## Encuentro con poder de jefe: el jefe del nivel o La Semilla (que usa el poder de uno de los jefes de la jugada).
 func is_boss(index: int = -1) -> bool:
-	return level_encounters[rival if index < 0 else index].kind == "boss"
+	return BossRules.has_power(level_encounters[rival if index < 0 else index].kind)
+
+## La Semilla: encuentro 22, después del guardián del último nivel.
+func is_seed(index: int = -1) -> bool:
+	return level_encounters[rival if index < 0 else index].kind == "seed"
+
+## La visita a la tienda que separa al guardián de La Semilla: la mano con el maletín (un ítem por sección, gratis).
+func is_seed_shop_visit() -> bool:
+	return not campaign.is_empty() and rival + 1 < level_encounters.size() and level_encounters[rival + 1].kind == "seed"
 
 ## Don Cebador se lleva el termo mientras se juega su encuentro (presentación y botón del termo).
 func thermos_stolen() -> bool:
@@ -365,7 +382,7 @@ func _enter_campaign_level() -> void:
 	var key := str(level_index)
 	_choose_level_boss(level_index)
 	var chosen := Campaign.candidate(level, selected_bosses[key])
-	level_encounters = Campaign.encounters(level, chosen)
+	level_encounters = Campaign.encounters(level, chosen, level_index == campaign.size() - 1)
 	boss_rule = chosen.rule.duplicate(true)
 	rival = 0
 	_start_encounter()
@@ -399,7 +416,7 @@ func jump_to_level(index: int) -> bool:
 	completed_encounters = []
 	for skipped in range(index):
 		_choose_level_boss(skipped)
-		for encounter in Campaign.encounters(campaign[skipped], Campaign.candidate(campaign[skipped], selected_bosses[str(skipped)])):
+		for encounter in Campaign.encounters(campaign[skipped], Campaign.candidate(campaign[skipped], selected_bosses[str(skipped)]), skipped == campaign.size() - 1):
 			completed_encounters.append(encounter.id)
 	level_index = index
 	_enter_campaign_level()
@@ -417,6 +434,7 @@ func environment_id() -> String:
 func boss_name() -> String:
 	if tutorial: return BossCatalog.TUTORIAL_BOSS.name
 	if campaign.is_empty(): return "Jefe"
+	if is_seed(): return Campaign.SEED_NAME
 	return Campaign.candidate(campaign[level_index], selected_bosses[str(level_index)]).name
 
 func campaign_route() -> Array:
@@ -425,11 +443,16 @@ func campaign_route() -> Array:
 	for level in range(campaign.size()):
 		var key := str(level)
 		var chosen: Dictionary = Campaign.candidate(campaign[level], selected_bosses[key]) if selected_bosses.has(key) else {}
-		for stop in range(3):
+		var last := level == campaign.size() - 1
+		for stop in range(4 if last else 3):
 			var id: String = campaign[level].id + "_r%d" % (stop + 1) if stop < 2 else chosen.get("id", campaign[level].id + "_boss")
+			if stop == 3: id = Campaign.SEED_ID
 			var status := "Pendiente"
 			if id in completed_encounters: status = "Superado"
 			elif level == level_index and stop == rival: status = "Derrota" if phase == "lost" else "Actual"
+			if stop == 3:
+				result.append({"level": level + 1, "position": 4, "status": status, "name": Campaign.SEED_NAME, "target": Campaign.seed_target(chosen.target) if not chosen.is_empty() else 0, "rule": "Uno de los poderes de los jefes de la jugada"})
+				continue
 			result.append({"level": level + 1, "position": stop + 1, "status": status, "name": "Rival %d" % (stop + 1) if stop < 2 else (chosen.get("name", "Dios" if level == 6 else "Jefe sin sortear")), "target": campaign[level].targets[stop] if stop < 2 else chosen.get("target", 0), "rule": chosen.get("rule", {}).get("name", "Se anuncia al entrar al nivel") if stop == 2 else "Sin regla especial"})
 	return result
 
@@ -777,7 +800,7 @@ func close_encounter() -> bool:
 		"available_ids": broken_ids, "selected_ids": [], "cost": 0,
 		"cash_after_reward": cash, "next_phase": phase}
 	if not broken_ids.is_empty(): phase = "repair"
-	message = "Nivel completado." if phase == "won" else "Encuentro ganado. Cobro acreditado una sola vez."
+	message = ("La Semilla quedó atrás." if is_seed() else "Nivel completado.") if phase == "won" else "Encuentro ganado. Cobro acreditado una sola vez."
 	_record_event(ENCOUNTER_CLOSED, {"points": points, "target": target(),
 		"reward": payout, "cash_before": cash_before, "cash_after": cash})
 	return true
@@ -820,11 +843,34 @@ func _generated_shop() -> Dictionary:
 		seen = generated.once_seen
 	return {"valid": true, "state": state, "rng_state": staged_rng, "sequence": serial, "once_seen": seen}
 
+## Tienda de la mano con el maletín (antes de La Semilla): se queda solo el primer ítem de cada sección. En la visita
+## gratis cuestan 0; las tandas nuevas que trae el restock tienen su precio normal.
+static func seed_shop_cut(state: Dictionary) -> Dictionary:
+	var result := state.duplicate(true)
+	for section in ["coins", "components", "numbers", "stickers"]:
+		var slots: Array = result[section].slots
+		for index in range(1, slots.size()): slots[index] = {}
+	return result
+
+## Ids de las ofertas en pie de la tienda (para marcar el regalo de la mano).
+static func offer_ids(state: Dictionary) -> Array:
+	var result: Array = []
+	for section in ["coins", "components", "numbers", "stickers"]:
+		for offer in state.get(section, {}).get("slots", []):
+			if not offer.is_empty(): result.append(offer.offer_id)
+	return result
+
+## Precio que se cobra por una oferta en esta visita: $0 si es un regalo de la mano; si no, con descuentos de monedas.
+func charged_price(offer: Dictionary) -> int:
+	if offer.get("offer_id", "") in shop_gifts: return 0
+	return offer_price(offer.get("price", 0), offer.get("kind") == "coin")
+
 func open_shop() -> bool:
 	if phase != "reward": return false
 	var generated := _generated_shop()
 	if not generated.valid: return false
-	shop_state = generated.state
+	shop_state = generated.state if not is_seed_shop_visit() else seed_shop_cut(generated.state)
+	shop_gifts = offer_ids(shop_state) if is_seed_shop_visit() else []
 	if not tutorial: rng.state = generated.rng_state
 	else: cash = Tutorial.SHOP_CASH
 	shop_offer_sequence = generated.sequence
@@ -859,6 +905,7 @@ func renewal_price(section: String) -> int:
 
 func refresh_shop(section: String = "coins") -> bool:
 	var price := renewal_price(section)
+	if is_seed_shop_visit(): return false # la mano con el maletín solo tiene restock completo (restock_seed_shop)
 	if phase != "shop" or not can_afford(price) or not shop_state.has(section) or not reroll_prices.has(section): return false
 	var generated := Shop.generate(section, shop_tables, sticker_catalog, passives, rng.state, shop_offer_sequence, once_coins_seen)
 	if not generated.valid or not generated.section.configured: return false
@@ -873,6 +920,21 @@ func refresh_shop(section: String = "coins") -> bool:
 	message = "Sección renovada."
 	return true
 
+## Restock de la mano con el maletín: otra tanda de un ítem por sección, ya sin regalo. Cuesta siempre lo mismo
+## (Campaign.SEED_SHOP_RESTOCK_PRICE), sin descuentos ni renovaciones gratis de monedas.
+func restock_seed_shop() -> bool:
+	if phase != "shop" or not is_seed_shop_visit() or not can_afford(Campaign.SEED_SHOP_RESTOCK_PRICE): return false
+	var generated := _generated_shop()
+	if not generated.valid: return false
+	shop_state = seed_shop_cut(generated.state)
+	shop_gifts = []
+	rng.state = generated.rng_state
+	shop_offer_sequence = generated.sequence
+	once_coins_seen = generated.once_seen
+	if not debug_mode: cash -= Campaign.SEED_SHOP_RESTOCK_PRICE
+	message = "La mano trajo otra tanda: esta ya se paga."
+	return true
+
 func commit_shop_offer(section: String, id: String) -> bool:
 	# Stock boundary used by an already validated purchase commit.
 	if phase != "shop" or id == "": return false
@@ -884,7 +946,7 @@ func commit_shop_offer(section: String, id: String) -> bool:
 	return false
 
 func _purchase_plan(section: String, offer: Dictionary, target: Dictionary) -> Dictionary:
-	var price: int = offer_price(offer.get("price", 0), offer.get("kind") == "coin") if offer.get("price") is int else -1
+	var price: int = charged_price(offer) if offer.get("price") is int else -1
 	return Purchases.prepare(section, offer, target, dice, global_points, cup.stickers, sticker_catalog, coin_inventory, coin_instance_sequence, cash, debug_mode, credit_limit(), price)
 
 func begin_purchase(section: String, id: String) -> Dictionary:
@@ -892,10 +954,10 @@ func begin_purchase(section: String, id: String) -> Dictionary:
 	var offer := inspect_shop_offer(section, id)
 	if not Purchases.valid_offer(section, offer, sticker_catalog): return Purchases.error("invalid_offer", "La oferta ya no está disponible.")
 	if offer.kind not in Purchases.TARGETED: return purchase_offer(section, id)
-	if not can_afford(offer_price(offer.price)): return Purchases.error("insufficient_funds", "No alcanza la plata para esta compra.")
+	if not can_afford(charged_price(offer)): return Purchases.error("insufficient_funds", "No alcanza la plata para esta compra.")
 	pending_purchase = {"section": section, "offer_id": id, "offer": offer, "target": {}}
 	phase = "purchase_target"
-	return {"ok": true, "code": "target_required", "message": "Elegí el dado" + (" y la cara." if offer.kind == "face" else "."), "cost": offer_price(offer.price)}
+	return {"ok": true, "code": "target_required", "message": "Elegí el dado" + (" y la cara." if offer.kind == "face" else "."), "cost": charged_price(offer)}
 
 func set_purchase_target(target: Dictionary) -> bool:
 	if phase != "purchase_target": return false
@@ -1051,7 +1113,9 @@ func _advance_encounter() -> bool:
 		return true
 	rival += 1
 	phase = "play"
+	if is_seed(): boss_rule = Campaign.seed_rule(campaign, selected_bosses, run_seed)
 	_start_encounter()
+	if is_seed(): message = "La Semilla: %s" % BossRules.description(boss_rule)
 	return true
 
 ## `target` es el dado elegido para las monedas que lo piden (Voltear dado); las demás lo ignoran.
