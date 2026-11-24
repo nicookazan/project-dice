@@ -2,6 +2,13 @@ extends RefCounted
 ## Cuadro de la copa (salón): tres estrellas clicables que se prenden y, con las tres, confeti de victoria.
 const Confetti = preload("res://scripts/confetti.gd")
 
+## Recorrido de los nodos en el orden de reparto de clics de Godot: el último hijo primero y los hijos antes que el padre.
+static func _click_order(node: Node, out: Array) -> void:
+	var kids := node.get_children()
+	kids.reverse()
+	for kid in kids: _click_order(kid, out)
+	out.append(node)
+
 static func run(scene, check: Callable) -> void:
 	var backdrop = scene.background
 	var done: Array = [0]
@@ -22,8 +29,25 @@ static func run(scene, check: Callable) -> void:
 	for i in 3: backdrop.copa_lit[i] = false
 	scene.preferences.reduced_motion = previous
 	# El clic sobre la estrella llega a la zona clicable (36 px alrededor de la estrella, en pantalla de 1440×900).
-	var hit: Control = backdrop.copa_hits[1]
-	check.call(hit.size.x >= 30.0 and Rect2(hit.position, hit.size).has_point((backdrop.COPA_STAR_ORIGINS[1] + Vector2(6.5, 6.5)) * 2.0), "Copa stars: the click zone covers the star")
+	var zone: Control = backdrop.copa_hits[1]
+	check.call(zone.size.x >= 30.0 and Rect2(zone.position, zone.size).has_point((backdrop.COPA_STAR_ORIGINS[1] + Vector2(6.5, 6.5)) * 2.0), "Copa stars: the click zone covers the star")
+	# Ninguna capa de la interfaz que se dibuja encima del fondo (y que no sea la propia zona clicable) tapa la estrella:
+	# un Control a pantalla completa con filtro «parar» se come los clics. (La ventana de pruebas mide 64×64, así que no se
+	# puede empujar un clic real; se revisa el árbol.)
+	var center: Vector2 = (backdrop.COPA_STAR_ORIGINS[0] + Vector2(6.5, 6.5)) * 2.0
+	var hit: Control = backdrop.copa_hits[0]
+	var order: Array = []
+	_click_order(scene, order)                         # en el orden en que se reparten los clics: lo de arriba primero
+	var blockers: Array = []
+	var seen_hit := false
+	for node in order:
+		if node == hit:
+			seen_hit = true
+			break
+		if not (node is Control) or node.is_ancestor_of(hit): continue
+		var control: Control = node
+		if control.is_visible_in_tree() and control.mouse_filter == Control.MOUSE_FILTER_STOP and control.get_global_rect().has_point(center): blockers.append(control.name)
+	check.call(seen_hit and blockers.is_empty(), "Copa stars: no interface layer above the background blocks the click (%s)" % str(blockers))
 	# Confeti: 220 piezas y 10 serpentinas; cada pieza sale de una esquina de abajo y deja de verse bajo el piso.
 	var confetti = Confetti.new()
 	confetti.build(7)

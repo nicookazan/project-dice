@@ -11,11 +11,10 @@ const TABLE := {
 	"basic": {"name": "Base", "base": "basic", "body_kind": 0, "color": "fff0c7"},
 	"steel": {"name": "Hierro", "base": "steel", "body_kind": 1, "color": "b8c4d4"},
 	"copper": {"name": "Cobre", "base": "copper", "body_kind": 2, "color": "e89a5c"},
-	"rust_iron": {"name": "Hierro oxidado", "base": "steel", "body_kind": 3, "color": "c0703c"},
-	"rust_copper": {"name": "Cobre oxidado", "base": "copper", "body_kind": 4, "color": "5fb88c"},
-	"gold": {"name": "Oro", "base": "steel", "body_kind": 5, "color": "f0c850"}}
+	"gold": {"name": "Oro", "base": "steel", "body_kind": 5, "color": "f0c850"},
+	"wood": {"name": "Madera", "base": "wood", "body_kind": 6, "color": "b97a3c"}}
 ## Metales: todos los materiales del cuerpo salvo el básico, en orden de catálogo.
-const METALS := ["steel", "copper", "rust_iron", "rust_copper", "gold"]
+const METALS := ["steel", "copper", "gold", "wood"]
 
 static func is_metal(id: String) -> bool:
 	return id in METALS
@@ -60,3 +59,15 @@ static func inspect(die: Dictionary) -> Dictionary:
 		"applies_to_leftovers": base == "steel",
 		"resets_on_own_reroll": base == "steel"
 	}
+
+## Madera (22/11/2026): recuerda los números que mostró en las tiradas anteriores de la mano y, cuando forma grupo, suma todos
+## esos números como puntos propios. Se guarda en hand_effects (se borra al empezar otra mano), así que no pisa a hierro ni cobre.
+static func is_wood(die: Dictionary) -> bool:
+	return die.get("material", "") == "wood"
+
+static func wood_points(die: Dictionary) -> float:
+	return float(die.get("hand_effects", {}).get("wood_points", 0.0)) if is_wood(die) else 0.0
+
+## Se llama justo antes de relanzar el dado: `previous` es el número que tenía.
+static func remember_wood(die: Dictionary, previous: int) -> void:
+	if is_wood(die) and previous > 0: die.hand_effects["wood_points"] = wood_points(die) + previous

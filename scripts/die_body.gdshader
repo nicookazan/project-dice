@@ -12,6 +12,7 @@ varying vec2 face_position;
 const vec3 RUST[6] = vec3[6](vec3(0.173, 0.067, 0.039), vec3(0.333, 0.133, 0.059), vec3(0.510, 0.208, 0.102), vec3(0.690, 0.310, 0.133), vec3(0.851, 0.478, 0.173), vec3(0.941, 0.651, 0.290));
 const vec3 GREEN[6] = vec3[6](vec3(0.043, 0.149, 0.133), vec3(0.078, 0.275, 0.235), vec3(0.122, 0.420, 0.341), vec3(0.188, 0.627, 0.486), vec3(0.400, 0.796, 0.639), vec3(0.706, 0.945, 0.816));
 const vec3 GOLD[6] = vec3[6](vec3(0.247, 0.149, 0.020), vec3(0.490, 0.310, 0.055), vec3(0.749, 0.518, 0.098), vec3(0.937, 0.714, 0.173), vec3(1.000, 0.859, 0.345), vec3(1.000, 0.965, 0.722));
+const vec3 WOOD[5] = vec3[5](vec3(0.20, 0.10, 0.05), vec3(0.38, 0.21, 0.10), vec3(0.56, 0.33, 0.16), vec3(0.73, 0.47, 0.24), vec3(0.88, 0.63, 0.36));
 
 vec3 steel_color(float shade) {
 	return mix(vec3(0.07, 0.09, 0.12), vec3(0.93, 0.96, 1.0), shade);
@@ -76,12 +77,23 @@ void fragment() {
 			} else {
 				result = copper_color(shade);
 			}
-		} else {
+		} else if (body_kind == 5) {
 			// Oro pulido: rampa por brillo y una franja de reflejo en diagonal.
 			float index = pow(clamp((shade - 0.5) / 0.42, 0.0, 1.0), 1.7) * 5.6;
 			vec2 at = face_position + mask_origin;
 			if (abs(at.x + at.y - 52.0) < 3.0) index = min(index + 1.6, 5.0);
 			result = ramp_color(2, index);
+		} else {
+			// Madera (diseño C aprobado): tres tablones con junta oscura, vetas propias y dos clavos por tabla.
+			vec2 at = floor(face_position + mask_origin);
+			float plank = floor((at.x - 2.0) / 17.0);
+			float local = mod(at.x - 2.0, 17.0);
+			float offset = fract(sin(dot(vec2(plank, 3.0), vec2(12.9898, 78.233))) * 43758.5453) * 0.9 - 0.3;
+			float vein = sin((at.x * 1.7 + plank * 5.0) + sin(at.y * 0.25 + plank) * 1.4);
+			float tone = shade * 3.2 + 0.4 + offset + (vein > 0.8 ? -0.9 : 0.0);
+			if (local < 1.0) tone = 0.2;
+			if (abs(local - 8.0) < 1.0 && (abs(at.y - 7.0) < 1.0 || abs(at.y - 47.0) < 1.0)) tone = 4.6;
+			result = WOOD[int(clamp(floor(tone), 0.0, 4.0))];
 		}
 	}
 	COLOR = vec4(result, source.a);

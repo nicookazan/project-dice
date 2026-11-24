@@ -47,7 +47,9 @@ static func prepare(section: String, offer: Dictionary, target: Dictionary, dice
 				var counters: Dictionary = dice[id].encounter_effects.duplicate(true)
 				counters.erase("steel_points")
 				counters.erase("copper_multiplier")
-				updates = {"material": effect.id, "encounter_effects": counters}
+				var hand_counters: Dictionary = dice[id].hand_effects.duplicate(true)
+				hand_counters.erase("wood_points")
+				updates = {"material": effect.id, "encounter_effects": counters, "hand_effects": hand_counters}
 				label = "material " + Materials.display_name(effect.id)
 			"element":
 				var counters: Dictionary = dice[id].hand_effects.duplicate(true)
