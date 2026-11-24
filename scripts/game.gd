@@ -591,6 +591,7 @@ func _throw(rolled_ids: Array, kept_ids: Array, mode: String) -> void:
 	var scripted_at := 0
 	for die in dice:
 		if die.zone == "cup":
+			Materials.remember_wood(die, die.value)
 			var wanted: int = scripted[scripted_at] if scripted_at < scripted.size() else 0
 			scripted_at += 1
 			if wanted > 0 and die.faces.has(wanted): die.face_index = die.faces.find(wanted)

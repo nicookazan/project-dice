@@ -3,13 +3,13 @@ extends SceneTree
 const Die = preload("res://scripts/die.gd")
 func _initialize() -> void:
 	var holder := Control.new()
-	holder.size = Vector2(1100, 760)
+	holder.size = Vector2(1100, 800)
 	root.add_child(holder)
 	var back := ColorRect.new()
 	back.color = Color("244638")
 	back.size = holder.size
 	holder.add_child(back)
-	var rows := [["steel", "", ""], ["copper", "", ""], ["rust_iron", "", ""], ["rust_copper", "", ""], ["gold", "", ""], ["rust_iron", "ruby", "fire"], ["rust_copper", "diamond", "water"], ["gold", "emerald", "wind"], ["gold", "sapphire", "electricity"]]
+	var rows := [["steel", "", ""], ["copper", "", ""], ["gold", "", ""], ["wood", "", ""], ["gold", "emerald", "wind"], ["gold", "sapphire", "electricity"]]
 	for r in rows.size():
 		for value in range(1, 7):
 			var die := Die.new()
@@ -26,6 +26,6 @@ func _initialize() -> void:
 	for i in 4: await process_frame
 	await RenderingServer.frame_post_draw
 	DirAccess.make_dir_recursive_absolute("res://test-results")
-	root.get_texture().get_image().get_region(Rect2i(0, 0, 1100, 760)).save_png("res://test-results/metales-dados.png")
+	root.get_texture().get_image().get_region(Rect2i(0, 0, 1100, 800)).save_png("res://test-results/metales-dados.png")
 	print("METALES REVIEW OK")
 	quit(0)

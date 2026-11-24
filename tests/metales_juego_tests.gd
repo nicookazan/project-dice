@@ -22,7 +22,7 @@ static func _play(material: String) -> Dictionary:
 	return {"game": game, "preview": game.preview(), "points": Materials.steel_points(game.dice[0]), "mult": Materials.copper_multiplier(game.dice[0])}
 
 static func run(check: Callable) -> void:
-	for pair in [["rust_iron", "steel"], ["rust_copper", "copper"], ["gold", "steel"]]:
+	for pair in [["gold", "steel"]]:
 		var nuevo: Dictionary = _play(pair[0])
 		var base: Dictionary = _play(pair[1])
 		check.call(nuevo.points == base.points and nuevo.mult == base.mult, "TX4: %s acumula igual que %s (%s puntos, %s mult)" % [pair[0], pair[1], nuevo.points, nuevo.mult])
@@ -44,17 +44,17 @@ static func run(check: Callable) -> void:
 	var ids := {}
 	for entry in candidates:
 		if entry.kind == "material": ids[entry.effect.id] = entry
-	check.call(ids.size() == 5, "TX4: la tienda de prueba ofrece los cinco metales")
-	check.call(ids.has("gold") and ids.gold.price == ids.steel.price and ids.gold.weight == ids.steel.weight and ids.rust_copper.price == ids.copper.price, "TX4: precio y peso de cada metal nuevo igualan a su base")
+	check.call(ids.size() == 4, "TX4: la tienda de prueba ofrece los cuatro materiales")
+	check.call(ids.has("gold") and ids.gold.price == ids.steel.price and ids.gold.weight == ids.steel.weight, "TX4: precio y peso del oro igualan a los del hierro")
 	for id in Materials.METALS:
 		check.call(Shop.valid_candidate("components", {"kind": "material", "price": 3, "weight": 1.0, "effect": {"id": id}}, {}), "TX4: la tienda acepta ofertas de %s" % id)
 	# Jefes: suspender el metal base suspende también a sus variantes.
 	var boss := {"kind": "suspend_material", "target": "steel"}
-	check.call(BossRules.suspended(boss, "material", Materials.base_of("rust_iron")) and BossRules.suspended(boss, "material", Materials.base_of("gold")) and not BossRules.suspended(boss, "material", Materials.base_of("rust_copper")), "TX4: el jefe que suspende hierro alcanza al oxidado y al oro, no al cobre oxidado")
+	check.call(BossRules.suspended(boss, "material", Materials.base_of("gold")) and not BossRules.suspended(boss, "material", Materials.base_of("copper")), "TX4: el jefe que suspende hierro alcanza al oro, no al cobre")
 	# Guardados con la tabla vieja (solo hierro y cobre): al continuar se suman los metales nuevos, una sola vez.
 	var old := {"shop_tables": {"coins": [], "components": [{"kind": "material", "price": 3, "weight": 1.0, "effect": {"id": "steel"}}, {"kind": "material", "price": 5, "weight": 2.0, "effect": {"id": "copper"}}, {"kind": "element", "price": 3, "weight": 1.0, "effect": {"id": "fire"}}]}}
 	preload("res://scripts/save_migrations.gd").coins_v9(old)
 	preload("res://scripts/save_migrations.gd").coins_v9(old)
 	var materials: Array = old.shop_tables.components.filter(func(entry): return entry.kind == "material")
-	check.call(materials.size() == 5, "TX4: la migración suma los tres metales nuevos a una tienda guardada, sin duplicar (%d)" % materials.size())
-	check.call(materials.any(func(entry): return entry.effect.id == "rust_copper" and entry.price == 5 and entry.weight == 2.0), "TX4: el metal nuevo hereda precio y peso de su base en la tabla guardada")
+	check.call(materials.size() == 3, "TX4: la migración suma el oro a una tienda guardada, sin duplicar (%d)" % materials.size())
+	check.call(materials.any(func(entry): return entry.effect.id == "gold" and entry.price == 3 and entry.weight == 1.0), "TX4: el oro hereda precio y peso del hierro en la tabla guardada")

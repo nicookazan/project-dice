@@ -13,17 +13,18 @@ enum Style { FELT, SHOP }
 
 ## Colores aprobados en los bocetos.
 const COLORS := {
-	"steel": "b8c4d4", "copper": "e89a5c", "rust_iron": "c0703c", "rust_copper": "5fb88c",
+	"steel": "b8c4d4", "copper": "e89a5c", "wood": "b97a3c",
 	"emerald": "55d890", "ruby": "ff5f70", "sapphire": "74a4f0", "diamond": "cdf2ff",
 	"fire": "ff8e30", "water": "52bcf2", "electric": "ffe24f", "earth": "c4955a", "wind": "a4e6c6",
 	"gold": "f0c850", "dim": "8f8676", "text": "fff0c7"}
 const NAMES := {
-	"steel": "Hierro", "copper": "Cobre", "rust_iron": "Hierro oxidado", "rust_copper": "Cobre oxidado", "gold": "Oro",
+	"steel": "Hierro", "copper": "Cobre", "gold": "Oro", "wood": "Madera",
 	"emerald": "Esmeralda", "ruby": "Rubí", "sapphire": "Zafiro", "diamond": "Diamante",
 	"fire": "Fuego", "water": "Agua", "electric": "Electricidad", "earth": "Tierra", "wind": "Viento"}
 const HINTS := {
 	"steel": "+3 puntos cada vez que se conserva al relanzar otros dados. Si se relanza, vuelve a 0.",
 	"copper": "+0,5 al multiplicador cada vez que se relanza.",
+	"wood": "Recuerda los números que sacó en esta mano: cuando forma grupo, los suma todos como puntos.",
 	"emerald": "Duplica los puntos propios del dado.",
 	"sapphire": "Suma +2 al multiplicador del grupo.",
 	"ruby": "Multiplica ×1,5 el multiplicador, después de las sumas.",

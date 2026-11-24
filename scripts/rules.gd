@@ -232,6 +232,8 @@ static func score(dice: Array, groups: Array, passives: Array, boost: Variant, s
 			var steel_bonus := 0.0 if BossRules.suspended(boss_context, "material", Materials.base_of(die.material)) else Materials.steel_points(die)
 			if steel_bonus > 0:
 				additions.append({"source": "material:steel:" + str(die.id), "amount": steel_bonus})
+			var wood_bonus := Materials.wood_points(die)
+			if wood_bonus > 0 and cat != "Sin combinación": additions.append({"source": "material:wood:" + str(die.id), "amount": wood_bonus})
 			var element_effect := {} if BossRules.suspended(boss_context, "element", die.get("element", "")) else Elements.evaluate(die, dice, group.ids, cat)
 			if not element_effect.is_empty() and element_effect.points > 0:
 				additions.append({"source": element_effect.source, "amount": element_effect.points})

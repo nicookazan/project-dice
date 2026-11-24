@@ -6,15 +6,15 @@ const MASK = preload("res://assets/art/pixel-v3/metales-mascaras-v3.png")
 const BODY_SHADER = preload("res://scripts/die_body.gdshader")
 
 static func run(scene, check: Callable) -> void:
-	check.call(Materials.METALS == ["steel", "copper", "rust_iron", "rust_copper", "gold"], "TX3: el catálogo de metales tiene cinco entradas")
+	check.call(Materials.METALS == ["steel", "copper", "gold", "wood"], "TX3: el catálogo de materiales tiene cuatro entradas (hierro, cobre, oro y madera)")
 	for id in Materials.METALS:
-		check.call(Materials.TABLE.has(id) and Materials.base_of(id) in ["steel", "copper"], "TX3: %s toma su mecánica de un metal base" % id)
-	check.call(Materials.base_of("rust_iron") == "steel" and Materials.base_of("rust_copper") == "copper" and Materials.base_of("gold") == "steel", "TX3: oxidados y oro heredan la mecánica de su base (D16)")
-	check.call(Materials.display_name("steel") == "Hierro" and Materials.display_name("rust_iron") == "Hierro oxidado", "TX3: se muestra «Hierro» y no «Acero»")
+		check.call(Materials.TABLE.has(id) and Materials.base_of(id) in ["steel", "copper", "wood"], "TX3: %s toma su mecánica de un metal base" % id)
+	check.call(Materials.base_of("gold") == "steel" and not Materials.TABLE.has("rust_iron") and not Materials.TABLE.has("rust_copper"), "TX3: el oro hereda la mecánica del hierro y los oxidados ya no existen")
+	check.call(Materials.display_name("steel") == "Hierro" and Materials.display_name("gold") == "Oro", "TX3: se muestra «Hierro» y no «Acero»")
 	check.call(Materials.body_kind("steel") == 1 and Materials.body_kind("copper") == 2, "TX3: acero y cobre conservan sus cuerpos de siempre")
 	var kinds := {}
 	for id in Materials.METALS: kinds[Materials.body_kind(id)] = true
-	check.call(kinds.size() == 5, "TX3: cada metal tiene su propio cuerpo en el shader")
+	check.call(kinds.size() == 4, "TX3: cada metal tiene su propio cuerpo en el shader")
 	check.call(BODY_SHADER.get_code().contains("body_kind == 5") or BODY_SHADER.get_code().contains("else {"), "TX3: el shader resuelve el oro")
 	var image: Image = MASK.get_image()
 	check.call(image.get_size() == Vector2i(124, 62), "TX3: las máscaras son dos celdas de 62x62")

@@ -88,3 +88,7 @@ El nombre «Hierro» reemplaza a «Acero» en toda la interfaz; el id interno si
 **Tienda y guardado:** los cinco metales entran a las ofertas de componentes con el mismo precio y peso que su base (tabla provisional hasta el ítem 7). El guardado solo amplía la lista de materiales válidos; el formato no cambia y las partidas viejas cargan.
 
 **Pendiente del autor:** mecánicas propias de los oxidados y del oro. La del oro («da dinero si no se usa para hacer puntos») necesita definir qué significa «no se usa», porque hoy los sobrantes suman puntos. Si cambian el formato del guardado, llevan su migración. Arte: [TX3](pasos/TX3-metales-arte.md); código: [TX4](pasos/TX4-metales-juego.md).
+
+## Cambio del 22/11/2026
+
+Se quitan `rust_iron` y `rust_copper`: los metales son hierro (`steel`), cobre y oro (`Materials.METALS`). Las partidas guardadas con dados oxidados dejan de ser válidas (no existen guardados de jugadas fuera de «Continuar partida», que es nuevo). Los cuerpos 3 y 4 del shader `die_body.gdshader` y sus máscaras quedan sin uso. El oro sigue funcionando como el hierro. La madera (acumula los números de la mano) está en diseño: bocetos en `tools/art/bocetos-madera/`.

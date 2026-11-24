@@ -4,15 +4,15 @@ const SHOP_ART = preload("res://assets/art/shop-table-v1.png")
 const SELLER_ART = preload("res://assets/art/pixel-v3/tienda-v3.png")
 ## El vendedor es una nube con una mano (TX7, make_vendedor_nube.py): la tienda se dibuja sin vendedor y encima van la nube
 ## animada (40 cuadros del video del autor, 4 por segundo, en bucle; coordenadas lógicas de 720×450 → pantalla ×2) y la
-## mano original, quieta, delante de la nube. Sin movimiento se ve el primer cuadro, sin volutas.
+## mano original, quieta, delante de la nube. Hoy solo se usa el primer cuadro (sin volutas) con un vaivén suave; el resto del atlas queda sin usar.
 const VENDOR_CLOUD = preload("res://assets/art/pixel-v3/vendedor-nube-v4.png")
 const VENDOR_HAND = preload("res://assets/art/pixel-v3/vendedor-mano-v4.png")
 const VENDOR_CLOUD_FRAME := Vector2i(270, 138)
 const VENDOR_CLOUD_COLS := 8
 const VENDOR_CLOUD_FRAMES := 40
-const VENDOR_CLOUD_ORIGIN := Vector2(0, 213)
+const VENDOR_CLOUD_ORIGIN := Vector2(0, 163)
 const VENDOR_CLOUD_SECONDS := 0.25
-const VENDOR_HAND_ORIGIN := Vector2(142, 250)
+const VENDOR_HAND_ORIGIN := Vector2(142, 200)
 ## La mano sube y baja con la nube y no hace nada más: cuánto se corre (px lógicos) el borde de abajo del cuerpo de la
 ## nube en cada cuadro. La imprime tools/art/make_vendedor_nube.py.
 const VENDOR_HAND_DY := [0, 0, 0, -1, -1, -1, -1, 0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, -1, -1, -1, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, -1, -1, -1, 0, 0, 0, 0, 1]
@@ -237,10 +237,13 @@ func _draw() -> void:
 	if shop_mode:
 		# The salesman and his case replace the entire playing table and props.
 		draw_texture_rect(SELLER_ART, Rect2(0, 0, 1440, 900), false)
-		var cloud_frame := int(elapsed / VENDOR_CLOUD_SECONDS) % VENDOR_CLOUD_FRAMES if motion else 0
-		var cloud_cell := Vector2(cloud_frame % VENDOR_CLOUD_COLS, cloud_frame / VENDOR_CLOUD_COLS) * Vector2(VENDOR_CLOUD_FRAME)
-		draw_texture_rect_region(VENDOR_CLOUD, Rect2(VENDOR_CLOUD_ORIGIN * 2.0, Vector2(VENDOR_CLOUD_FRAME) * 2.0), Rect2(cloud_cell, Vector2(VENDOR_CLOUD_FRAME)))
-		draw_texture_rect(VENDOR_HAND, Rect2((VENDOR_HAND_ORIGIN + Vector2(0, VENDOR_HAND_DY[cloud_frame])) * 2.0, VENDOR_HAND.get_size() * 2.0), false)
+		# El fondo trae el puño del vendedor viejo (x 112-168, y 270-350 lógicos) en la boiserie; al subir la nube quedaría a la vista.
+		# Los tablones se repiten cada 28 px: se tapa con los dos de la izquierda.
+		draw_texture_rect_region(SELLER_ART, Rect2(224, 540, 112, 160), Rect2(Vector2(56, 270) * Vector2(SELLER_ART.get_size()) / Vector2(720, 450), Vector2(56, 80) * Vector2(SELLER_ART.get_size()) / Vector2(720, 450)))
+		# Solo la nube (cuadro 0, sin volutas ni estelas) y la mano, que suben y bajan juntas, apenas.
+		var bob := 2.0 * roundf(sin(elapsed * 1.1) * 1.5) if motion else 0.0
+		draw_texture_rect_region(VENDOR_CLOUD, Rect2(VENDOR_CLOUD_ORIGIN * 2.0 + Vector2(0, bob), Vector2(VENDOR_CLOUD_FRAME) * 2.0), Rect2(Vector2.ZERO, Vector2(VENDOR_CLOUD_FRAME)))
+		draw_texture_rect(VENDOR_HAND, Rect2(VENDOR_HAND_ORIGIN * 2.0 + Vector2(0, bob), VENDOR_HAND.get_size() * 2.0), false)
 		props.draw_flag(self, "shop_flag")
 		return
 	draw_texture_rect(ART if shop_mode else CLEAN_TABLE, Rect2(0, 0, 1440, 900), false)
