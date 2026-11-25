@@ -24,8 +24,8 @@ const ZONES := {
 	"close": Rect2(375, 626, 236, 42), "next_hand": Rect2(725, 626, 262, 42), "choice_shop": Rect2(338, 565, 366, 56),
 	"payout_continue": Rect2(768, 510, 232, 56), "lobby_shop": Rect2(748, 430, 272, 58), "lobby_play": Rect2(380, 430, 292, 58),
 	"inventory": Rect2(40, 740, 700, 130), "thermos": Rect2(1180, 130, 220, 260), "advance": Rect2(1025, 25, 380, 93),
-	"components": Rect2(540, 252, 222, 179), "numbers": Rect2(788, 252, 254, 179), "coins": Rect2(534, 442, 560, 179), "single_use": Rect2(1122, 442, 208, 179),
-	"stickers": Rect2(1074, 252, 240, 179), "cash": Rect2(518, 30, 193, 80), "seller": Rect2(60, 160, 440, 470)}
+	"components": Rect2(538, 252, 367, 179), "coins": Rect2(534, 442, 560, 179), "single_use": Rect2(1122, 442, 208, 179),
+	"stickers": Rect2(929, 252, 388, 179), "cash": Rect2(518, 30, 193, 80), "seller": Rect2(60, 160, 440, 470)}
 
 static func rolls_for(hand: int, roll_number: int, count: int) -> Array:
 	## Valores guionados para la tirada `roll_number` (0 = primera) de la mano `hand` (1 = primera), o [] si no hay.
@@ -90,9 +90,8 @@ static func _first_encounter(ctx: Dictionary) -> Dictionary:
 static func _shop() -> Dictionary:
 	return {"id": "shop", "notes": [
 		note("Acá comprás mejoras con la plata que cobraste. Tenés $%d." % SHOP_CASH, "cash", "below"),
-		note("Números y caras: mejoran un número o cambian una cara de un dado.", "numbers", "above"),
 		note("Stickers: potencian una categoría y se pegan en el termo.", "stickers", "above"),
-		note("Componentes: gemas, elementos y materiales, para uno de tus cinco dados.", "components", "left"),
+		note("Componentes: elementos y materiales, para uno de tus cinco dados.", "components", "left"),
 		note("Monedas: pasivas que cambian las reglas. Podés vender las tuyas arrastrándolas al maletín.", "coins", "left"),
 		note("Moneda de un uso: se gasta al usarla.", "single_use", "below")], "blocking": true, "allow": ["all"], "select": []}
 

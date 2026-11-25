@@ -1893,13 +1893,31 @@ func render_inventory() -> void:
 	# En la selección de encuentro ya están Opciones y Abandonar sobre la libreta: no se repite.
 	if not game.in_lobby(): button(ui, "Menú", Rect2(1273, 748, 120, 60), show_game_menu).name = "TableMenu"
 
-## Línea «Total: …» para la ayuda de una moneda propia que acumula (Acumulada, Veterana, Racha, Gastada, Cazajefes);
-## vacía para las demás. `instance`: id de la instancia equipada o de un uso.
+## Línea «Total: …» para la ayuda de una moneda propia que suma algo que cambia; vacía para las demás.
+## `instance`: id de la instancia equipada o de un uso.
 func coin_total_line(instance: int) -> String:
 	for owned in game.coin_inventory.equipped + game.coin_inventory.consumables:
-		if owned.get("instance_id", -1) != instance: continue
-		var state := coin_state_text(owned).strip_edges()
-		return "" if state.is_empty() else "\nTotal: " + state
+		if owned.get("instance_id", -1) == instance: return coin_total_for(owned.coin_id, owned, true)
+	return ""
+
+## «Total: …» de una moneda que suma algo que cambia: lo acumulado (Acumulada, Veterana, Racha, Gastada, Cazajefes) o lo
+## que da ahora según el saldo, los stickers, las monedas equipadas o el nivel. A la venta (`owned` falso) se calcula
+## como si ya la tuvieras. Las que dependen de la mano (tiradas, sobrantes) no muestran total.
+func coin_total_for(coin_id: String, instance: Dictionary, owned: bool) -> String:
+	var state := coin_state_text(instance if not instance.is_empty() else Coins.instance(coin_id, 0)).strip_edges()
+	if state != "": return "\nTotal: " + state
+	for effect in Coins.DATA.get(coin_id, {}).get("effects", []):
+		var amount := float(effect.get("amount", 0))
+		match effect.get("per", ""):
+			"cash_fifth": return "\nTotal: +%d puntos de mano (con %s)" % [int(maxi(game.cash, 0) / 5) * int(amount), money_text(game.cash)]
+			"sticker_levels":
+				var levels := 0
+				for level in game.cup.stickers.values(): levels += int(level)
+				return "\nTotal: +%s mult (%d niveles de stickers)" % [number(levels * amount), levels]
+			"equipped":
+				var count: int = game.coin_inventory.equipped.size() + (0 if owned else 1)
+				return "\nTotal: +%s mult (%d monedas equipadas)" % [number(count * amount), count]
+			"campaign_level": return "\nTotal: +%s mult (nivel %d)" % [number((game.level_index + 1) * amount), game.level_index + 1]
 	return ""
 
 ## Progress of coins that keep state (C18, C48-C51), one line for tooltips and the inspector.
@@ -2067,7 +2085,7 @@ func shop_card(parent: Node, section: String, index: int, rect: Rect2) -> void:
 	object_hover.size = Vector2(100, 91)
 	object_hover.mouse_filter = Control.MOUSE_FILTER_STOP
 	object_hover.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
-	object_hover.tooltip_text = text[0] + "\n" + text[1]
+	object_hover.tooltip_text = text[0] + "\n" + text[1] + (coin_total_for(offer.effect.coin_id, {}, false) if offer.kind == "coin" else "")
 	card.add_child(object_hover)
 	var unavailable: bool = game.phase != "shop" or not game.can_afford(game.charged_price(offer)) or not Purchases.valid_offer(section, offer, game.sticker_catalog)
 	if offer.kind == "coin": unavailable = unavailable or not Coins.can_store(game.coin_inventory, offer.effect.coin_id)
@@ -2107,7 +2125,7 @@ func shop_card(parent: Node, section: String, index: int, rect: Rect2) -> void:
 	purchase.add_theme_color_override("font_disabled_color", Color("8a7a60"))
 
 ## Secciones del maletín en pantalla (coinciden con las divisiones de `tienda-secciones-v4.png`).
-const SHOP_ZONES := {"components": Rect2(540, 252, 222, 179), "numbers": Rect2(788, 252, 254, 179), "stickers": Rect2(1074, 252, 240, 179),
+const SHOP_ZONES := {"components": Rect2(538, 252, 367, 179), "stickers": Rect2(929, 252, 388, 179),
 	"coins": Rect2(534, 442, 560, 179), "single_use": Rect2(1122, 442, 208, 179)}
 
 func render_shop() -> void:
@@ -2126,9 +2144,12 @@ func render_shop() -> void:
 	shop_frame(Rect2(518, 30, 193, 80))
 	shop_caption(ui, "PLATA", Rect2(530, 38, 169, 22), 18)
 	shop_caption(ui, money_text(game.cash), Rect2(530, 60, 169, 42), 34, gold)
-	shop_frame(Rect2(730, 30, 200, 80))
-	shop_caption(ui, "CAPACIDAD", Rect2(742, 38, 176, 22), 18)
-	shop_caption(ui, str(game.coin_inventory.shared_capacity), Rect2(742, 60, 176, 42), 34, gold)
+	# Sin cartel de capacidad (25/11): un contador «monedas equipadas / lugares» abajo a la derecha de su bandeja.
+	var capacity: int = game.coin_inventory.shared_capacity
+	var tray_right: float = 785.0 + (capacity - 1) * minf(78.0, 400.0 / maxf(capacity, 1)) + 31.0 + 50.0
+	var counter := shop_caption(ui, "%d/%d" % [game.passives.size(), capacity], Rect2(tray_right - 74, 856, 62, 18), 14, gold)
+	counter.name = "CoinCounter"
+	counter.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	for id in range(5):
 		var die := Die.new()
 		die.configure_appearance(game.dice[id], game.boss_context())
@@ -2158,7 +2179,7 @@ func render_shop() -> void:
 			var use_button := button(ui, "Usar", Rect2(offset, 880, 62, 18), func(): act(func(): game.use_consumable(slot_index)), game.phase != "shop")
 			use_button.name = "UseShopCoin_" + str(slot)
 			use_button.add_theme_font_size_override("font_size", 13)
-	# Opción B del boceto (D20): arriba componentes, números y stickers; abajo las monedas (ancha) y la de un uso.
+	# Arriba componentes y stickers (los números son recompensa de los rivales); abajo las monedas y la de un uso.
 	var zones := SHOP_ZONES
 	var renew_names := {"coins": "monedas", "single_use": "moneda de un uso", "components": "componentes", "numbers": "números", "stickers": "stickers"}
 	for section in zones:

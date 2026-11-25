@@ -131,7 +131,7 @@ static func run(scene, check: Callable) -> void:
 	var cards := 0
 	var cursors_ok := true
 	var shop_ring: Control
-	for section in ["coins", "components", "numbers", "stickers"]:
+	for section in ["coins", "single_use", "components", "stickers"]:
 		var panel = scene.ui.get_node("Shop_" + section)
 		for card in panel.get_children():
 			if not str(card.name).begins_with("Offer_") or card.get_node_or_null("OfferRing") == null: continue

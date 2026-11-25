@@ -46,6 +46,8 @@ static func _test_generation(check: Callable) -> void:
 	var ids: Dictionary = {}
 	for section in Shop.SIZES:
 		check.call(game.shop_state[section].slots.size() == Shop.SIZES[section], "shop: exact slot count " + section)
+	check.call(not game.shop_state.numbers.configured, "shop: numbers are not sold (they are the rival reward)")
+	for section in Shop.SECTIONS:
 		for offer in game.shop_state[section].slots:
 			check.call(offer.has("kind") and offer.has("effect") and offer.has("price") and not ids.has(offer.offer_id), "shop: offers have distinct identities and concrete payloads")
 			ids[offer.offer_id] = true
@@ -112,7 +114,7 @@ static func _test_generation(check: Callable) -> void:
 	check.call(no_balance.open_shop() and no_balance.shop_state.coins.slots.size() == Shop.SIZES.coins and not no_balance.shop_state.components.configured and not no_balance.shop_state.numbers.configured and not no_balance.shop_state.stickers.configured, "shop: normal game exposes its provisional coin offers without inventing missing commercial tables")
 	before = no_balance.snapshot()
 	check.call(not no_balance.generate_offers() and not no_balance.open_shop() and no_balance.snapshot() == before, "shop: reopening or calling initial generation cannot reroll existing stock for free")
-	for broken in ["negative_weight", "missing_price", "unknown_effect", "missing_rarity", "bad_pack"]:
+	for broken in ["negative_weight", "missing_price", "unknown_effect", "bad_pack"]:
 		var invalid = Game.new(123)
 		invalid.phase = "reward"
 		invalid.shop_tables = tables()

@@ -21,7 +21,7 @@ func _initialize() -> void:
 	scene.render()
 	scene.background.set_process(false)
 	var rings := []
-	for section in ["coins", "components", "numbers", "stickers"]:
+	for section in ["coins", "single_use", "components", "stickers"]:
 		for card in scene.ui.get_node("Shop_" + section).get_children():
 			var ring = card.get_node_or_null("OfferRing")
 			if ring != null:

@@ -201,7 +201,7 @@ static func _test_tutorial_game(check: Callable) -> void:
 				rows.append(row)
 		return rows
 	check.call(strip.call(stock_a) == strip.call(other.shop_state), "Tutorial: la tienda es siempre la misma con cualquier semilla de jugada")
-	check.call(stock_a.coins.slots.any(func(s): return s.get("kind") == "coin") and stock_a.components.slots.any(func(s): return not s.is_empty()) and stock_a.numbers.slots.any(func(s): return s.get("kind") == "face") and stock_a.numbers.slots.any(func(s): return s.get("kind") == "global") and stock_a.stickers.slots.any(func(s): return s.get("kind") == "sticker"), "Tutorial: la tienda muestra monedas, componentes, un cambio de cara, una mejora de número y stickers")
+	check.call(stock_a.coins.slots.any(func(s): return s.get("kind") == "coin") and stock_a.components.slots.any(func(s): return not s.is_empty()) and not stock_a.numbers.configured and not stock_a.single_use.slots[0].is_empty() and stock_a.stickers.slots.any(func(s): return s.get("kind") == "sticker"), "Tutorial: la tienda muestra monedas, la de un uso, componentes y stickers (los números son recompensa)")
 	check.call(not stock_a.coins.slots.any(func(s): return s.get("effect", {}).get("coin_id", "") == "vendor_gift"), "Tutorial: la moneda del regalo no sale en la tienda del tutorial")
 	game.unlocked_coins = ["vendor_gift"]
 	check.call(game.leave_shop() and game.rival == 1 and game.phase == "play", "Tutorial: se sale de la tienda al segundo encuentro")

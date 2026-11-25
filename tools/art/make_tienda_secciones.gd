@@ -1,6 +1,7 @@
 extends SceneTree
 ## Maletín de la tienda con las secciones de la opción B (aprobada el 25/11/2026, ver `tools/art/bocetos-tienda/`):
-##   arriba tres secciones (componentes | números | stickers), abajo dos (monedas, ancha | moneda de un uso, angosta).
+##   arriba dos secciones (componentes | stickers; desde el 25/11 los números son recompensa), abajo dos (monedas, ancha |
+##   moneda de un uso, angosta).
 ## Parte de `tienda-v3.png` sin redibujar nada: el acolchado se repite cada 24 × 16 píxeles de arte, así que la división
 ## vertical original se borra copiando el acolchado de 48 px a la izquierda y la franja de la división (con sus
 ## esquineros) se copia corrida en múltiplos de 24 px. Se corre sin GPU:
@@ -13,8 +14,8 @@ const BOTTOM := 328
 const STRIP_X := 440
 const STRIP_W := 36
 const MID_Y := 217
-## Corrimientos de las divisiones nuevas: arriba dos (−72 y +72), abajo una (+96).
-const TOP_SHIFTS := [-72, 72]
+## Corrimientos de las divisiones: arriba una en su lugar original (componentes | stickers), abajo una (+96).
+const TOP_SHIFTS := [0]
 const BOTTOM_SHIFTS := [96]
 
 func _initialize() -> void:

@@ -14,18 +14,20 @@ func _initialize() -> void:
 	root.add_child(scene)
 	await process_frame
 	prefix = "%dx%d-object-buy-" % [root.size.x, root.size.y]
-	scene.game = ShopTests.game_at_shop(162)
+	scene.game = Purchases.fixture("global", {"number": 4, "amount": 2}, 3)
 	Fixture.set_values(scene.game, [4, 4, 4, 4, 4])
 	scene.render()
 	var offer: Dictionary = scene.game.shop_state.numbers.slots[0].duplicate(true)
 	var cash: int = scene.game.cash
 	await capture("antes")
-	await click_object(scene.ui.get_node("Shop_numbers/Offer_0/ObjectHover"))
+	# Los números ya no se ven en la tienda (son recompensa): la compra se hace directo sobre el stock.
+	scene.game.purchase_offer("numbers", offer.offer_id)
+	scene.render()
 	verify(scene.game.shop_state.numbers.slots[0].is_empty() and scene.game.cash == cash - offer.price and scene.game.global_points[str(offer.effect.number)] == offer.effect.amount, "Native object click buys global improvement exactly once")
 	await capture("comprado")
 	scene.game = Purchases.fixture("face", {"number": 6}, 4)
+	scene.game.begin_purchase("numbers", "fixture:1")
 	scene.render()
-	await click_object(scene.ui.get_node("Shop_numbers/Offer_0/ObjectHover"))
 	verify(scene.game.phase == "purchase_target" and scene.game.cash == 100, "Native face object click opens target selection without premature charge")
 	await capture("objetivo")
 	await click_object(scene.ui.get_node("PurchaseTarget/Die_2"))

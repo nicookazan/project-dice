@@ -56,7 +56,7 @@ func _initialize() -> void:
 	scene.game.consumable = "boost"
 	scene.render()
 	await capture("tienda-cinco-zonas")
-	for section in ["coins", "components", "numbers", "stickers"]:
+	for section in ["coins", "single_use", "components", "stickers"]:
 		for offer in scene.game.shop_state[section].slots.duplicate(true): scene.game.commit_shop_offer(section, offer.offer_id)
 	scene.render()
 	await capture("tienda-vacia")

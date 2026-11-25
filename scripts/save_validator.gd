@@ -83,8 +83,8 @@ static func validate(data: Variant) -> String:
 	if not BossRules.valid_state(g.boss_rule, g.boss_state, BossRules.has_power(g.level_encounters[g.rival].kind)): return "estado del jefe inválido"
 	for key in ["event_sequence", "coin_instance_sequence", "shop_offer_sequence", "sticker_offer_sequence"]:
 		if g[key] < 0: return "secuencia negativa"
-	if g.reroll_prices.size() != Shop.SECTIONS.size(): return "contadores de renovación incompletos"
-	for section in Shop.SECTIONS:
+	if g.reroll_prices.size() != Shop.RENEWABLE.size(): return "contadores de renovación incompletos"
+	for section in Shop.RENEWABLE:
 		if not g.reroll_prices.get(section) is int or g.reroll_prices[section] < 1: return "contador de renovación inválido"
 	if g.dice.size() != 5 or not Numbers.valid_points(g.global_points): return "dados o mejoras inválidos"
 	if g.cup.get("material") != "leather" or not g.cup.get("stickers") is Dictionary or not Stickers.valid_levels(g.cup.stickers, g.sticker_catalog): return "vaso inválido"
@@ -199,7 +199,7 @@ static func validate(data: Variant) -> String:
 		for id in r.available_ids:
 			if not g.dice[id].shell_broken or g.dice[id].shell == "": return "carcasa de reparación inválida"
 	var ui: Dictionary = data.ui
-	if not ids(ui.get("selected")) or not ids(ui.get("repair_selection")) or ui.get("shop_section") not in Shop.SECTIONS or not ui.get("pack_panel_open") is bool: return "selección de interfaz inválida"
+	if not ids(ui.get("selected")) or not ids(ui.get("repair_selection")) or ui.get("shop_section") not in Shop.RENEWABLE or not ui.get("pack_panel_open") is bool: return "selección de interfaz inválida"
 	for id in ui.repair_selection:
 		if g.phase != "repair" or id not in g.repair_resolution.available_ids: return "selección de reparación inconsistente"
 	return ""

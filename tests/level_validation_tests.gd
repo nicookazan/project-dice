@@ -143,10 +143,17 @@ static func buy_controlled(scene, kind: String, id: String, check: Callable, die
 	scene.game.shop_state[section].slots[0] = candidate
 	scene.game.shop_state[section].configured = true
 	scene.render()
-	var cards: Array = scene.ui.get_node("Shop_" + section).get_children().filter(func(node): return node is Panel)
-	var purchase = UI.find_button(cards[0], "$%d" % candidate.price)
 	var before_cash: int = scene.game.cash
-	purchase.pressed.emit()
+	var zone = scene.ui.get_node_or_null("Shop_" + section)
+	var purchase = null
+	if zone == null:
+		# Los números ya no están a la venta (son recompensa): la compra empieza directo sobre el stock.
+		scene.game.begin_purchase(section, offer_id)
+		scene.render()
+	else:
+		var cards: Array = zone.get_children().filter(func(node): return node is Panel)
+		purchase = UI.find_button(cards[0], "$%d" % candidate.price)
+		purchase.pressed.emit()
 	if kind in ["material", "element", "shell", "face"]:
 		scene.ui.get_node("PurchaseTarget/Die_%d" % die_id).pressed.emit()
 		if kind == "face": scene.ui.get_node("PurchaseTarget/Face_%d" % face_index).pressed.emit()
@@ -161,7 +168,8 @@ static func buy_controlled(scene, kind: String, id: String, check: Callable, die
 		check.call("+3 puntos" in choice.tooltip_text and "+0.5" in choice.tooltip_text, "Integral: paid pack exposes candidate growth before choosing")
 		choice.pressed.emit()
 	var snapshot: Dictionary = scene.game.snapshot()
-	purchase.pressed.emit()
+	if purchase != null: purchase.pressed.emit()
+	else: scene.game.begin_purchase(section, offer_id)
 	if scene.detail.visible: scene.detail.hide()
 	check.call(scene.game.snapshot() == snapshot, "Integral: queued second purchase click cannot duplicate " + kind + ":" + id)
 	reload_ui(scene, check, "purchased " + kind + ":" + id)

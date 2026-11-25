@@ -11,21 +11,18 @@ static func run(scene, check: Callable) -> void:
 	check.call(Profile.tables().numbers.all(func(offer): return offer.kind in ["global", "face"]), "Global numbers: production tables generate no local upgrade offers")
 	scene.detail.hide()
 	scene.preferences.drag_groups = false
-	scene.game = Purchases.fixture("global", {"number": 4, "amount": 2}, 3)
+	# Desde el 25/11 las mejoras de número no se venden: son la recompensa de los rivales.
+	var rewarded = Purchases.fixture("global", {"number": 4, "amount": 2}, 3)
+	rewarded.pending_reward = {"section": "numbers", "offer": rewarded.shop_state.numbers.slots[0].duplicate(true), "target": {}, "source": "rival"}
+	rewarded.phase = "bonus"
+	var cash_before: int = rewarded.cash
+	scene.game = rewarded
+	scene.render()
+	scene.ui.find_child("TakeReward", true, false).pressed.emit()
 	Fixture.set_values(scene.game, [4, 4, 4, 4, 4])
-	scene.render()
-	var object = scene.ui.get_node("Shop_numbers/Offer_0/ObjectHover")
-	var click := InputEventMouseButton.new()
-	click.button_index = MOUSE_BUTTON_LEFT
-	click.pressed = true
-	object._gui_input(click)
-	check.call(scene.game.cash == 97 and scene.game.global_points == {"4": 2} and scene.game.phase == "shop" and scene.game.preview().rows[0].die_rows.all(func(die): return die.points == 6), "Global numbers: touching artwork purchases once and upgrades all five matching dice immediately")
-	scene.game = Purchases.fixture("global", {"number": 4, "amount": 2}, 3)
-	scene.game.cash = 0
-	scene.render()
+	check.call(scene.game.cash == cash_before and scene.game.global_points == {"4": 2} and scene.game.pending_reward.is_empty() and scene.game.preview().rows[0].die_rows.all(func(die): return die.points == 6), "Global numbers: taking the reward upgrades all five matching dice for free")
 	var before: Dictionary = scene.game.snapshot()
-	scene.ui.get_node("Shop_numbers/Offer_0/ObjectHover")._gui_input(click)
-	check.call(scene.game.snapshot() == before, "Global numbers: touching unaffordable artwork cannot purchase or mutate state")
+	check.call(not scene.game.take_reward().ok and scene.game.snapshot() == before, "Global numbers: the reward cannot be taken twice")
 	var legacy = Saves.shop_game("local", {"number": 4, "amount": 12})
 	legacy.shop_state.numbers.slots[0].rarity = "rare"
 	legacy.global_points = {"4": 3}

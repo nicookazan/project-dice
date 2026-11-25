@@ -498,8 +498,9 @@ func _initialize() -> void:
 	scene.game = PurchaseTests.fixture("face", {"number": 4}, 4)
 	scene.shop_section = "numbers"
 	scene.purchase_error = ""
+	# Los cambios de cara ya no están a la venta (son recompensa): la compra se empieza directo y se revisa su ventana.
+	scene.game.begin_purchase("numbers", scene.game.shop_state.numbers.slots[0].offer_id)
 	scene.render()
-	find_button(scene, "$4").pressed.emit()
 	scene.ui.get_node("PurchaseTarget/Die_0").pressed.emit()
 	check(find_button(scene, "Confirmar · $4").disabled, "UI face purchase requires selecting source position after die")
 	scene.ui.get_node("PurchaseTarget/Face_1").pressed.emit()

@@ -295,6 +295,12 @@ static func _table_and_shop(scene, check: Callable) -> void:
 	check.call(not UI.text_in(scene.ui, scene.game.message) and scene.ui.find_child("ShopError", true, false) == null, "Tienda: no queda texto de estado abajo")
 	scene.inspect_thermos()
 	check.call(not scene.detail.visible, "Tienda: tocar el termo no abre ningún panel")
+	# Sin cartel de capacidad: contador de monedas equipadas en su bandeja, y «Total» en las monedas que suman algo.
+	var counter: Label = scene.ui.find_child("CoinCounter", true, false)
+	check.call(counter != null and counter.text == "%d/%d" % [scene.game.passives.size(), scene.game.coin_inventory.shared_capacity] and not UI.text_in(scene.ui, "CAPACIDAD"), "Tienda: un contador 0/5 de monedas reemplaza a CAPACIDAD")
+	scene.game.cash = 23
+	check.call(scene.coin_total_for("interest", {}, false) == "\nTotal: +4 puntos de mano (con $23)" and scene.coin_total_for("accumulated", {}, false) == "\nTotal: +0 puntos acumulados" and scene.coin_total_for("full", {}, false) == "", "Tienda: Interés y las que acumulan muestran su total; las fijas no")
+	check.call(not scene.ui.find_child("Shop_numbers", true, false) and not scene.game.shop_state.numbers.configured, "Tienda: los números ya no se venden (son recompensa de los rivales)")
 	# Opción B (25/11): cinco secciones; abajo las monedas (pasivas sueltas y el paquete) y la de un uso, aparte.
 	var single: Control = scene.ui.find_child("Shop_single_use", true, false)
 	var coins_zone: Control = scene.ui.find_child("Shop_coins", true, false)

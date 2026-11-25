@@ -9,7 +9,11 @@ const Materials = preload("res://scripts/materials.gd")
 const SIZES = {"coins": 3, "single_use": 1, "components": 2, "numbers": 2, "stickers": 2, "cup": 0}
 ## Secciones del maletín, en el orden en que se sortean (el orden fija el azar). Desde el 25/11/2026 (D20, opción B del
 ## boceto): «coins» trae tres monedas pasivas sueltas (sin paquete desde el 25/11); «single_use», una de un uso.
-const SECTIONS = ["coins", "single_use", "components", "numbers", "stickers"]
+## Desde el 25/11 (más tarde) las mejoras de número y los cambios de cara no se venden: son la recompensa de los rivales.
+## «numbers» sigue en SIZES (se sortea para la recompensa y las partidas viejas la guardan vacía), pero no en la tienda.
+const SECTIONS = ["coins", "single_use", "components", "stickers"]
+## Secciones con contador de renovación (las de la tienda más «numbers», que queda de partidas anteriores).
+const RENEWABLE = ["coins", "single_use", "components", "numbers", "stickers"]
 ## Secciones que venden monedas sueltas y de qué tipo son las sueltas de cada una.
 const COIN_TYPES = {"coins": "passive", "single_use": "consumable"}
 ## Tamaños del paquete de monedas (D15): se muestran `shown`, se eligen `picks` y el grande trae al menos 2 pasivas.
