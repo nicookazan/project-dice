@@ -25,9 +25,6 @@ func _initialize() -> void:
 	for i in range(5): scene.game.dice[i].shell = ["", "ruby", "sapphire", "emerald", "diamond"][i]
 	scene.render()
 	await capture("mesa")
-	scene.show_thermos_detail()
-	await capture("termo-stickers")
-	scene.detail.hide()
 	scene.game.dice[1].shell_broken = true
 	scene.selected = [1]
 	scene.render()
@@ -41,7 +38,7 @@ func _initialize() -> void:
 	scene.show_options()
 	scene.show_dice_gallery()
 	await capture("galeria-desde-opciones")
-	print("DICE ART REVIEW: 7 captures; gallery, real table, thermos/stickers, damage/selection and shop")
+	print("DICE ART REVIEW: 6 captures; gallery, real table, damage/selection and shop")
 	quit()
 
 func capture(caption: String) -> void:

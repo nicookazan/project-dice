@@ -20,11 +20,14 @@ const COIN_SIZE := 84.0
 const GOLD := Color("f0c850")
 const CREAM := Color("fff0c7")
 const DIM := Color("b7a98c")
-## Madera de los estantes: canto claro, frente, sombra y la pared del fondo.
+## Madera de los estantes: canto claro, frente y sombra.
 const WOOD_TOP := Color("b07a45")
 const WOOD_FRONT := Color("7a4a26")
 const WOOD_DARK := Color("3f2614")
-const BACK_WALL := Color("2a1418")
+## Pared de tablones del fondo, con la paleta de la pared de la tienda (`tienda-v3.png`).
+const PLANK_SEAM := Color("2a160c")
+const PLANK_SHADES := [Color("43240f"), Color("5e3414"), Color("7c4a1c")]
+const PLANK_LIGHT := Color("9a6228")
 
 var ids: Array = []
 var page := 0
@@ -59,8 +62,8 @@ func _ready() -> void:
 	panel.mouse_filter = Control.MOUSE_FILTER_STOP
 	add_child(panel)
 	caption("MONEDAS", Rect2(32, 22, PANEL.size.x - 64, 40), 28, GOLD)
-	var back := ColorRect.new()
-	back.color = BACK_WALL
+	var back := PlankWall.new()
+	back.name = "PlankWall"
 	back.position = SHELF_AREA.position - Vector2(16, 12)
 	back.size = SHELF_AREA.size + Vector2(32, 24)
 	back.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -205,3 +208,35 @@ func _unhandled_key_input(event: InputEvent) -> void:
 	elif event.keycode == KEY_RIGHT: show_page(page + 1)
 	else: return
 	get_viewport().set_input_as_handled()
+
+## Pared de tablones horizontales como la de la tienda: filas de 10 píxeles de arte (a ×2), una línea oscura entre
+## filas, canto claro arriba de cada tablón, tablones de largo variable en tres tonos y vetas cortas. Semilla fija:
+## siempre se dibuja igual.
+class PlankWall extends Control:
+	const PIXEL := 2.0
+	const ROW := 10
+	func _draw() -> void:
+		var rng := RandomNumberGenerator.new()
+		rng.seed = 5802
+		var cols := int(ceil(size.x / PIXEL))
+		var rows := int(ceil(size.y / PIXEL))
+		var y := 0
+		while y < rows:
+			var x := -rng.randi_range(0, 60)
+			while x < cols:
+				var length := rng.randi_range(36, 110)
+				var shade: int = rng.randi_range(0, 2)
+				var body: Color = PLANK_SHADES[shade]
+				_px(x, y, length, 1, PLANK_SEAM)
+				_px(x, y + 1, length, 1, PLANK_LIGHT if shade == 2 else PLANK_SHADES[mini(shade + 1, 2)])
+				_px(x, y + 2, length, ROW - 2, body)
+				# Vetas: rayitas de un tono vecino dentro del tablón.
+				for i in rng.randi_range(2, 5):
+					var grain: Color = PLANK_SHADES[clampi(shade + (1 if rng.randf() < 0.5 else -1), 0, 2)]
+					_px(x + rng.randi_range(2, maxi(length - 10, 3)), y + rng.randi_range(3, ROW - 2), rng.randi_range(3, 9), 1, grain)
+				_px(x + length - 1, y + 1, 1, ROW - 1, PLANK_SEAM)
+				x += length
+			y += ROW
+	func _px(x: int, y: int, w: int, h: int, color: Color) -> void:
+		var rect := Rect2(Vector2(x, y) * PIXEL, Vector2(w, h) * PIXEL).intersection(Rect2(Vector2.ZERO, size))
+		if rect.has_area(): draw_rect(rect, color)

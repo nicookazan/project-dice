@@ -111,7 +111,6 @@ var hover_description_body: Label
 var detail: AcceptDialog
 var detail_body: RichTextLabel
 var detail_text := ""
-var thermos_panel: Control
 var confirmation: ConfirmationDialog
 var pending_navigation := ""
 var windowed_mode := DisplayServer.WINDOW_MODE_WINDOWED
@@ -133,6 +132,8 @@ var thief_next := -1
 var thief_pending := -1
 var thief_node: Control
 var throw_blocker: Control
+## Tema con la letra pixel para toda la interfaz de la partida (menos la libreta).
+var pixel_theme: Theme
 
 func _ready() -> void:
 	if preferences_enabled:
@@ -157,12 +158,16 @@ func _ready() -> void:
 	theme_value.set_color("font_hover_color", "Button", Color("fff0c7"))
 	theme_value.set_color("font_disabled_color", "Button", Color("85867b"))
 	theme = theme_value
+	# Todo el texto de la partida va en letra pixel (D20); la libreta conserva la letra de siempre (se retoca después).
+	pixel_theme = theme_value.duplicate()
+	pixel_theme.default_font = ItemTooltip.pixel_font()
 	background = Backdrop.new()
 	background.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(background)
 	background.copa_stars_complete.connect(_celebrate_copa)
 	background.finale_finished.connect(_on_finale_finished)
 	detail = AcceptDialog.new()
+	detail.theme = pixel_theme
 	detail.exclusive = true
 	detail.title = "Libreta · detalle de cálculo"
 	detail.min_size = Vector2i(520, 260)
@@ -175,6 +180,7 @@ func _ready() -> void:
 	detail_body.focus_mode = Control.FOCUS_ALL
 	detail.add_child(detail_body)
 	confirmation = ConfirmationDialog.new()
+	confirmation.theme = pixel_theme
 	confirmation.title = "Abandonar partida"
 	confirmation.exclusive = true
 	confirmation.ok_button_text = "Abandonar"
@@ -208,7 +214,6 @@ func skin_dialog(window: Window) -> void:
 	window.add_theme_font_override("title_font", ItemTooltip.pixel_font())
 
 func present_detail(title: String, text: String, compact := false) -> void:
-	if is_instance_valid(thermos_panel): thermos_panel.hide()
 	detail.add_theme_stylebox_override("panel", UiSkin.panel(Vector4(20, 20, 20, 20)))
 	if is_instance_valid(settings_panel): settings_panel.hide()
 	if is_instance_valid(dice_gallery): dice_gallery.hide()
@@ -363,38 +368,15 @@ func open_sticker_book(sticker_id: String) -> void:
 	if is_instance_valid(sticker_tip): sticker_tip.hide()
 
 func inspect_thermos() -> void:
-	# En la mesa el termo ceba el mate (los stickers se leen al pasar el mouse); robado y en la tienda abre su detalle.
-	if not game.thermos_stolen() and not background.shop_mode:
-		background.props.play("thermos")
-		return
-	show_thermos_detail()
+	# En la mesa el termo ceba el mate (los stickers se leen al pasar el mouse); robado explica el robo. En la tienda no
+	# abre nada: los stickers se ven en el termo y en Colecciones.
+	if game.thermos_stolen(): show_thermos_detail()
+	elif not background.shop_mode: background.props.play("thermos")
 
-## Detalle del termo: robado (explica el robo) y en la tienda (niveles y efectos). En la mesa, los stickers se leen al pasar el mouse.
+## Detalle del termo robado: explica el robo y que los stickers no aportan mientras dure el jefe.
 func show_thermos_detail() -> void:
-	if game.thermos_stolen():
-		present_detail("Termo robado", "Don Cebador te robó el termo: flota junto a su mano y los %d stickers pegados no aportan nada mientras dure el jefe.
+	present_detail("Termo robado", "Don Cebador te robó el termo: flota junto a su mano y los %d stickers pegados no aportan nada mientras dure el jefe.
 Te lo devuelve flotando cuando lo venzas." % game.cup.stickers.size(), true)
-		return
-	var lines: Array[String] = ["Termo del mate", "Stickers pegados al termo:"]
-	if game.cup.stickers.is_empty(): lines.append("Sin stickers.")
-	for id in game.cup.stickers:
-		var level: int = game.cup.stickers[id]
-		lines.append("%s · nivel %d" % [Stickers.NAMES.get(id, id), level])
-		if Stickers.defined(id, game.sticker_catalog):
-			var data: Dictionary = game.sticker_catalog[id]
-			lines.append("+%s puntos de grupo y +%s al multiplicador de su categoría." % [number(data.points_per_level * level), number(data.multiplier_per_level * level)])
-		else: lines.append("Efectos pendientes de definición.")
-	present_detail("Termo y stickers", "\n".join(lines), true)
-	detail_body.hide()
-	if is_instance_valid(thermos_panel):
-		detail.remove_child(thermos_panel)
-		thermos_panel.queue_free()
-	thermos_panel = preload("res://scripts/thermos_inspector.gd").new()
-	thermos_panel.levels = game.cup.stickers.duplicate(true)
-	thermos_panel.catalog = game.sticker_catalog.duplicate(true)
-	detail.add_child(thermos_panel)
-	detail.add_theme_stylebox_override("panel", box(Color("091923"), gold, 2))
-	detail.popup_centered(Vector2i(680, 510))
 
 func box(bg: Color, border := Color.TRANSPARENT, width := 0) -> StyleBoxFlat:
 	var s := StyleBoxFlat.new()
@@ -1331,6 +1313,7 @@ func render() -> void:
 		ui.queue_free()
 	ui = Control.new()
 	ui.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	ui.theme = pixel_theme
 	# La capa ocupa toda la pantalla: sin esto se comía los clics que van al fondo (estrellas de la copa).
 	ui.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(ui)
@@ -1392,6 +1375,7 @@ func finish_render() -> void:
 	var thermos_rect: Rect2 = Backdrop.SHOP_THERMOS_RECT if background.shop_mode else (Backdrop.STOLEN_THERMOS_RECT if game.thermos_stolen() else Backdrop.THERMOS_RECT)
 	var thermos_button := button(ui, "", thermos_rect, inspect_thermos)
 	thermos_button.name = "InspectThermos"
+	if background.shop_mode and not game.thermos_stolen(): thermos_button.mouse_default_cursor_shape = Control.CURSOR_ARROW
 	if not background.shop_mode and background.finale_stage != "matrix":
 		# En la selección de encuentro y el cobro, bandera y sifones no responden (D20).
 		for prop in ([] if game.in_lobby() or game.phase == "reward" else ["flag", "soda_left", "soda_right"]):
@@ -1413,7 +1397,8 @@ func finish_render() -> void:
 			for child in thermos_button.get_children():
 				if child.has_meta("sticker_id"): cup_zone.accept_through(child)
 	if not background.shop_mode: render_boss_hand()
-	if background.shop_mode: label(ui, purchase_error if not purchase_error.is_empty() else game.message, Vector2(38, 864), 17, cream, 1360)
+	# En la tienda no queda texto de estado abajo: solo se avisa si una compra no se pudo hacer.
+	if background.shop_mode and not purchase_error.is_empty(): label(ui, purchase_error, Vector2(38, 864), 17, cream, 1360).name = "ShopError"
 	if game.phase != "repair": repair_selection.clear()
 	# Ganarle a La Semilla no muestra cartel: la mesa se cae y vienen los créditos.
 	if game.phase in ["reward", "won", "lost", "repair"] and not (game.phase == "won" and background.finale_stage == "ending"): render_result()
@@ -1484,6 +1469,7 @@ func tutorial_notes_open() -> bool:
 func render_notebook(blank := false) -> void:
 	var note := panel(ui, Rect2(22, 25, 310, 630), Color("f3e6c7"), Color("856a47"))
 	note.name = "PlayerNotebook"
+	note.theme = theme
 	# Flat paper belongs to the player's interface, with no table perspective.
 	for line_y in range(44, 621, 24):
 		var rule := ColorRect.new()
@@ -2083,9 +2069,6 @@ func shop_card(parent: Node, section: String, index: int, rect: Rect2) -> void:
 	purchase.add_theme_color_override("font_disabled_color", Color("8a7a60"))
 
 func render_shop() -> void:
-	var shop_theme := theme.duplicate()
-	shop_theme.default_font = ItemTooltip.pixel_font()
-	ui.theme = shop_theme
 	shop_frame(Rect2(30, 14, 400, 75), true)
 	shop_caption(ui, "TIENDA", Rect2(55, 34, 350, 38), 34)
 	var inventory := panel(ui, Rect2(770, 777, 635, 80), Color.TRANSPARENT)

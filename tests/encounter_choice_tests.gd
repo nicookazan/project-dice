@@ -165,6 +165,7 @@ static func _menu(scene, check: Callable) -> void:
 	scene.ui.find_child("CollectionCoins", true, false).pressed.emit()
 	var shelf = scene.ui.find_child("CoinShelf", true, false)
 	var pages: int = shelf.page_count() if shelf != null else 0
+	check.call(shelf != null and shelf.find_child("PlankWall", true, false) != null, "Colecciones: detrás de los estantes hay una pared de tablones")
 	var seen: Array = []
 	for page in range(pages):
 		shelf.show_page(page)
@@ -226,6 +227,12 @@ static func _table_and_shop(scene, check: Callable) -> void:
 	check.call(ungroup != null and not overlaps, "Mesa: Desarmar queda arriba de los dados del grupo, sin taparlos")
 	var options: Button = scene.ui.find_child("TableOptions", true, false)
 	check.call(options != null and options.text == "Opciones" and UI.find_button(scene.ui, "Ayuda") == null, "Mesa: donde estaba Ayuda ahora está Opciones")
+	var pixel := func(control: Control) -> bool:
+		var font = control.get_theme_font("font")
+		return font is SystemFont and font.antialiasing == TextServer.FONT_ANTIALIASING_NONE
+	var note: Control = scene.ui.find_child("PlayerNotebook", true, false)
+	var note_label: Label = note.find_children("*", "Label", true, false)[0]
+	check.call(pixel.call(options) and pixel.call(scene.ui.find_child("Ungroup_0", true, false)) and not pixel.call(note_label), "Mesa: los textos de la partida van en letra pixel, menos la libreta")
 	options.pressed.emit()
 	check.call(scene.detail.visible and scene.detail.title == "Opciones y controles", "Mesa: el botón abre Opciones")
 	scene.detail.hide()
@@ -235,6 +242,9 @@ static func _table_and_shop(scene, check: Callable) -> void:
 	check.call(scene.ui.find_child("TableOptions", true, false) == null and scene.ui.find_child("LobbyOptions", true, false) != null, "Selección: Opciones no se repite en la esquina")
 	scene.game.open_shop()
 	scene.render()
+	check.call(not UI.text_in(scene.ui, scene.game.message) and scene.ui.find_child("ShopError", true, false) == null, "Tienda: no queda texto de estado abajo")
+	scene.inspect_thermos()
+	check.call(not scene.detail.visible, "Tienda: tocar el termo no abre ningún panel")
 	var card: Control = scene.ui.find_child("Offer_0", true, false)
 	var hover: Control = card.find_child("ObjectHover", true, false) if card != null else null
 	if hover == null:
