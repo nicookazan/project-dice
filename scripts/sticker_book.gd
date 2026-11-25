@@ -34,11 +34,17 @@ var upgrades_label: Label
 var effect_label: Label
 var level_bar: Control
 var panel: Panel
+## Colecciones (D20): todos los stickers encendidos, sin niveles propios; cada uno muestra lo que da por nivel.
+var collection := false
 
 func setup(owned_levels: Dictionary, definitions: Dictionary, first: String) -> void:
 	levels = owned_levels.duplicate(true)
 	catalog = definitions
 	selected = first if Stickers.NAMES.has(first) else "trio"
+
+## Lo que se ve encendido: lo que se tiene o, en Colecciones, todo.
+func lit(id: String) -> bool:
+	return collection or levels.get(id, 0) > 0
 
 func _ready() -> void:
 	name = "StickerBook"
@@ -60,7 +66,7 @@ func _ready() -> void:
 	panel.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	panel.mouse_filter = Control.MOUSE_FILTER_STOP
 	add_child(panel)
-	caption("STICKERS DEL TERMO", Rect2(32, 22, PANEL.size.x - 64, 40), 28, GOLD)
+	caption("STICKERS" if collection else "STICKERS DEL TERMO", Rect2(32, 22, PANEL.size.x - 64, 40), 28, GOLD)
 	var y := 86.0
 	for id in Stickers.NAMES:
 		rows[id] = make_row(id, Vector2(36, y))
@@ -110,7 +116,7 @@ static func row_style(chosen: bool, owned: bool) -> StyleBoxFlat:
 	return style
 
 func make_row(id: String, pos: Vector2) -> Button:
-	var owned: bool = levels.get(id, 0) > 0
+	var owned: bool = lit(id)
 	var row := Button.new()
 	row.name = "Row_" + id
 	row.position = pos
@@ -137,7 +143,7 @@ func make_row(id: String, pos: Vector2) -> Button:
 	title.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	row.add_child(title)
 	var sub := Label.new()
-	sub.text = "Nivel %d" % levels[id] if owned else "Sin conseguir"
+	sub.text = per_level_text(id) if collection else ("Nivel %d" % levels[id] if owned else "Sin conseguir")
 	sub.position = Vector2(82, 40)
 	sub.size = Vector2(190, 24)
 	sub.add_theme_font_override("font", Tip.pixel_font())
@@ -145,7 +151,7 @@ func make_row(id: String, pos: Vector2) -> Button:
 	sub.add_theme_color_override("font_color", GOLD if owned else DIM)
 	sub.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	row.add_child(sub)
-	if owned:
+	if owned and not collection:
 		var data := StickerTip.effect(id, levels[id], catalog)
 		var total := Label.new()
 		total.text = "" if data.is_empty() else "+%s · +%s" % [StickerTip.number(data.points), StickerTip.number(data.multiplier_addition)]
@@ -190,12 +196,18 @@ func build_detail() -> void:
 	effect_label.vertical_alignment = VERTICAL_ALIGNMENT_TOP
 	effect_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 
+## Lo que suma cada nivel, en una línea corta («Por nivel: +3 · +0.5»).
+func per_level_text(id: String) -> String:
+	if not Stickers.defined(id, catalog): return "Sin definir"
+	return "Por nivel: +%s · +%s" % [StickerTip.number(catalog[id].points_per_level), StickerTip.number(catalog[id].multiplier_per_level)]
+
 ## Texto de las mejoras: lo que da ahora y lo que daría con un nivel más.
 func upgrades_text(id: String) -> String:
 	var level: int = levels.get(id, 0)
 	if not Stickers.defined(id, catalog): return "MEJORAS\nEfectos pendientes de definición."
 	var data: Dictionary = catalog[id]
 	var per_level := "+%s puntos y +%s mult. por nivel" % [StickerTip.number(data.points_per_level), StickerTip.number(data.multiplier_per_level)]
+	if collection: return "MEJORAS\nCada nivel suma %s\nCada copia que comprás sube un nivel." % per_level.trim_suffix(" por nivel")
 	if level <= 0: return "MEJORAS\nCada nivel suma %s.\nConseguilo en la tienda." % per_level
 	var now := StickerTip.effect(id, level, catalog)
 	var next := StickerTip.effect(id, level + 1, catalog)
@@ -204,14 +216,14 @@ func upgrades_text(id: String) -> String:
 func select(id: String) -> void:
 	selected = id
 	for key in rows:
-		var owned: bool = levels.get(key, 0) > 0
+		var owned: bool = lit(key)
 		rows[key].add_theme_stylebox_override("normal", row_style(key == id, owned))
-	var owned_now: bool = levels.get(id, 0) > 0
+	var owned_now: bool = lit(id)
 	big_sticker.sticker_id = id
 	big_sticker.level = maxi(1, levels.get(id, 1))
 	big_sticker.modulate = Color.WHITE if owned_now else Color(0.35, 0.35, 0.4, 0.8)
 	big_sticker.queue_redraw()
-	level_label.text = "NIVEL %d" % levels[id] if owned_now else "SIN CONSEGUIR"
+	level_label.text = Stickers.NAMES[id].to_upper() if collection else ("NIVEL %d" % levels[id] if owned_now else "SIN CONSEGUIR")
 	level_label.add_theme_color_override("font_color", GOLD if owned_now else DIM)
 	upgrades_label.text = upgrades_text(id)
 	effect_label.text = "QUÉ HACE\n" + CATEGORY_TEXT.get(id, "")

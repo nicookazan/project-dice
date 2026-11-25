@@ -10,6 +10,7 @@ const SaveTests = preload("res://tests/save_tests.gd")
 const CampaignTests = preload("res://tests/campaign_tests.gd")
 const StartMenu = preload("res://scripts/start_menu.gd")
 const EncounterLobby = preload("res://scripts/encounter_lobby.gd")
+const Coins = preload("res://scripts/coins.gd")
 
 static func reward_game():
 	var game = Game.new(920)
@@ -156,11 +157,31 @@ static func _menu(scene, check: Callable) -> void:
 	check.call(scene.background.copa_hits.all(func(hit): return not hit.visible), "Menú: las estrellas de la copa no responden")
 	UI.find_button(scene.ui, "Colecciones").pressed.emit()
 	check.call(scene.menu_panel == "collections" and scene.ui.find_child("CollectionCoins", true, false) != null and scene.ui.find_child("CollectionStickers", true, false) != null, "Colecciones: secciones en el paño del medio")
-	check.call(StartMenu.coins_text().count("\n") >= 70 and "Trío" in StartMenu.stickers_text(), "Colecciones: monedas y stickers con nombre y descripción")
 	var snapshot: Dictionary = scene.game.snapshot()
+	scene.ui.find_child("CollectionStickers", true, false).pressed.emit()
+	var book = scene.ui.find_child("StickerBook", true, false)
+	check.call(book != null and book.collection and book.rows.size() == 6 and book.upgrades_label.text.begins_with("MEJORAS\nCada nivel suma") and book.level_label.text == "TRÍO", "Colecciones: Stickers abre el álbum con todos los stickers encendidos")
+	book.free()
 	scene.ui.find_child("CollectionCoins", true, false).pressed.emit()
-	check.call(scene.detail.visible and scene.game.snapshot() == snapshot, "Colecciones: mirar no cambia nada")
-	scene.detail.hide()
+	var shelf = scene.ui.find_child("CoinShelf", true, false)
+	var pages: int = shelf.page_count() if shelf != null else 0
+	var seen: Array = []
+	for page in range(pages):
+		shelf.show_page(page)
+		for child in shelf.shelf_layer.get_children():
+			if child is Button: seen.append(String(child.name).trim_prefix("Coin_"))
+	check.call(shelf != null and pages == ceili(Coins.DATA.size() / 18.0) and seen.size() == Coins.DATA.size() and seen.all(func(id): return Coins.DATA.has(id)), "Colecciones: los estantes muestran todas las monedas, de a páginas")
+	shelf.show_page(0)
+	check.call(shelf.left_arrow.disabled and not shelf.right_arrow.disabled, "Colecciones: en la primera página solo anda la flecha derecha")
+	shelf.right_arrow.pressed.emit()
+	check.call(shelf.page == 1 and not shelf.left_arrow.disabled and shelf.page_label.text == "Página 2 / %d" % pages, "Colecciones: la flecha pasa de página")
+	shelf.show_page(pages - 1)
+	check.call(shelf.right_arrow.disabled, "Colecciones: en la última página la flecha derecha se apaga")
+	var last_id: String = Coins.DATA.keys()[-1]
+	shelf.select(last_id)
+	check.call(shelf.name_label.text == Coins.definition(last_id).name and shelf.description_label.text == Coins.definition(last_id).description, "Colecciones: elegir una moneda muestra su nombre y lo que hace")
+	shelf.free()
+	check.call(scene.game.snapshot() == snapshot, "Colecciones: mirar no cambia nada")
 	scene.ui.find_child("PanelBack", true, false).pressed.emit()
 	check.call(scene.menu_panel == "", "Colecciones: Volver cierra el paño")
 	UI.find_button(scene.ui, "Nueva partida").pressed.emit()

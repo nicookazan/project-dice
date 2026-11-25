@@ -8,6 +8,8 @@ const Coins = preload("res://scripts/coins.gd")
 const Stickers = preload("res://scripts/stickers.gd")
 const StickerBook = preload("res://scripts/sticker_book.gd")
 const ItemTooltip = preload("res://scripts/item_tooltip.gd")
+const CoinShelf = preload("res://scripts/coin_shelf.gd")
+const ValidationProfile = preload("res://scripts/validation_profile.gd")
 
 ## Paños de la mesa (coordenadas lógicas 1440 × 900), dentro del borde dorado. El izquierdo tiene el costado inclinado.
 const PANO1 := Rect2(350, 320, 340, 330)
@@ -104,8 +106,8 @@ static func _collections(host, menu: Control) -> void:
 	var sections := [
 		["CollectionDice", "Dados y gemas", host.show_dice_gallery],
 		["CollectionComponents", "Materiales y elementos", host.show_component_gallery],
-		["CollectionStickers", "Stickers", func(): host.present_detail("Colecciones · Stickers", stickers_text())],
-		["CollectionCoins", "Monedas", func(): host.present_detail("Colecciones · Monedas", coins_text())]]
+		["CollectionStickers", "Stickers", func(): open_stickers(host)],
+		["CollectionCoins", "Monedas", func(): open_coins(host)]]
 	var first: Button
 	for index in sections.size():
 		var section: Array = sections[index]
@@ -115,18 +117,23 @@ static func _collections(host, menu: Control) -> void:
 	_back(host, menu, "")
 	first.grab_focus()
 
-static func stickers_text() -> String:
-	var lines: Array = ["Se pegan en el termo y potencian una categoría. Cada copia sube un nivel.", ""]
-	for id in Stickers.NAMES: lines.append(StickerBook.CATEGORY_TEXT.get(id, Stickers.NAMES[id]))
-	return "\n".join(lines)
+## Stickers: el álbum del termo en modo colección (todos encendidos, con lo que da cada nivel).
+static func open_stickers(host) -> Control:
+	if is_instance_valid(host.sticker_book): return host.sticker_book
+	var book := StickerBook.new()
+	book.collection = true
+	book.setup({}, ValidationProfile.stickers(), "trio")
+	host.sticker_book = book
+	host.ui.add_child(book)
+	return book
 
-static func coins_text() -> String:
-	var lines: Array = ["Todas las monedas del juego. Algunas se desbloquean con logros.", ""]
-	for id in Coins.DATA:
-		var coin: Dictionary = Coins.definition(id)
-		var locked := " · se desbloquea" if id in Coins.LOCKED else ""
-		lines.append("%s (%s%s): %s" % [coin.name, Coins.RARITY_NAMES.get(coin.get("rarity", "common"), ""), locked, coin.description])
-	return "\n".join(lines)
+## Monedas: estantes con todas las monedas, de a páginas.
+static func open_coins(host) -> Control:
+	var existing = host.ui.find_child("CoinShelf", false, false)
+	if existing != null: return existing
+	var shelf := CoinShelf.new()
+	host.ui.add_child(shelf)
+	return shelf
 
 static func _centered(host, parent: Node, text: String, rect: Rect2, size: int, color: Color) -> Label:
 	var node: Label = host.label(parent, text, rect.position, size, color, rect.size.x)
