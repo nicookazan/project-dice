@@ -139,3 +139,12 @@ Renovar actúa solo sobre la sección elegida, repone vacíos y vuelve a sortear
 El jefe disponible prohíbe generala; cinco iguales se pueden dividir en trío y par. Doble par sigue permitido si la selección cumple su regla.
 
 Etapa de monedas (noviembre de 2026): el cuarto espacio de monedas de la tienda es un paquete de 2 (se elige 1) o de 5 (se eligen 2) y se compra aun con el inventario lleno, reemplazando monedas propias si no hay lugar. U09 Relanzo total, U12 Voltear dado y U14 Escudo de jefe (una vez por partida) están en juego. Detalle y valores provisionales en [monedas nuevas](MONEDAS-NUEVAS.md).
+
+## Recompensas por encuentro (25/11/2026, a prueba)
+
+Después del cobro, cada encuentro ganado (menos el último de la versión) da una recompensa gratis, en una ventana propia (fase `bonus`, entre el cobro y la selección o la tienda del jefe):
+
+- **Rival:** una mejora de número o un cambio de cara, sorteada con los mismos pesos que la tienda. El cambio de cara pide elegir dado y cara.
+- **Jefe (también el guardián):** una gema (esmeralda, zafiro, rubí o diamante, al azar), que va al dado que se elija.
+
+Se puede **tomar** o **dejar**. El sorteo usa un azar propio (semilla de la partida, nivel y encuentro): no cambia los dados ni la tienda y es el mismo al recargar. Las gemas ya no se venden en la tienda; las mejoras de número y los cambios de cara siguen a la venta. No hay recompensas en el tutorial ni en partidas sin tablas de balance. Código: `Game.pending_reward`, `_draw_reward`, `take_reward`, `skip_reward`; ventana: `main.gd: render_reward_choice`.

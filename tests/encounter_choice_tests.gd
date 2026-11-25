@@ -24,6 +24,12 @@ static func reward_game():
 	game.close_encounter()
 	return game
 
+## Continuar del cobro y dejar la recompensa (si hay): el camino de antes, hasta la selección o la tienda del jefe.
+static func past_reward(game) -> bool:
+	var ok: bool = game.continue_after_reward()
+	if game.phase == "bonus": ok = game.skip_reward()
+	return ok
+
 static func run(scene, check: Callable) -> void:
 	scene.detail.hide()
 	scene.cancel_navigation()
@@ -54,12 +60,31 @@ static func _payout(scene, check: Callable) -> void:
 	go = scene.ui.find_child("ContinueReward", true, false)
 	var cash: int = scene.game.cash
 	go.pressed.emit()
-	check.call(scene.game.phase == "lobby" and scene.game.rival == 0 and scene.game.cash == cash, "Cobro: Continuar lleva a la selección sin volver a cobrar")
+	# Recompensa del rival (25/11): mejora de número o cambio de cara, gratis; se puede tomar o dejar.
+	var reward: Dictionary = scene.game.pending_reward
+	check.call(scene.game.phase == "bonus" and reward.source == "rival" and reward.offer.kind in ["global", "face"] and scene.ui.find_child("RewardChoice", true, false) != null and scene.game.cash == cash, "Recompensa: vencer a un rival da una mejora de número o un cambio de cara, sin cobrar de nuevo")
+	var again = reward_game()
+	check.call(again.pending_reward == reward, "Recompensa: misma partida, misma recompensa (azar propio, reproducible)")
+	scene.ui.find_child("SkipReward", true, false).pressed.emit()
+	check.call(scene.game.phase == "lobby" and scene.game.rival == 0 and scene.game.cash == cash and scene.game.pending_reward.is_empty(), "Cobro: Continuar y dejar la recompensa lleva a la selección sin volver a cobrar")
+	# Tomarla: se aplica gratis (con dado y cara si hace falta) y sigue a la selección.
+	var taker = reward_game()
+	taker.continue_after_reward()
+	var offer: Dictionary = taker.pending_reward.offer
+	if offer.kind == "face": taker.set_reward_target({"die_id": 2, "face_index": 0})
+	var points_before: Dictionary = taker.global_points.duplicate(true)
+	var taken: Dictionary = taker.take_reward()
+	check.call(taken.ok and taker.phase == "lobby" and taker.cash == cash and (taker.dice[2].faces[0] == offer.effect.number if offer.kind == "face" else taker.global_points != points_before), "Recompensa: tomarla la aplica gratis y sigue a la selección")
+	# Jefe: una gema, que va al dado elegido.
+	var boss = reward_game()
+	boss.rival = 2
+	boss.pending_reward = boss._draw_reward()
+	check.call(boss.pending_reward.is_empty() or (boss.pending_reward.source == "boss" and boss.pending_reward.offer.kind == "shell"), "Recompensa: vencer a un jefe da una gema")
 
 ## PS4: selección de encuentro.
 static func _lobby(scene, check: Callable) -> void:
 	scene.game = reward_game()
-	scene.game.continue_after_reward()
+	past_reward(scene.game)
 	scene.render()
 	var play = scene.ui.find_child("PlayNext", true, false)
 	var shop = scene.ui.find_child("OpenShop", true, false)
@@ -86,7 +111,7 @@ static func _lobby(scene, check: Callable) -> void:
 static func _shop_reentry(check: Callable) -> void:
 	var game = reward_game()
 	game.cash = 50
-	game.continue_after_reward()
+	past_reward(game)
 	check.call(game.open_shop() and game.phase == "shop", "Tienda: se abre desde la selección")
 	check.call(game.refresh_shop("coins"), "Tienda: renovar una sección")
 	var stock: Dictionary = game.shop_state.duplicate(true)
@@ -107,8 +132,8 @@ static func _flow_rules(check: Callable) -> void:
 	repair.phase = "repair"
 	repair.repair_resolution = {"status": "pending", "available_ids": [0], "next_phase": "reward"}
 	var before: Dictionary = repair.snapshot()
-	check.call(not repair.skip_shop() and not repair.continue_after_reward() and repair.snapshot() == before, "Flujo: la reparación pendiente no se saltea")
-	check.call(repair.resolve_repairs([]) and repair.phase == "reward" and repair.continue_after_reward() and repair.phase == "lobby" and repair.dice[0].shell_broken, "Flujo: reparación → cobro → selección")
+	check.call(not repair.skip_shop() and not past_reward(repair) and repair.snapshot() == before, "Flujo: la reparación pendiente no se saltea")
+	check.call(repair.resolve_repairs([]) and repair.phase == "reward" and past_reward(repair) and repair.phase == "lobby" and repair.dice[0].shell_broken, "Flujo: reparación → cobro → selección")
 	var campaign = Game.new(921)
 	campaign.begin_campaign(921)
 	Profile.apply(campaign)
@@ -127,7 +152,7 @@ static func _flow_rules(check: Callable) -> void:
 		if not campaign.score_hand() or not campaign.close_encounter(): break
 		wins += 1
 		if campaign.phase == "repair": campaign.resolve_repairs([])
-		if campaign.phase == "reward": campaign.continue_after_reward()
+		if campaign.phase == "reward": past_reward(campaign)
 		# Tras cada jefe se entra sí o sí a la tienda (25/11); al salir queda la selección.
 		if campaign.phase == "shop":
 			shops += 1
@@ -147,9 +172,9 @@ static func _flow_rules(check: Callable) -> void:
 		boss.close_encounter()
 		if boss.phase == "repair": boss.resolve_repairs([])
 		if i < 2:
-			boss.continue_after_reward()
+			past_reward(boss)
 			boss.play_next()
-	check.call(boss.phase == "reward" and boss.rival == 2 and boss.continue_after_reward() and boss.phase == "shop" and not boss.shop_state.is_empty(), "Flujo: después del jefe, Continuar entra sí o sí a la tienda")
+	check.call(boss.phase == "reward" and boss.rival == 2 and past_reward(boss) and boss.phase == "shop" and not boss.shop_state.is_empty(), "Flujo: después del jefe, Continuar entra sí o sí a la tienda")
 	check.call(boss.exit_shop() and boss.phase == "lobby" and boss.lobby_next_index() == -1 and boss.shop_available() and EncounterLobby.next_encounter(boss).line.begins_with("Nivel 2 · Rival 1/3"), "Flujo: al salir de esa tienda, la selección anuncia el primer rival del nivel siguiente")
 	check.call(boss.play_next() and boss.level_index == 1 and boss.rival == 0 and boss.phase == "play", "Flujo: desde ahí se juega el primer encuentro del nivel siguiente")
 
@@ -249,8 +274,9 @@ static func _table_and_shop(scene, check: Callable) -> void:
 	for die in UI.dice_in(scene.ui):
 		if die.locked and ungroup != null and ungroup.get_global_rect().intersects(die.get_global_rect()): overlaps = true
 	check.call(ungroup != null and not overlaps, "Mesa: Desarmar queda arriba de los dados del grupo, sin taparlos")
-	var options: Button = scene.ui.find_child("TableOptions", true, false)
-	check.call(options != null and options.text == "Opciones" and UI.find_button(scene.ui, "Ayuda") == null, "Mesa: donde estaba Ayuda ahora está Opciones")
+	var options: Button = scene.ui.find_child("TableMenu", true, false)
+	var top_menu: Array = scene.ui.find_children("*", "Button", true, false).filter(func(b): return b.text == "Menú" and b.position.y < 100)
+	check.call(options != null and options.text == "Menú" and UI.find_button(scene.ui, "Ayuda") == null and top_menu.is_empty(), "Mesa: en la esquina de la libreta está el Menú de la partida (y ya no arriba)")
 	var pixel := func(control: Control) -> bool:
 		var font = control.get_theme_font("font")
 		return font is SystemFont and font.antialiasing == TextServer.FONT_ANTIALIASING_NONE
@@ -258,12 +284,12 @@ static func _table_and_shop(scene, check: Callable) -> void:
 	var note_label: Label = note.find_children("*", "Label", true, false)[0]
 	check.call(pixel.call(options) and pixel.call(scene.ui.find_child("Ungroup_0", true, false)) and not pixel.call(note_label), "Mesa: los textos de la partida van en letra pixel, menos la libreta")
 	options.pressed.emit()
-	check.call(scene.detail.visible and scene.detail.title == "Opciones y controles", "Mesa: el botón abre Opciones")
-	scene.detail.hide()
+	check.call(scene.ui.has_node("GameMenu"), "Mesa: el botón de la esquina abre el menú de la partida")
+	scene.close_game_menu()
 	scene.game = reward_game()
-	scene.game.continue_after_reward()
+	past_reward(scene.game)
 	scene.render()
-	check.call(scene.ui.find_child("TableOptions", true, false) == null and scene.ui.find_child("LobbyOptions", true, false) != null, "Selección: Opciones no se repite en la esquina")
+	check.call(scene.ui.find_child("TableMenu", true, false) == null and scene.ui.find_child("LobbyOptions", true, false) != null, "Selección: el menú no se repite en la esquina")
 	scene.game.open_shop()
 	scene.render()
 	check.call(not UI.text_in(scene.ui, scene.game.message) and scene.ui.find_child("ShopError", true, false) == null, "Tienda: no queda texto de estado abajo")

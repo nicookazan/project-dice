@@ -95,10 +95,13 @@ static func run(scene, check: Callable) -> Dictionary:
 			# Después del jefe la próxima parada es sí o sí la tienda (25/11); al volver a la mesa se juega el nivel siguiente.
 			level_boundaries += 1
 			uninterrupted = Store.new("res://test-results/unused.json").restore_game(scene.checkpoint_data())
-			uninterrupted.continue_after_reward()
+			take_reward_model(uninterrupted)
 			uninterrupted.exit_shop()
 			uninterrupted.play_next()
 			Flow.click(scene, "Continuar")
+			check.call(scene.game.phase == "bonus" and scene.game.pending_reward.source == "boss" and scene.game.pending_reward.offer.kind == "shell", "Campaign: beating the boss gives a gem as reward")
+			take_reward_ui(scene)
+			check.call(scene.game.dice.any(func(d): return d.shell != "" and not d.shell_broken), "Campaign: the boss gem goes on the chosen die, free")
 			check.call(scene.game.phase == "shop" and scene.game.level_index == int(encounter / 3), "Campaign: after the boss the next stop is the shop")
 			Flow.click(scene, "Volver a la mesa →")
 			check.call(scene.game.phase == "lobby" and scene.game.lobby_next_index() == -1, "Campaign: leaving that shop shows the selection for the next level")
@@ -109,6 +112,10 @@ static func run(scene, check: Callable) -> Dictionary:
 			check.call(scene.background.environment_id == scene.game.campaign[scene.game.level_index].environment, "Campaign UI: environment changes with new level")
 		else:
 			Flow.click(scene, "Continuar")
+			check.call(scene.game.phase == "bonus" and scene.game.pending_reward.source == "rival" and scene.game.pending_reward.offer.kind in ["global", "face"], "Campaign: beating a rival gives a number upgrade or face change as reward")
+			var cash_before_reward: int = scene.game.cash
+			take_reward_ui(scene)
+			check.call(scene.game.cash == cash_before_reward, "Campaign: taking the reward is free")
 			check.call(scene.game.phase == "lobby" and not UI.find_button(scene.ui, "Ir a la tienda").disabled, "Campaign: after a rival the selection offers the shop")
 			Flow.click(scene, "Ir a la tienda")
 			if encounter == 0:
@@ -131,6 +138,7 @@ static func run(scene, check: Callable) -> Dictionary:
 	# El guardián (encuentro 21) ya no cierra la versión: sigue La Semilla (docs/LA-SEMILLA.md).
 	check.call(scene.game.phase == "reward" and scene.game.level_index == 6 and scene.game.rival == 2 and scene.game.completed_encounters.size() == 21 and scene.game.is_seed_shop_visit(), "Campaign: the guardian (encounter 21) leads to La Semilla")
 	Flow.click(scene, "Continuar")
+	take_reward_ui(scene)
 	# Tras el guardián también se entra sí o sí a la tienda: la mano con el maletín.
 	check.call(scene.game.phase == "shop" and scene.game.is_seed_shop_visit(), "Campaign: after the guardian the next stop is the hand with the briefcase")
 	Flow.click(scene, "Volver a la mesa →")
@@ -232,3 +240,33 @@ static func first_campaign_state():
 	var game = Game.new(604)
 	game.begin_campaign(604)
 	return game
+
+## Toma la recompensa del encuentro por la interfaz: el primer dado y, si es un cambio de cara, su primera cara.
+static func take_reward_ui(scene) -> void:
+	if scene.game.phase != "bonus": return
+	var target := first_valid_target(scene.game)
+	if target.has("die_id"): Flow.click_named(scene, "RewardDie_%d" % target.die_id)
+	if target.has("face_index"): Flow.click_named(scene, "RewardFace_%d" % target.face_index)
+	Flow.click_named(scene, "TakeReward")
+
+## Primer dado (y cara) donde la recompensa se puede tomar; {} si no necesita destino. No cambia la partida.
+static func first_valid_target(game) -> Dictionary:
+	var kind: String = game.pending_reward.offer.kind
+	if kind not in ["shell", "face", "material", "element"]: return {}
+	var saved: Dictionary = game.pending_reward.target.duplicate(true)
+	for die_id in range(5):
+		for face_index in (range(6) if kind == "face" else [-1]):
+			var target := {"die_id": die_id} if face_index < 0 else {"die_id": die_id, "face_index": face_index}
+			game.set_reward_target(target)
+			var ok: bool = game.reward_preview().ok
+			game.pending_reward.target = saved.duplicate(true)
+			if ok: return target
+	return {}
+
+## Lo mismo sobre el modelo (para comparar con la partida recargada).
+static func take_reward_model(game) -> void:
+	game.continue_after_reward()
+	if game.phase != "bonus": return
+	var target := first_valid_target(game)
+	if not target.is_empty(): game.set_reward_target(target)
+	game.take_reward()

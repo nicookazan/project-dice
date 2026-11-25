@@ -109,7 +109,7 @@ var offers: Array:
 	set(value):
 		shop_state = Shop.empty_state()
 		shop_state.coins.configured = true
-		for i in range(mini(value.size(), 4)):
+		for i in range(mini(value.size(), Shop.SIZES.coins)):
 			if value[i] == "": continue
 			shop_offer_sequence += 1
 			shop_state.coins.slots[i] = {"offer_id": str(shop_offer_sequence), "kind": "coin", "price": Coins.definition(value[i]).get("price", 0), "effect": {"coin_id": value[i]}}
@@ -127,6 +127,10 @@ var sticker_offers: Dictionary = {}
 var sticker_offer_sequence := 0
 var pending_sticker_pack: Dictionary = {}
 var pending_purchase: Dictionary = {}
+## Recompensa del encuentro ganado (25/11/2026, a prueba): un rival da una mejora de número o un cambio de cara; un jefe,
+## una gema. Es gratis y se toma (o se deja) en la fase «bonus», entre el cobro y lo que sigue. {} si no hay.
+## {"section", "offer", "target", "source": "rival" | "boss"}.
+var pending_reward: Dictionary = {}
 var purchase_receipts: Dictionary = {}
 var last_purchase_result: Dictionary = {}
 
@@ -185,6 +189,7 @@ func _start_encounter() -> void:
 	repair_resolution = {}
 	sticker_offers = {}
 	pending_purchase = {}
+	pending_reward = {}
 	purchase_receipts = {}
 	last_purchase_result = {}
 	for die in dice:
@@ -238,7 +243,8 @@ func snapshot() -> Dictionary:
 		"coin_inventory": coin_inventory, "coin_instance_sequence": coin_instance_sequence,
 		"shop_tables": shop_tables, "shop_state": shop_state, "shop_offer_sequence": shop_offer_sequence,
 		"shop_gifts": shop_gifts, "seeded": seeded,
-		"pending_purchase": pending_purchase, "purchase_receipts": purchase_receipts, "last_purchase_result": last_purchase_result
+		"pending_purchase": pending_purchase, "purchase_receipts": purchase_receipts, "last_purchase_result": last_purchase_result,
+		"pending_reward": pending_reward
 	}.duplicate(true)
 
 func _record_event(type: String, payload: Dictionary) -> Dictionary:
@@ -499,7 +505,7 @@ func route() -> Array:
 		if i < rival or phase == "won": status = "Superado"
 		elif i == rival:
 			status = "Derrota" if phase == "lost" else "Actual"
-			if phase in ["reward", "repair", "lobby", "shop", "purchase_target", "sticker_choice", "coin_choice"]: status = "Superado"
+			if phase in ["reward", "repair", "bonus", "lobby", "shop", "purchase_target", "sticker_choice", "coin_choice"]: status = "Superado"
 		result.append({"index": i, "name": "Jefe" if is_boss(i) else "Rival %d" % (i + 1), "target": level_encounters[i].target, "status": status, "rule": boss_rule.name if is_boss(i) else "Sin regla especial"})
 	return result
 
@@ -801,6 +807,7 @@ func close_encounter() -> bool:
 		"available_ids": broken_ids, "selected_ids": [], "cost": 0,
 		"cash_after_reward": cash, "next_phase": phase}
 	if not broken_ids.is_empty(): phase = "repair"
+	pending_reward = _draw_reward()
 	message = ("La Semilla quedó atrás." if is_seed() else "Nivel completado.") if phase == "won" else "Encuentro ganado. Cobro acreditado una sola vez."
 	_record_event(ENCOUNTER_CLOSED, {"points": points, "target": target(),
 		"reward": payout, "cash_before": cash_before, "cash_after": cash})
@@ -893,11 +900,71 @@ func shop_available() -> bool:
 func continue_after_reward() -> bool:
 	if phase != "reward" or not has_next_encounter(): return false
 	var after_boss: bool = is_boss(rival)
+	# Primero la recompensa del encuentro (si hay): se toma o se deja y después sigue el camino de siempre.
+	if not pending_reward.is_empty():
+		phase = "bonus"
+		message = "Recompensa: tomala gratis o dejala."
+		return true
+	return _leave_reward(after_boss)
+
+## Después del cobro (y de la recompensa): selección de encuentro, o la tienda sí o sí tras un jefe.
+func _leave_reward(after_boss: bool) -> bool:
 	if rival + 1 >= level_encounters.size() and not SHOP_AFTER_BOSS: return _advance_encounter()
 	phase = "lobby"
 	message = "Elegí: jugar contra el siguiente rival o pasar por la tienda."
 	# Tras el jefe no se elige: se entra a la tienda (si no se pudiera abrir, queda la selección con la tienda a mano).
 	if after_boss: open_shop()
+	return true
+
+## Sortea la recompensa del encuentro recién ganado con un azar propio (semilla de la partida, nivel y encuentro): no
+## toca el azar de los dados ni de la tienda, y es la misma al recargar. Sin tablas (partida sin balance) no hay.
+func _draw_reward() -> Dictionary:
+	if tutorial or not has_next_encounter(): return {}
+	var draw := RandomNumberGenerator.new()
+	draw.seed = hash([run_seed, level_index, rival, "recompensa"])
+	var boss: bool = is_boss()
+	var offer: Dictionary = {}
+	if boss:
+		var gems: Array = shop_tables.get("gems", [])
+		if gems.is_empty(): return {}
+		offer = Shop.pick(gems, draw)
+		offer.erase("weight")
+	else:
+		var generated := Shop.generate("numbers", shop_tables, sticker_catalog, passives, draw.state, 0)
+		if not generated.get("valid", false) or generated.section.slots.is_empty() or generated.section.slots[0].is_empty(): return {}
+		offer = generated.section.slots[0]
+	offer["offer_id"] = "recompensa_%d_%d" % [level_index, rival]
+	return {"section": "components" if boss else "numbers", "offer": offer, "target": {}, "source": "boss" if boss else "rival"}
+
+func set_reward_target(target: Dictionary) -> bool:
+	if phase != "bonus" or pending_reward.is_empty(): return false
+	var id = target.get("die_id")
+	if not id is int or id < 0 or id >= dice.size(): return false
+	if target.has("face_index") and (not target.face_index is int or target.face_index < 0 or target.face_index >= 6): return false
+	pending_reward.target = target.duplicate(true)
+	return true
+
+## Lo que haría tomar la recompensa con el dado (y la cara) elegidos; gratis.
+func reward_preview() -> Dictionary:
+	if phase != "bonus" or pending_reward.is_empty(): return Purchases.error("invalid_context", "No hay una recompensa pendiente.")
+	return Purchases.prepare(pending_reward.section, pending_reward.offer, pending_reward.target, dice, global_points, cup.stickers, sticker_catalog, coin_inventory, coin_instance_sequence, cash, debug_mode, credit_limit(), 0)
+
+func take_reward() -> Dictionary:
+	var plan := reward_preview()
+	if not plan.ok: return plan
+	_apply_changes(plan.changes)
+	var after_boss: bool = pending_reward.source == "boss"
+	pending_reward = {}
+	_leave_reward(after_boss)
+	message = "Recompensa tomada."
+	return plan.duplicate(true)
+
+func skip_reward() -> bool:
+	if phase != "bonus" or pending_reward.is_empty(): return false
+	var after_boss: bool = pending_reward.source == "boss"
+	pending_reward = {}
+	_leave_reward(after_boss)
+	message = "Dejaste la recompensa."
 	return true
 
 ## Jugar el encuentro que muestra la selección. Si el siguiente es de otro nivel, se entra al nivel y se juega enseguida.
@@ -921,6 +988,8 @@ func exit_shop() -> bool:
 ## los descuentos de esa visita: entrar y salir no consume azar.
 func open_shop() -> bool:
 	if phase not in ["reward", "lobby"]: return false
+	# Abrir desde el cobro (camino viejo, lo usan las pruebas) deja la recompensa sin tomar.
+	if phase == "reward": pending_reward = {}
 	var from_lobby := phase == "lobby"
 	if from_lobby and not shop_state.is_empty():
 		phase = "shop"
@@ -1051,15 +1120,19 @@ func purchase_offer(section: String, id: String) -> Dictionary:
 	if not plan.ok: return plan
 	return _commit_purchase(section, offer, plan)
 
-func _commit_purchase(section: String, offer: Dictionary, plan: Dictionary) -> Dictionary:
-	# No awaits: validation, effect, payment and stock consumption form one commit.
-	var updates: Dictionary = plan.changes
+## Aplica los cambios de un plan de compra o de recompensa (dado, mejoras, monedas, stickers). No cobra ni toca stock.
+func _apply_changes(updates: Dictionary) -> void:
 	if updates.has("die_fields"): dice[updates.die_id].merge(updates.die_fields.duplicate(true), true)
 	if updates.has("global_points"): global_points = updates.global_points
 	if updates.has("coin_inventory"):
 		coin_inventory = updates.coin_inventory
 		coin_instance_sequence = updates.coin_sequence
 	if updates.has("stickers"): cup.stickers = updates.stickers
+
+func _commit_purchase(section: String, offer: Dictionary, plan: Dictionary) -> Dictionary:
+	# No awaits: validation, effect, payment and stock consumption form one commit.
+	var updates: Dictionary = plan.changes
+	_apply_changes(updates)
 	if not debug_mode: cash -= plan.cost
 	phase = "shop"
 	commit_shop_offer(section, offer.offer_id)
@@ -1168,6 +1241,7 @@ func skip_shop() -> bool:
 	return _advance_encounter()
 
 func _advance_encounter() -> bool:
+	pending_reward = {}
 	if rival == level_encounters.size() - 1:
 		level_index += 1
 		_enter_campaign_level()

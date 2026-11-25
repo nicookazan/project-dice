@@ -118,7 +118,7 @@ static func run(scene, check: Callable) -> Dictionary:
 	click(scene, "Empezar primer encuentro")
 	check.call(scene.game.phase == "play" and scene.game.rival == 0 and not scene.game.begin_level(), "Flow: only first encounter starts, intro continuation is idempotent")
 	before = scene.game.snapshot()
-	check.call(UI.find_button(scene.ui, "Recorrido · M") == null and UI.find_button(scene.ui, "Abandonar partida") == null and scene.ui.find_child("TableOptions", true, false) != null and UI.find_button(scene.ui, "Menú") != null, "Flow: table keeps the Menú button and Opciones in the notebook corner; route and abandon are not loose on screen")
+	check.call(UI.find_button(scene.ui, "Recorrido · M") == null and UI.find_button(scene.ui, "Abandonar partida") == null and scene.ui.find_child("TableMenu", true, false) != null, "Flow: the table keeps only the Menú button (notebook corner); route and abandon are not loose on screen")
 	UI.find_button(scene.ui, "Menú").pressed.emit()
 	check.call(scene.ui.has_node("GameMenu") and UI.find_button(scene.ui, "Seguir jugando") != null and UI.find_button(scene.ui, "Recorrido · M") != null and UI.find_button(scene.ui, "Opciones") != null and UI.find_button(scene.ui, "Abandonar partida") != null and UI.find_button(scene.ui, "Guardar y volver al menú") == null and scene.game.snapshot() == before, "Flow: Menú opens a panel with route, options and abandon (no save-and-exit) without changing state")
 	UI.find_button(scene.ui, "Seguir jugando").pressed.emit()
@@ -233,8 +233,8 @@ static func run(scene, check: Callable) -> Dictionary:
 	check.call(boss.route()[0].target == 40 and boss.route()[2].status == "Superado", "Flow: route is detached, fixed and marks all stops won")
 
 	# Fixed regression seed, generated dice and stock; repeat exclusively via UI controls.
-	# Semilla 10 desde el 25/11/2026: la sección de un uso cambió el sorteo de la tienda y la 9 ya no gana.
-	var seed_value := 10
+	# Semilla 18 desde el 25/11/2026: la tienda cambió de forma (de un uso aparte, tres monedas, sin paquete) y con ella el sorteo.
+	var seed_value := 18
 	var natural = Game.new(seed_value)
 	var expected: Array = play_run(natural)
 	check.call(natural.phase == "won", "Flow: ordinary generated dice and shop permit completing the level")
@@ -264,13 +264,19 @@ static func legacy(scene, caption: String) -> bool:
 	if caption == "Empezar primer encuentro": return click_named(scene, "PlayNext")
 	if caption == "Ir a la tienda →":
 		if scene.game.phase == "reward" and not click_named(scene, "ContinueReward"): return false
-		return click_named(scene, "OpenShop")
+		skip_bonus(scene)
+		return scene.game.phase == "shop" or click_named(scene, "OpenShop")
 	if caption == "Seguir sin tienda →":
 		if not click_named(scene, "ContinueReward"): return false
+		skip_bonus(scene)
 		return scene.game.phase != "lobby" or click_named(scene, "PlayNext")
 	# Salir de la tienda hacia el próximo encuentro: «Volver a la mesa» y después «Jugar contra…».
 	if not click_named(scene, "ShopAdvance"): return false
 	return click_named(scene, "PlayNext")
+
+## Los recorridos viejos no toman la recompensa del encuentro (25/11): la dejan, como hace `open_shop` desde el cobro.
+static func skip_bonus(scene) -> void:
+	if scene.game.phase == "bonus": click_named(scene, "SkipReward")
 
 static func click_named(scene, node_name: String) -> bool:
 	var control = scene.ui.find_child(node_name, true, false)

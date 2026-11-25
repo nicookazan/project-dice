@@ -42,6 +42,8 @@ func _initialize() -> void:
 	scene.render()
 	await capture("7-cobro")
 	press("ContinueReward")
+	await capture("7b-recompensa")
+	press("SkipReward")
 	await capture("8-seleccion-rival-2")
 	press("OpenShop")
 	await capture("9-tienda")

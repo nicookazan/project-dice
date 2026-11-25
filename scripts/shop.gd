@@ -6,9 +6,9 @@ const Gems = preload("res://scripts/gems.gd")
 const Elements = preload("res://scripts/elements.gd")
 const Numbers = preload("res://scripts/number_upgrades.gd")
 const Materials = preload("res://scripts/materials.gd")
-const SIZES = {"coins": 4, "single_use": 1, "components": 2, "numbers": 2, "stickers": 2, "cup": 0}
+const SIZES = {"coins": 3, "single_use": 1, "components": 2, "numbers": 2, "stickers": 2, "cup": 0}
 ## Secciones del maletín, en el orden en que se sortean (el orden fija el azar). Desde el 25/11/2026 (D20, opción B del
-## boceto): «coins» trae monedas pasivas sueltas y el paquete; «single_use», una moneda de un uso.
+## boceto): «coins» trae tres monedas pasivas sueltas (sin paquete desde el 25/11); «single_use», una de un uso.
 const SECTIONS = ["coins", "single_use", "components", "numbers", "stickers"]
 ## Secciones que venden monedas sueltas y de qué tipo son las sueltas de cada una.
 const COIN_TYPES = {"coins": "passive", "single_use": "consumable"}
@@ -19,9 +19,10 @@ static func default_tables() -> Dictionary:
 	var coins: Array = []
 	for id in Coins.catalog():
 		coins.append({"kind": "coin", "price": Coins.definition(id).price, "weight": 1.0, "effect": {"coin_id": id}})
-	return {"coins": coins, "components": [], "numbers": [], "stickers": [], "numeric_rarity_weights": {},
+	return {"coins": coins, "components": [], "numbers": [], "stickers": [], "gems": [], "numeric_rarity_weights": {},
 		"coin_type_weights": {"passive": 75.0, "consumable": 25.0},
-		"coin_packs": coin_pack_table(),
+		# Sin paquete de monedas en la tienda (25/11/2026, pedido del autor). `coin_pack_table()` queda para las pruebas.
+		"coin_packs": [],
 		"coin_rarity_weights": {"passive": {"common": 60.0, "rare": 28.0, "epic": 9.0, "legendary": 3.0}, "consumable": {"common": 70.0, "rare": 25.0, "epic": 5.0}}}
 
 static func empty_state() -> Dictionary:

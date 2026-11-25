@@ -143,3 +143,24 @@ static func single_use_v11(game: Dictionary) -> String:
 	if game.get("shop_state") is Dictionary and not game.shop_state.is_empty() and not game.shop_state.has("single_use"):
 		game.shop_state["single_use"] = {"slots": [{}], "configured": false}
 	return ""
+
+## v12 (25/11/2026): tres monedas sueltas sin paquete, gemas fuera de la tienda (recompensa de jefe) y recompensa
+## pendiente. Se recorta el stock de monedas a tres (sin re-sortear), las tablas guardadas pierden el paquete y pasan
+## sus gemas a `gems`, y la recompensa pendiente arranca vacía.
+static func rewards_v12(game: Dictionary) -> String:
+	if not game.has("pending_reward"): game["pending_reward"] = {}
+	if game.get("shop_tables") is Dictionary:
+		var tables: Dictionary = game.shop_tables
+		tables["coin_packs"] = []
+		var components: Array = tables.get("components", [])
+		if not tables.has("gems"): tables["gems"] = []
+		for entry in components.duplicate():
+			if entry is Dictionary and entry.get("kind") == "shell":
+				components.erase(entry)
+				var gem: Dictionary = entry.duplicate(true)
+				gem.price = 0
+				tables.gems.append(gem)
+	if game.get("shop_state") is Dictionary and game.shop_state.get("coins") is Dictionary:
+		var slots: Array = game.shop_state.coins.get("slots", [])
+		while slots.size() > 3: slots.pop_back()
+	return ""

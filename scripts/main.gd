@@ -1376,7 +1376,7 @@ func render() -> void:
 		finish_render()
 		return
 	# Cobro (D20): la libreta en blanco, sin dados ni botonera; «+$total» y Continuar salen en `render_result`.
-	if game.phase == "reward":
+	if game.phase in ["reward", "bonus"]:
 		render_notebook(true)
 		render_inventory()
 		render_seed()
@@ -1388,7 +1388,7 @@ func render() -> void:
 		render_shop()
 		finish_render()
 		return
-	button(ui, "Menú", Rect2(1220, 23, 185, 38), show_game_menu)
+	# El menú de la partida está en la esquina de la libreta (render_inventory), no arriba.
 	if game.phase not in ["shop", "purchase_target", "sticker_choice", "coin_choice"]: shop_section = "coins"
 	if game.phase not in ["sticker_choice", "coin_choice"]: pack_panel_open = true
 	render_notebook()
@@ -1431,6 +1431,7 @@ func finish_render() -> void:
 	# Ganarle a La Semilla no muestra cartel: la mesa se cae y vienen los créditos.
 	if game.phase in ["reward", "won", "lost", "repair"] and not (game.phase == "won" and background.finale_stage == "ending"): render_result()
 	elif game.phase == "purchase_target": render_purchase_target()
+	elif game.phase == "bonus": render_reward_choice()
 	elif game.phase == "sticker_choice":
 		if pack_panel_open: render_pack_choice()
 		else: button(ui, "Elegir sticker pendiente", Rect2(1045, 748, 355, 40), func():
@@ -1888,9 +1889,9 @@ func render_inventory() -> void:
 		if BossRules.suspended(game.boss_context(), "coin", stored):
 			label(use, "SUSP", Vector2(1, 43), 11, gold)
 			use.tooltip_text = "Suspendida por el jefe. No se consume y conserva su espacio."
-	# Opciones en la esquina de la libreta (D20); la ayuda sigue a mano desde Opciones y con la tecla de ayuda.
+	# El menú de la partida (Recorrido, Opciones, Abandonar…) en la esquina de la libreta (25/11, pedido del autor).
 	# En la selección de encuentro ya están Opciones y Abandonar sobre la libreta: no se repite.
-	if not game.in_lobby(): button(ui, "Opciones", Rect2(1273, 748, 120, 60), show_options).name = "TableOptions"
+	if not game.in_lobby(): button(ui, "Menú", Rect2(1273, 748, 120, 60), show_game_menu).name = "TableMenu"
 
 ## Línea «Total: …» para la ayuda de una moneda propia que acumula (Acumulada, Veterana, Racha, Gastada, Cazajefes);
 ## vacía para las demás. `instance`: id de la instancia equipada o de un uso.
@@ -2344,6 +2345,59 @@ func render_purchase_target() -> void:
 		game.cancel_purchase()
 		purchase_error = ""
 		render())
+
+## Recompensa del encuentro (fase «bonus»): la misma elección de dado (y cara) que en la tienda, pero gratis. Un rival
+## da una mejora de número o un cambio de cara; un jefe, una gema. «Dejarla» sigue sin tomarla.
+func render_reward_choice() -> void:
+	panel(ui, Rect2(0, 0, 1440, 900), Color(0.04, 0.06, 0.07, 0.84))
+	# Sin dado que elegir (mejora de número) la ventana es más baja.
+	var compact: bool = game.pending_reward.offer.kind not in Purchases.TARGETED
+	var modal := panel(ui, Rect2(290, 225, 860, 420) if compact else Rect2(290, 105, 860, 690), Color.TRANSPARENT)
+	modal.name = "RewardChoice"
+	modal.add_theme_stylebox_override("panel", ItemTooltip.skin())
+	modal.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	var reward: Dictionary = game.pending_reward
+	var offer: Dictionary = reward.offer
+	var text: Array = shop_offer_text(offer)
+	shop_caption(modal, "RECOMPENSA", Rect2(32, 20, 796, 34), 28, gold)
+	shop_caption(modal, "%s · gratis por vencer %s" % [text[0], "al jefe" if reward.source == "boss" else "al rival"], Rect2(32, 58, 796, 28), 18)
+	var icon_holder := Control.new()
+	icon_holder.position = Vector2(380, 92)
+	icon_holder.size = Vector2(100, 91)
+	modal.add_child(icon_holder)
+	shop_icon(icon_holder, offer, Rect2(0, 0, 100, 91))
+	var target: Dictionary = reward.target
+	var targeted: bool = offer.kind in Purchases.TARGETED
+	if targeted:
+		shop_caption(modal, "1. ELEGÍ UN DADO", Rect2(32, 190, 796, 26), 18, gold)
+		for id in range(5):
+			var die_id := id
+			var state: Dictionary = game.dice[id].duplicate(true)
+			if state.value == 0: state.value = state.faces[0]
+			purchase_die_choice(modal, "RewardDie_%d" % id, state, Rect2(72 + id * 146, 222, 132, 116), "DADO %d" % [id + 1], target.get("die_id", -1) == id, func():
+				game.set_reward_target({"die_id": die_id})
+				render())
+		if offer.kind == "face" and target.has("die_id"):
+			var die: Dictionary = game.dice[target.die_id]
+			shop_caption(modal, "2. ELEGÍ LA CARA A REEMPLAZAR", Rect2(32, 350, 796, 26), 18, gold)
+			for index in range(6):
+				var face_index := index
+				var face_state: Dictionary = die.duplicate(true)
+				face_state.value = die.faces[index]
+				purchase_die_choice(modal, "RewardFace_%d" % index, face_state, Rect2(72 + index * 120, 382, 116, 116), "CARA %d" % [index + 1], target.get("face_index", -1) == index, func():
+					game.set_reward_target({"die_id": die.id, "face_index": face_index})
+					render())
+	var summary := label(modal, text[1], Vector2(64, 200 if compact else (512 if offer.kind == "face" else 360)), 18, cream, 732)
+	summary.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	var preview: Dictionary = game.reward_preview()
+	var take := button(modal, "Tomar recompensa", Rect2(64, 304 if compact else 574, 732, 46), func():
+		var result: Dictionary = game.take_reward()
+		purchase_error = "" if result.ok else result.message
+		act(func(): pass), not preview.ok, true)
+	take.name = "TakeReward"
+	var skip := button(modal, "Dejarla", Rect2(64, 362 if compact else 632, 732, 38), func(): act(game.skip_reward))
+	skip.name = "SkipReward"
+	if preview.ok: take.grab_focus()
 
 func purchase_die_choice(parent: Control, node_name: String, state: Dictionary, rect: Rect2, caption: String, picked: bool, action: Callable) -> Button:
 	var choice := button(parent, "", rect, action)

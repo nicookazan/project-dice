@@ -1,11 +1,11 @@
 extends RefCounted
 ## Versioned local checkpoints. Variant bytes preserve int64 RNG; objects are disabled.
 const FORMAT := "dios-no-juega-save"
-const VERSION := 11
+const VERSION := 12
 const BossRules = preload("res://scripts/boss_rules.gd")
 const Game = preload("res://scripts/game.gd")
 const Validator = preload("res://scripts/save_validator.gd")
-const ACTIVE = ["level_intro", "play", "hand_result", "reward", "repair", "lobby", "shop", "purchase_target", "sticker_choice", "coin_choice"]
+const ACTIVE = ["level_intro", "play", "hand_result", "reward", "repair", "bonus", "lobby", "shop", "purchase_target", "sticker_choice", "coin_choice"]
 var path: String
 var fail_at := "" # Fault injection for filesystem tests only.
 
@@ -81,6 +81,10 @@ func read_file(file_path: String) -> Dictionary:
 		data = data.duplicate(true)
 		var single_use_error: String = preload("res://scripts/save_migrations.gd").single_use_v11(data.game)
 		if single_use_error != "": return error("state", single_use_error)
+	if envelope.version <= 11 and data is Dictionary and data.get("game") is Dictionary:
+		data = data.duplicate(true)
+		var reward_error: String = preload("res://scripts/save_migrations.gd").rewards_v12(data.game)
+		if reward_error != "": return error("state", reward_error)
 	var reason: String = Validator.validate(data)
 	if reason != "": return error("state", "El guardado contiene un estado inválido: " + reason)
 	return {"ok": true, "active": data.game.phase in ACTIVE, "code": "valid", "message": "", "data": data, "source": file_path}

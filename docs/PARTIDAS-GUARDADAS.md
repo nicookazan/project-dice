@@ -49,3 +49,7 @@ Clave opcional `seed_finale_seen` (sí/no): se escribe al ver entero el final de
 ## Guardado de «Continuar partida» v11 (25/11/2026)
 
 `SaveStore.VERSION` pasa a 11 porque la tienda suma la sección `single_use` (moneda de un uso, D20 opción B). `save_migrations.gd: single_use_v11` agrega a las partidas guardadas antes su contador de renovación (en 1) y, si estaban en una tienda, la sección vacía y sin configurar: no se re-sortea nada, así el azar queda exacto. Los regalos de la mano con el maletín pueden ser hasta cinco (uno por sección).
+
+## Guardado v12 (25/11/2026)
+
+`save_migrations.gd: rewards_v12`: el stock de monedas guardado se recorta a tres (sin re-sortear), las tablas guardadas pierden el paquete y pasan sus gemas a `gems`, y se agrega `pending_reward` vacío. Fase nueva `bonus` (recompensa pendiente).
