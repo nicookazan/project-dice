@@ -20,7 +20,7 @@ const ZONES := {
 	"score": Rect2(40, 681, 292, 47), "table": Rect2(712, 324, 350, 330), "cup": Rect2(1082, 324, 358, 330),
 	"groups": Rect2(366, 324, 330, 330), "notebook": Rect2(22, 25, 310, 630), "boss_hand": Rect2(560, 20, 330, 160),
 	"close": Rect2(375, 626, 236, 42), "next_hand": Rect2(725, 626, 262, 42), "choice_shop": Rect2(338, 565, 366, 56),
-	"payout_continue": Rect2(782, 510, 232, 56), "lobby_shop": Rect2(762, 430, 272, 58), "lobby_play": Rect2(384, 430, 276, 58),
+	"payout_continue": Rect2(782, 510, 232, 56), "lobby_shop": Rect2(762, 430, 272, 58), "lobby_play": Rect2(380, 430, 292, 58),
 	"inventory": Rect2(40, 740, 700, 130), "thermos": Rect2(1180, 130, 220, 260), "advance": Rect2(1025, 25, 380, 93),
 	"numbers": Rect2(538, 252, 367, 179), "components": Rect2(929, 252, 388, 179), "coins": Rect2(525, 442, 380, 179),
 	"stickers": Rect2(929, 442, 401, 179), "cash": Rect2(518, 30, 193, 80), "seller": Rect2(60, 160, 440, 470)}

@@ -7,6 +7,7 @@ const BarProps = preload("res://scripts/bar_props.gd")
 const Coins = preload("res://scripts/coins.gd")
 const Stickers = preload("res://scripts/stickers.gd")
 const StickerBook = preload("res://scripts/sticker_book.gd")
+const ItemTooltip = preload("res://scripts/item_tooltip.gd")
 
 ## Paños de la mesa (coordenadas lógicas 1440 × 900), dentro del borde dorado. El izquierdo tiene el costado inclinado.
 const PANO1 := Rect2(350, 320, 340, 330)
@@ -24,6 +25,7 @@ static func build(host) -> void:
 	menu.name = "MainMenu"
 	menu.size = Vector2(1440, 900)
 	menu.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	pixelate(host, menu)
 	host.ui.add_child(menu)
 	var entries: Array = []
 	if host.has_run_save(): entries.append(["ContinueRun", "Continuar partida", host.continue_run])
@@ -50,6 +52,14 @@ static func build(host) -> void:
 		var note: Label = host.label(menu, host.profile_message, Vector2(PANO1.position.x, 664), 15, host.gold, 740)
 		note.name = "ProfileMessage"
 	_mate(host)
+
+## Textos y botones pixelados, como en la tienda: la letra de la interfaz pixel (sin suavizado) y los marcos con
+## filtro «nearest». Se aplica a un contenedor y lo heredan todos sus hijos.
+static func pixelate(host, container: Control) -> void:
+	var pixel_theme: Theme = host.theme.duplicate()
+	pixel_theme.default_font = ItemTooltip.pixel_font()
+	container.theme = pixel_theme
+	container.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 
 ## Paño del medio: título y, debajo, una columna de botones centrada.
 static func _panel(host, menu: Control, title: String, subtitle := "") -> Dictionary:

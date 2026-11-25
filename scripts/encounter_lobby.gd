@@ -5,7 +5,7 @@ extends RefCounted
 const Campaign = preload("res://scripts/campaign.gd")
 const StartMenu = preload("res://scripts/start_menu.gd")
 
-const PLAY_RECT := Rect2(384, 430, 276, 58)
+const PLAY_RECT := Rect2(380, 430, 292, 58)
 const SKIP_RECT := Rect2(434, 572, 176, 42)
 const SHOP_RECT := Rect2(762, 430, 272, 58)
 const OPTIONS_RECT := Rect2(60, 300, 236, 50)
@@ -48,6 +48,7 @@ static func build(host) -> void:
 	lobby.name = "EncounterLobby"
 	lobby.size = Vector2(1440, 900)
 	lobby.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	StartMenu.pixelate(host, lobby)
 	host.ui.add_child(lobby)
 	var next := next_encounter(game)
 	var x := PLAY_RECT.position.x
@@ -56,6 +57,7 @@ static func build(host) -> void:
 	_centered(host, lobby, "%d PUNTOS" % next.target, Rect2(x, 364, w, 46), 36, host.gold).name = "LobbyTarget"
 	var play: Button = host.button(lobby, "Jugar contra %s" % next.who, PLAY_RECT, func(): host.act(game.play_next), not host.tutorial_allows("play_next"), true)
 	play.name = "PlayNext"
+	play.add_theme_font_size_override("font_size", 15)
 	_centered(host, lobby, next.line, Rect2(x - 16, 498, w + 32, 44), 15, host.cream).name = "LobbyInfo"
 	var skip: Button = host.button(lobby, "Saltear", SKIP_RECT, func(): pass, true)
 	skip.name = "Skip"
@@ -74,11 +76,19 @@ static func build_payout(host) -> void:
 	var game = host.game
 	var total: int = int(game.payout.get("total", 0))
 	var area := StartMenu.PANO2
-	var big := _centered(host, host.ui, "+$%d" % total, Rect2(area.position.x, 400, area.size.x, 90), 72, host.gold)
+	var payout := Control.new()
+	payout.name = "Payout"
+	payout.size = Vector2(1440, 900)
+	payout.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	StartMenu.pixelate(host, payout)
+	host.ui.add_child(payout)
+	# El número se dibuja a la mitad y se escala ×2 sin suavizado: así se ven los píxeles de la letra, como en la tienda.
+	var big := _centered(host, payout, "+$%d" % total, Rect2(area.position.x, 404, area.size.x / 2.0, 44), 36, host.gold)
 	big.name = "PayoutTotal"
+	big.scale = Vector2(2, 2)
 	big.add_theme_color_override("font_outline_color", Color("2a0a10"))
-	big.add_theme_constant_override("outline_size", 8)
-	var go: Button = host.button(host.ui, "Continuar", CONTINUE_RECT, func(): host.act(game.continue_after_reward), not host.tutorial_allows("continue"), true)
+	big.add_theme_constant_override("outline_size", 4)
+	var go: Button = host.button(payout, "Continuar", CONTINUE_RECT, func(): host.act(game.continue_after_reward), not host.tutorial_allows("continue"), true)
 	go.name = "ContinueReward"
 	go.grab_focus()
 	# Entrada corta del número: sube y aparece. Sin movimiento (o velocidad cero), queda quieto desde el principio.
