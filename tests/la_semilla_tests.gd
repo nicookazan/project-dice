@@ -181,11 +181,13 @@ static func run_ui(scene, check: Callable) -> void:
 	scene.finale_shown = ""
 	scene.finale_anim = ""
 	scene.render()
-	check.call(scene.finale_anim == "" and scene.background.finale.anim == "" and scene.background.finale_stage == "beaten" and scene.background.guardian >= 0 and scene.ui.get_node_or_null("EncounterChoice") != null and UI.text_in(scene.ui, "GUARDIÁN VENCIDO"), "La Semilla: al ganarle, el guardián sigue vivo, sin grietas, y aparece el cobro")
+	check.call(scene.finale_anim == "" and scene.background.finale.anim == "" and scene.background.finale_stage == "beaten" and scene.background.guardian >= 0 and scene.ui.find_child("PayoutTotal", true, false) != null, "La Semilla: al ganarle, el guardián sigue vivo, sin grietas, y aparece el cobro")
 	scene.act(scene.game.open_shop)
-	check.call(UI.find_button(scene.ui, "Gratis") != null and scene.ui.find_child("SeedRestock", true, false) != null and scene.ui.find_child("Refresh", true, false) == null and UI.find_button(scene.ui, "Enfrentar a La Semilla →") != null, "La Semilla: la mano muestra regalos, la tanda nueva y el paso a La Semilla")
-	scene.act(scene.game.leave_shop)
-	check.call(scene.finale_anim == "death" and scene.background.finale.anim == "death" and scene.background.finale_guardian >= 0 and scene.ui.get_node_or_null("FinaleBlocker") != null, "La Semilla: al salir de la mano muere el guardián")
+	check.call(UI.find_button(scene.ui, "Gratis") != null and scene.ui.find_child("SeedRestock", true, false) != null and scene.ui.find_child("Refresh", true, false) == null and UI.find_button(scene.ui, "Volver a la mesa →") != null, "La Semilla: la mano muestra regalos, la tanda nueva y el paso a La Semilla")
+	scene.act(scene.game.exit_shop)
+	check.call(scene.finale_anim == "" and scene.background.finale_stage == "beaten" and UI.find_button(scene.ui, "Jugar contra La Semilla") != null, "La Semilla: al volver a la mesa el guardián sigue vivo y la selección ofrece La Semilla")
+	scene.act(scene.game.play_next)
+	check.call(scene.finale_anim == "death" and scene.background.finale.anim == "death" and scene.background.finale_guardian >= 0 and scene.ui.get_node_or_null("FinaleBlocker") != null, "La Semilla: al jugar contra La Semilla muere el guardián")
 	check.call(scene.ui.find_child("SkipFinale", true, false) == null, "La Semilla: la primera vez no se puede omitir")
 	scene.background.finale.stop()
 	scene._on_finale_finished("death")

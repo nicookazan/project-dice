@@ -26,6 +26,8 @@ const ItemTooltip = preload("res://scripts/item_tooltip.gd")
 const CoinPackPanel = preload("res://scripts/coin_pack_panel.gd")
 const HoverButton = preload("res://scripts/hover_button.gd")
 const HoverPanel = preload("res://scripts/hover_panel.gd")
+const StartMenu = preload("res://scripts/start_menu.gd")
+const EncounterLobby = preload("res://scripts/encounter_lobby.gd")
 const Materials = preload("res://scripts/materials.gd")
 const Elements = preload("res://scripts/elements.gd")
 const Gems = preload("res://scripts/gems.gd")
@@ -82,6 +84,9 @@ var session_started := false
 var tutorial_seen: Array = []
 var tutorial_current: Dictionary = {}
 var pending_tutorial_choice := false
+## Qué muestra el paño del medio en el menú inicial (D20): "" nada, "modes" elegir modo, "tutorial" la pregunta del
+## tutorial, "collections" Colecciones. "tutorial" va siempre junto con `pending_tutorial_choice`.
+var menu_panel := ""
 var game = Game.new()
 var selected: Array = []
 ## Ranura de la moneda "Voltear dado" mientras se elige el dado; solo de pantalla, nunca se guarda (-1 = sin elegir).
@@ -247,7 +252,7 @@ func _unhandled_key_input(event: InputEvent) -> void:
 	if tutorial_notes_open(): return
 	if event.keycode == KEY_F1:
 		show_help()
-	elif event.keycode == KEY_M and game.phase not in ["menu", "level_intro"]:
+	elif event.keycode == KEY_M and game.phase != "menu":
 		show_route()
 	elif game.phase == "purchase_target" and event.keycode == KEY_ESCAPE:
 		act(game.cancel_purchase)
@@ -617,6 +622,7 @@ func start_new_run(seed_value: int = -1, debug_run := false, tutorial_run := fal
 	purchase_error = ""
 	pack_panel_open = true
 	pending_tutorial_choice = false
+	menu_panel = ""
 	tutorial_seen.clear()
 	game.forced_boss_ids = forced_boss_arguments()
 	if tutorial_run: game.begin_tutorial(seed_value)
@@ -691,13 +697,13 @@ func run_save_allowed() -> bool:
 	return profiles_enabled and session_started and not game.tutorial and not game.debug_mode and validation_profile == false
 
 func save_shop_checkpoint() -> void:
-	if not run_save_allowed() or game.phase != "shop": return
+	if not run_save_allowed() or game.phase not in ["shop", "lobby"]: return
 	var data := checkpoint_data()
 	if run_store.write_text(run_store.path + ".tmp", run_store.encode(data)) and run_store.read_file(run_store.path + ".tmp").ok:
 		DirAccess.rename_absolute(run_store.path + ".tmp", run_store.path)
 
 func resume_hint() -> String:
-	return "\nPodés volver a la última tienda con «Continuar partida»." if profiles_enabled and FileAccess.file_exists(run_store.path) else ""
+	return "\nPodés volver a la mesa con «Continuar partida»." if profiles_enabled and FileAccess.file_exists(run_store.path) else ""
 
 func clear_run_save() -> void:
 	if not profiles_enabled: return
@@ -848,6 +854,7 @@ func confirm_navigation() -> void:
 		repair_selection.clear()
 		purchase_error = ""
 		pending_tutorial_choice = false
+		menu_panel = ""
 		game.return_to_menu()
 		session_started = false
 		render()
@@ -884,7 +891,7 @@ func load_profile(slot: int) -> void:
 	repair_selection.clear()
 	game.return_to_menu()
 	session_started = false
-	ask_tutorial()
+	open_menu_panel("modes")
 
 func request_delete_profile(slot: int) -> void:
 	detail.hide()
@@ -944,8 +951,17 @@ func show_profiles() -> void:
 
 ## Cada jugada nueva pregunta si se quiere jugar el tutorial. No: sigue la campaña; sí: jugada guiada.
 func ask_tutorial() -> void:
-	pending_tutorial_choice = true
+	open_menu_panel("tutorial")
+
+## Cambia lo que muestra el paño del medio del menú inicial ("" lo deja vacío).
+func open_menu_panel(panel_name: String) -> void:
+	menu_panel = panel_name
+	pending_tutorial_choice = panel_name == "tutorial"
 	render()
+
+## «Campaña» en la elección de modo: sigue la pregunta del tutorial.
+func choose_campaign() -> void:
+	ask_tutorial()
 
 func cancel_navigation() -> void:
 	var cancelled := pending_navigation
@@ -1209,6 +1225,21 @@ func update_hover_description() -> void:
 		hover_description_body.text = text
 		hover_description_body.add_theme_font_size_override("font_size", 16 if text.length() > 650 else 18)
 		hover_description.reset_size()
+	place_hover_description(hovered)
+
+## La ayuda de la mano del jefe sale centrada debajo de la mano (D20, PS6), dentro de la pantalla; si no entra abajo,
+## va arriba. El resto de las ayudas sigue en su lugar de siempre, sobre la libreta.
+func place_hover_description(hovered: Control) -> void:
+	if hovered == null or hovered.name != "InspectBoss":
+		hover_description.position = HOVER_DEFAULT
+		return
+	var rect := hovered.get_global_rect()
+	var box_size := hover_description.size
+	var at := Vector2(rect.get_center().x - box_size.x / 2.0, rect.end.y + 8.0)
+	if at.y + box_size.y > 888.0: at.y = rect.position.y - box_size.y - 8.0
+	at.x = clampf(at.x, 12.0, 1440.0 - box_size.x - 12.0)
+	at.y = clampf(at.y, 12.0, 888.0 - box_size.y)
+	hover_description.position = at
 
 func _input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_F11 and not confirmation.visible:
@@ -1225,72 +1256,14 @@ func render_entry() -> void:
 	if game.phase == "menu":
 		render_menu()
 		return
-	if game.tutorial:
-		render_tutorial_intro()
-		return
-	var card := panel(ui, Rect2(300, 125, 840, 650), Color("0d1728"), gold)
-	label(card, "DIOS NO JUEGA A LOS DADOS", Vector2(40, 30), 34, gold, 760)
-	if campaign_mode: label(card, "CAMPAÑA PROVISIONAL v1 · objetivos, jefes y balance de prueba", Vector2(40, 77), 17, gold, 760)
-	elif validation_profile: label(card, "DATOS DE PRUEBA v1 · balance provisional", Vector2(40, 77), 17, gold, 760)
-	if game.debug_mode: label(card, "DEBUG · DAÑO ∞ · PLATA ∞", Vector2(40, 143), 17, gold, 760)
-	label(card, "NIVEL %d / 7 · %s" % [game.level_index + 1, "DIOS" if game.level_index == 6 else game.environment_id().to_upper()] if not game.campaign.is_empty() else "NIVEL 1 · CLUB DE BARRIO", Vector2(40, 105), 27, cream, 760)
-	var stops: Array = game.route().map(func(stop): return "%s: %d puntos" % [stop.name, stop.target])
-	label(card, "  →  ".join(stops) + "\n\n" + game.boss_name() + " · " + game.boss_rule.name.to_upper() + "\n" + BossRules.description(game.boss_rule) + "\n\nDos manos por encuentro y tres tiradas por mano.\nTras ganar: cobro, reparación opcional y tienda.", Vector2(40, 175), 22, cream, 760)
-	button(card, "Empezar primer encuentro", Rect2(150, 490, 540, 55), func(): act(game.begin_level), false, true)
-	button(card, "Abandonar partida", Rect2(150, 565, 540, 45), func(): request_navigation("menu"))
+	render_tutorial_intro()
 
-## Pantalla inicial: el bar a la derecha (con sus interacciones de siempre) y el menú a la izquierda.
+## Pantalla inicial (D20): el menú va sobre el paño izquierdo de la mesa; ver `start_menu.gd`.
 func render_menu() -> void:
-	var column := panel(ui, Rect2(36, 120, 440, 640), Color("0d1728"), gold)
-	column.name = "MainMenu"
-	label(column, "DIOS NO JUEGA\nA LOS DADOS", Vector2(28, 24), 34, gold, 390)
-	var subtitle := "Siete niveles · 22 encuentros · hasta La Semilla" if campaign_mode else "Un nivel de prueba · dos rivales y un jefe"
-	label(column, subtitle, Vector2(28, 118), 17, cream, 390)
-	if pending_tutorial_choice:
-		label(column, "¿QUERÉS JUGAR\nEL TUTORIAL?", Vector2(28, 168), 28, gold, 390)
-		label(column, "Te muestra cómo se tira, se agrupa, se anota y se compra. Aparece en cada partida nueva.", Vector2(28, 250), 18, cream, 390)
-		var yes := button(column, "Sí, jugar el tutorial", Rect2(40, 350, 360, 58), func(): start_new_run(-1, false, true), false, true)
-		yes.name = "TutorialYes"
-		var no := button(column, "No, ir a la campaña", Rect2(40, 424, 360, 52), func(): start_new_run())
-		no.name = "TutorialNo"
-		button(column, "Volver", Rect2(40, 496, 360, 46), func():
-			pending_tutorial_choice = false
-			render()).name = "TutorialBack"
-		yes.grab_focus()
-	else:
-		var can_continue := has_run_save()
-		var first_y := 190.0
-		if can_continue:
-			var resume := button(column, "Continuar partida", Rect2(40, 190, 360, 58), continue_run, false, true)
-			resume.name = "ContinueRun"
-			first_y = 262.0
-		var first := button(column, "Nueva partida", Rect2(40, first_y, 360, 58), func(): request_navigation("new"), false, not can_continue)
-		first.name = "NewRun"
-		var next_y := first_y + 72.0
-		if OS.has_feature("debug"):
-			var debug_button := button(column, "Nueva partida debug", Rect2(40, next_y, 360, 48), func(): request_navigation("new_debug"))
-			debug_button.name = "NewRunDebug"
-			next_y += 62
-		button(column, "Opciones", Rect2(40, next_y, 360, 48), show_options).name = "Options"
-		button(column, "Salir del juego", Rect2(40, next_y + 62, 360, 48), func(): request_navigation("quit")).name = "Quit"
-		first.grab_focus()
-	if profile_message != "": label(column, profile_message, Vector2(28, 560), 15, gold, 390)
-	var mate := button(ui, "", Backdrop.THERMOS_RECT, func(): background.props.play("thermos"))
-	mate.name = "MenuMate"
-	mate.focus_mode = Control.FOCUS_NONE
-	for state in ["normal", "hover", "pressed"]: mate.add_theme_stylebox_override(state, StyleBoxEmpty.new())
-	BarProps.attach_ring(mate, "thermos", background.props)
-	for prop in ["flag", "soda_left", "soda_right"]:
-		var zone := BarProps.make_zone(prop, background.props)
-		zone.clicked.connect(func(): background.props.play(prop))
-		ui.add_child(zone)
-		ui.move_child(zone, mate.get_index())
-	var hand := button(ui, "", Backdrop.HAND_RECT, func(): background.props.play_hand(background.hand_boss))
-	hand.name = "MenuHand"
-	hand.focus_mode = Control.FOCUS_NONE
-	for state in ["normal", "pressed"]: hand.add_theme_stylebox_override(state, StyleBoxEmpty.new())
-	hand.add_theme_stylebox_override("hover", box(Color(1, 1, 1, 0.07)))
-	BarProps.attach_ring(hand, "hand", background.props)
+	StartMenu.build(self)
+
+## Lugar de siempre de la ayuda al pasar el mouse (sobre la libreta).
+const HOVER_DEFAULT := Vector2(30, 400)
 
 const SELLER_LINE := "Veo que querés desafiar a Dios. Él no juega a los dados, pero quizás puedas vencerlo."
 
@@ -1328,6 +1301,8 @@ func render() -> void:
 	if game.phase in ["won", "lost"] and session_started and not run_recorded: record_finished_run()
 	save_shop_checkpoint()
 	background.stickers = game.cup.stickers.duplicate()
+	background.menu_mode = game.phase == "menu"
+	background.quiet = game.phase == "menu" or game.in_lobby()
 	if is_instance_valid(background): background.configure(profile, preferences)
 	_update_finale(profile)
 	if is_instance_valid(audio): audio.configure(preferences, profile.environment)
@@ -1343,7 +1318,7 @@ func render() -> void:
 	add_child(ui)
 	hover_description = PanelContainer.new()
 	hover_description.name = "HoverDescription"
-	hover_description.position = Vector2(30, 400)
+	hover_description.position = HOVER_DEFAULT
 	hover_description.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	hover_description.add_theme_stylebox_override("panel", ItemTooltip.skin())
 	hover_description_body = ItemTooltip.content("")
@@ -1360,9 +1335,23 @@ func render() -> void:
 	if showing_credits:
 		render_credits()
 		return
-	if game.phase in ["menu", "level_intro"]:
+	if game.phase == "menu" or (game.phase == "level_intro" and game.tutorial):
 		render_entry()
 		render_tutorial_layer()
+		return
+	# Selección de encuentro (D20): la mesa sin libreta ni botonera, con la bandeja de abajo.
+	if game.in_lobby():
+		EncounterLobby.build(self)
+		render_inventory()
+		render_seed()
+		finish_render()
+		return
+	# Cobro (D20): la libreta en blanco, sin dados ni botonera; «+$total» y Continuar salen en `render_result`.
+	if game.phase == "reward":
+		render_notebook(true)
+		render_inventory()
+		render_seed()
+		finish_render()
 		return
 	if game.phase not in ["sticker_choice", "coin_choice"]: pack_panel_open = true
 	if game.phase != "coin_choice": coin_pack_replacing = ""
@@ -1386,7 +1375,8 @@ func finish_render() -> void:
 	var thermos_button := button(ui, "", thermos_rect, inspect_thermos)
 	thermos_button.name = "InspectThermos"
 	if not background.shop_mode and background.finale_stage != "matrix":
-		for prop in ["flag", "soda_left", "soda_right"]:
+		# En la selección de encuentro y el cobro, bandera y sifones no responden (D20).
+		for prop in ([] if game.in_lobby() or game.phase == "reward" else ["flag", "soda_left", "soda_right"]):
 			var zone := BarProps.make_zone(prop, background.props)
 			zone.clicked.connect(func(): background.props.play(prop))
 			ui.add_child(zone)
@@ -1430,7 +1420,8 @@ func tutorial_context() -> Dictionary:
 	for die in game.dice:
 		if die.zone == "cup": cup.append(die.id)
 	return {"phase": game.phase, "rival": game.rival, "hand": game.hand, "rolls_made": game.rolls_made, "grouped": game.groups.size(),
-		"cup": cup, "selected": selected.duplicate(), "points": game.points, "target": game.target() if not game.level_encounters.is_empty() else 0}
+		"cup": cup, "selected": selected.duplicate(), "points": game.points, "target": game.target() if not game.level_encounters.is_empty() else 0,
+		"shop_visited": not game.shop_state.is_empty()}
 
 ## Paso del tutorial según el estado; {} fuera del tutorial.
 func tutorial_step() -> Dictionary:
@@ -1471,7 +1462,8 @@ func render_tutorial_layer() -> void:
 func tutorial_notes_open() -> bool:
 	return game.tutorial and not tutorial_current.is_empty() and tutorial_current.get("blocking", false) and tutorial_current.id not in tutorial_seen
 
-func render_notebook() -> void:
+## `blank`: la hoja vacía del cobro (D20), solo con el título.
+func render_notebook(blank := false) -> void:
 	var note := panel(ui, Rect2(22, 25, 310, 630), Color("f3e6c7"), Color("856a47"))
 	note.name = "PlayerNotebook"
 	# Flat paper belongs to the player's interface, with no table perspective.
@@ -1489,6 +1481,7 @@ func render_notebook() -> void:
 	margin.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	note.add_child(margin)
 	label(note, "LIBRETA", Vector2(28, 14), 22, ink)
+	if blank: return
 	label(note, "PUNTOS / OBJETIVO", Vector2(28, 49), 14, ink)
 	label(note, "%d / %d" % [game.points, game.target()], Vector2(28, 69), 32, ink)
 	label(note, "Mano %d / %d" % [game.hand, game.hand_limit()], Vector2(28, 115), 18, ink)
@@ -2146,16 +2139,16 @@ func render_shop() -> void:
 		retry_icon.position = Vector2(2, 0)
 		retry_icon.size = Vector2(28, 30)
 		renew.add_child(retry_icon)
-	var next_label := "Entrar al nivel %d →" % (game.level_index + 2) if game.rival + 1 == game.level_encounters.size() and game.has_next_encounter() else "Ir al %s →" % ("jefe" if game.rival + 1 < game.level_encounters.size() and game.is_boss(game.rival + 1) else "siguiente rival")
+	# Salir de la tienda vuelve a la selección de encuentro (D20): ahí se elige jugar o volver a entrar.
+	var next_label := "Volver a la mesa →"
 	if game.is_seed_shop_visit():
-		next_label = "Enfrentar a La Semilla →"
 		# La mano con el maletín: un regalo por sección; la tanda nueva cuesta siempre lo mismo y ya se paga.
 		var restock := button(ui, "Otra tanda · $%d" % Campaign.SEED_SHOP_RESTOCK_PRICE, Rect2(1025, 170, 380, 40), func(): act(game.restock_seed_shop), game.phase != "shop" or not game.can_afford(Campaign.SEED_SHOP_RESTOCK_PRICE))
 		restock.name = "SeedRestock"
 		restock.tooltip_text = "La mano trae otra tanda de un ítem por sección.\nCuesta siempre $%d y lo nuevo ya no es gratis." % Campaign.SEED_SHOP_RESTOCK_PRICE
 		restock.add_theme_font_size_override("font_size", 16)
 		shop_caption(ui, "UN REGALO POR SECCIÓN" if not game.shop_gifts.is_empty() else "LA MANO YA NO REGALA", Rect2(1025, 214, 380, 22), 13, gold)
-	var next_button := button(ui, next_label, Rect2(1025, 25, 380, 93), func(): act(game.leave_shop), game.phase != "shop", true)
+	var next_button := button(ui, next_label, Rect2(1025, 25, 380, 93), func(): act(game.exit_shop), game.phase != "shop", true)
 	next_button.name = "ShopAdvance"
 	next_button.add_theme_font_size_override("font_size", 18)
 	var game_menu_button := button(ui, "Menú", Rect2(1025, 126, 380, 36), show_game_menu)
@@ -2383,13 +2376,13 @@ func show_sticker_reveal(items: Array, previous: Dictionary) -> void:
 	hover_description.hide()
 
 func render_result() -> void:
+	if game.phase == "reward":
+		EncounterLobby.build_payout(self)
+		return
 	panel(ui, Rect2(0, 0, 1440, 900), Color(0.04, 0.06, 0.07, 0.84))
 	button(ui, "Menú", Rect2(1220, 23, 185, 38), show_game_menu)
 	if game.phase == "repair":
 		render_repairs()
-		return
-	if game.phase == "reward":
-		render_encounter_choice()
 		return
 	if game.tutorial:
 		render_tutorial_end()
@@ -2420,7 +2413,7 @@ func new_run_from_result() -> void:
 	purchase_error = ""
 	game.return_to_menu()
 	session_started = false
-	ask_tutorial()
+	open_menu_panel("modes")
 
 ## Cierre del tutorial (ganado o perdido): anuncia el logro y la moneda desbloqueada. Abandonar no llega acá.
 func render_tutorial_end() -> void:
@@ -2436,44 +2429,6 @@ func render_tutorial_end() -> void:
 	elif not profiles_enabled or profile_slot == 0: label(modal, "Sin progreso activo: el logro no se guardó.", Vector2(36, 345), 16, gold, 566)
 	button(modal, "Nueva partida", Rect2(36, 395, 566, 49), new_run_from_result, false, true).name = "TutorialEndNew"
 	button(modal, "Volver al menú", Rect2(36, 457, 566, 40), func(): request_navigation("menu"))
-
-func render_encounter_choice() -> void:
-	var modal := panel(ui, Rect2(290, 130, 860, 640), Color.TRANSPARENT)
-	modal.name = "EncounterChoice"
-	modal.add_theme_stylebox_override("panel", ItemTooltip.skin())
-	modal.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	modal.theme = theme.duplicate()
-	modal.theme.default_font = ItemTooltip.pixel_font()
-	shop_caption(modal, "GUARDIÁN VENCIDO" if game.is_seed_shop_visit() else "ENCUENTRO GANADO", Rect2(32, 25, 796, 42), 30, gold)
-	shop_caption(modal, "%d / %d puntos" % [game.points, game.target()], Rect2(32, 75, 796, 30), 20)
-	var p: Dictionary = game.payout
-	var names := ["Victoria", "Manos sobrantes", "Exceso de puntos", "Intereses"]
-	var values: Array = [p.base, p.hands, p.excess, p.interest]
-	for i in range(names.size()):
-		label(modal, names[i], Vector2(200, 133 + i * 32), 18, cream, 360)
-		var amount := label(modal, "$%d" % values[i], Vector2(580, 133 + i * 32), 18, cream, 80)
-		amount.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	var total_y := 272.0
-	if p.get("coins", 0) > 0:
-		label(modal, "Cobrador", Vector2(200, 261), 18, cream, 360)
-		var coin_amount := label(modal, "$%d" % p.coins, Vector2(580, 261), 18, cream, 80)
-		coin_amount.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-		total_y = 298.0
-	shop_caption(modal, "TOTAL COBRADO: $%d   ·   SALDO: %s" % [p.total, money_text(game.cash)], Rect2(32, total_y, 796, 34), 20, gold)
-	shop_caption(modal, "¿CÓMO QUERÉS SEGUIR?", Rect2(32, 335, 796, 32), 22, gold)
-	var next_text := "Próximo: %s" % ("jefe" if game.is_boss(game.rival + 1) else "rival %d" % [game.rival + 2]) if game.rival + 1 < game.level_encounters.size() else "Entrar al nivel %d" % [game.level_index + 2]
-	if game.is_seed_shop_visit(): next_text = "Próximo: La Semilla"
-	shop_caption(modal, "La mano con el maletín regala uno de cada sección." if game.is_seed_shop_visit() else "Comprá mejoras para tus dados.", Rect2(42, 390, 374, 28), 16)
-	shop_caption(modal, next_text, Rect2(444, 390, 374, 28), 16)
-	var visit := button(modal, "Ir a la tienda →", Rect2(48, 435, 366, 56), func(): act(game.open_shop), not tutorial_allows("open_shop"), true)
-	var advance := button(modal, "Seguir sin tienda →", Rect2(446, 435, 366, 56), func(): act(game.skip_shop), game.tutorial)
-
-	for node in [visit, advance]:
-		skin_shop_button(node)
-		node.add_theme_font_size_override("font_size", 19)
-	shop_caption(modal, "La recompensa ya está acreditada. Elegí tu próximo destino.", Rect2(32, 516, 796, 26), 16)
-	var menu := button(modal, "Volver al menú", Rect2(250, 571, 360, 38), func(): request_navigation("menu"))
-	skin_shop_button(menu)
 
 func render_repairs() -> void:
 	var modal := panel(ui, Rect2(350, 160, 740, 580), Color("263c3d"), gold)

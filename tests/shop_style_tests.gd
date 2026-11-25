@@ -43,7 +43,7 @@ static func run(scene, check: Callable) -> Dictionary:
 	scene.game.cash = -3
 	scene.render()
 	check.call(UI.find_button(scene.ui.get_node("Shop_numbers"), "$3").disabled and scene.ui.get_node("Shop_numbers/Refresh").disabled, "Shop style: debt disables purchase and renewal while keeping continuation available")
-	check.call(not UI.find_button(scene.ui, "Ir al siguiente rival →").disabled, "Shop style: debt does not trap player in shop")
+	check.call(not UI.find_button(scene.ui, "Volver a la mesa →").disabled, "Shop style: debt does not trap player in shop")
 	check.call(scene.ui.get_node("ShopInventory").position.y >= 777 and scene.ui.get_node("ShopAdvance").position.y == 25 and scene.ui.get_node("ShopAdvance").position.x >= 1025, "Shop layout: owned coins occupy footer and continuation occupies old upper-right inventory area")
 	scene.game = Purchase.fixture("sticker", {"id": "trio"}, 4)
 	scene.render()

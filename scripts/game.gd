@@ -498,7 +498,7 @@ func route() -> Array:
 		if i < rival or phase == "won": status = "Superado"
 		elif i == rival:
 			status = "Derrota" if phase == "lost" else "Actual"
-			if phase in ["reward", "repair", "shop", "purchase_target", "sticker_choice", "coin_choice"]: status = "Superado"
+			if phase in ["reward", "repair", "lobby", "shop", "purchase_target", "sticker_choice", "coin_choice"]: status = "Superado"
 		result.append({"index": i, "name": "Jefe" if is_boss(i) else "Rival %d" % (i + 1), "target": level_encounters[i].target, "status": status, "rule": boss_rule.name if is_boss(i) else "Sin regla especial"})
 	return result
 
@@ -865,8 +865,59 @@ func charged_price(offer: Dictionary) -> int:
 	if offer.get("offer_id", "") in shop_gifts: return 0
 	return offer_price(offer.get("price", 0), offer.get("kind") == "coin")
 
+## Pantalla de selección de encuentro (D20). «level_intro»: al empezar un nivel, con el primer encuentro preparado y la
+## tienda cerrada. «lobby»: entre dos encuentros del mismo nivel, después del cobro; `rival` sigue siendo el encuentro
+## ganado y la tienda se puede abrir las veces que se quiera.
+## ¿Hay selección con tienda después de vencer al jefe? D20 lo lee literal: no; el cobro del jefe lleva directo al
+## nivel siguiente, cuyo primer encuentro va sin tienda. Cambiar a true deja la tienda también después del jefe.
+const SHOP_AFTER_BOSS := false
+
+func in_lobby() -> bool:
+	return phase in ["level_intro", "lobby"]
+
+## Índice (en el nivel actual) del encuentro que se juega desde la selección; -1 si es el primero del nivel siguiente.
+func lobby_next_index() -> int:
+	if phase == "level_intro": return rival
+	return rival + 1 if rival + 1 < level_encounters.size() else -1
+
+## La tienda solo se abre desde la selección entre encuentros, nunca antes del primer encuentro de un nivel.
+func shop_available() -> bool:
+	return phase == "lobby"
+
+## Del cobro (+$total) a la selección de encuentro. La reparación, si hacía falta, ya pasó antes del cobro.
+func continue_after_reward() -> bool:
+	if phase != "reward" or not has_next_encounter(): return false
+	if rival + 1 >= level_encounters.size() and not SHOP_AFTER_BOSS: return _advance_encounter()
+	phase = "lobby"
+	message = "Elegí: jugar contra el siguiente rival o pasar por la tienda."
+	return true
+
+## Jugar el encuentro que muestra la selección. Si el siguiente es de otro nivel, se entra al nivel y se juega enseguida.
+func play_next() -> bool:
+	if phase == "level_intro": return begin_level()
+	if phase != "lobby": return false
+	var new_level := rival + 1 >= level_encounters.size()
+	if not _advance_encounter(): return false
+	if new_level and phase == "level_intro": begin_level()
+	return true
+
+## Salir de la tienda a la selección de encuentro, sin avanzar. El stock queda para volver a entrar.
+func exit_shop() -> bool:
+	if phase != "shop" or not has_next_encounter(): return false
+	phase = "lobby"
+	message = "Podés volver a la tienda o jugar contra el siguiente rival."
+	return true
+
+## Se abre desde la selección (`lobby`) o, como antes, desde el cobro (`reward`, lo usan las pruebas). La primera vez
+## entre dos encuentros genera el stock; al volver a entrar se reutiliza, con lo vendido, los precios de renovación y
+## los descuentos de esa visita: entrar y salir no consume azar.
 func open_shop() -> bool:
-	if phase != "reward": return false
+	if phase not in ["reward", "lobby"]: return false
+	var from_lobby := phase == "lobby"
+	if from_lobby and not shop_state.is_empty():
+		phase = "shop"
+		message = "Volviste a la tienda."
+		return true
 	var generated := _generated_shop()
 	if not generated.valid: return false
 	shop_state = generated.state if not is_seed_shop_visit() else seed_shop_cut(generated.state)
@@ -880,6 +931,7 @@ func open_shop() -> bool:
 	visit_discount = 0.0
 	reroll_prices = {"coins": 1, "components": 1, "numbers": 1, "stickers": 1}
 	free_renewals = int(CoinEffects.sum_of(passives, "free_renewals"))
+	if from_lobby: message = "Comprá mejoras. Podés salir a la mesa y volver a entrar."
 	return true
 
 func generate_offers() -> bool:
@@ -1098,8 +1150,9 @@ func sell(coin: String) -> bool:
 	message = "Moneda vendida."
 	return true
 
+## Salir de la tienda y pasar directo al siguiente encuentro (el camino de antes de D20; lo usan las pruebas).
 func leave_shop() -> bool:
-	if phase != "shop" or not has_next_encounter(): return false
+	if not exit_shop(): return false
 	return _advance_encounter()
 
 func skip_shop() -> bool:

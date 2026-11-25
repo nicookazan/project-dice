@@ -6,6 +6,7 @@ const UI = preload("res://tests/interface_tests.gd")
 
 static func click(scene, caption: String) -> bool:
 	var control = UI.find_button(scene.ui, caption)
+	if control == null and legacy_caption(caption): return legacy(scene, caption)
 	# Secondary options live inside the in-game menu panel: open it first when the button is not on screen.
 	if control == null and caption in ["Recorrido · M", "Opciones", "Abandonar partida", "Seguir jugando"]:
 		var menu = UI.find_button(scene.ui, "Menú")
@@ -108,9 +109,10 @@ static func run(scene, check: Callable) -> Dictionary:
 	check.call(scene.detail.visible and "F11" in scene.detail_text and scene.game.snapshot() == before, "Flow: options expose working display control and preserve game")
 	scene.detail.hide()
 	click(scene, "Nueva partida")
+	click(scene, "Campaña")
 	check.call(scene.pending_tutorial_choice and UI.find_button(scene.ui, "No, ir a la campaña") != null and UI.find_button(scene.ui, "Sí, jugar el tutorial") != null, "Flow: a new run asks whether to play the tutorial")
 	click(scene, "No, ir a la campaña")
-	check.call(scene.game.phase == "level_intro" and UI.text_in(scene.ui, "GENERALA PROHIBIDA"), "Flow: level intro announces boss rule before first encounter")
+	check.call(scene.game.phase == "level_intro" and UI.text_in(scene.ui, "Rival 1/3") and scene.ui.find_child("InspectBoss", true, false) != null, "Flow: the encounter selection announces the first encounter; the boss rule is read on the hand")
 	check.call(scene.game.cash == 0 and scene.game.passives.is_empty() and scene.game.consumable == "" and scene.game.cup.material == "leather", "Flow: new run starts leather, zero money and zero coins")
 	check.call(scene.game.dice == preload("res://scripts/dice_state.gd").create_dice() and scene.game.shop_state.is_empty(), "Flow: five base dice and no initial shop")
 	check.call(not scene.game.roll() and not scene.game.leave_shop() and not scene.game.open_shop(), "Flow: announcement cannot roll or skip to shop/encounter")
@@ -135,7 +137,8 @@ static func run(scene, check: Callable) -> Dictionary:
 	scene.request_navigation("new")
 	check.call(scene.confirmation.visible, "Flow: active new run also needs confirmation")
 	scene.confirmation.get_ok_button().pressed.emit()
-	check.call(scene.game.phase == "menu" and scene.pending_tutorial_choice and scene.pending_navigation == "", "Flow: confirm new run goes back to the menu and asks about the tutorial")
+	check.call(scene.game.phase == "menu" and scene.menu_panel == "modes" and scene.pending_navigation == "", "Flow: confirm new run goes back to the menu and asks for the mode")
+	click(scene, "Campaña")
 	click(scene, "No, ir a la campaña")
 	check.call(scene.game.phase == "level_intro", "Flow: declining the tutorial opens a fresh intro")
 	scene.request_navigation("menu")
@@ -244,7 +247,31 @@ static func run(scene, check: Callable) -> Dictionary:
 	before = scene.game.snapshot()
 	check.call(not scene.game.open_shop() and not scene.game.close_encounter() and not scene.game.leave_shop() and scene.game.snapshot() == before, "Flow: boss victory is terminal and cannot pay or advance again")
 	click(scene, "Prototipo completado · volver a jugar")
-	check.call(scene.game.phase == "menu" and scene.pending_tutorial_choice, "Flow: after a victory a new run asks about the tutorial")
+	check.call(scene.game.phase == "menu" and scene.menu_panel == "modes", "Flow: after a victory a new run asks for the mode")
+	click(scene, "Campaña")
 	click(scene, "No, ir a la campaña")
 	check.call(scene.game.phase == "level_intro" and scene.game.rival == 0 and scene.game.cash == 0, "Flow: victory restart starts fresh level announcement")
 	return {"natural_seed": seed_value, "hands": trace, "natural_ui_victory": true, "save_available": false}
+
+## Botones de antes de D20 que siguen usando los recorridos largos. Se traducen al flujo nuevo con los botones reales:
+## el cobro tiene «Continuar», la selección de encuentro «Jugar contra…» e «Ir a la tienda», y la tienda «Volver a la mesa».
+static func legacy_caption(caption: String) -> bool:
+	return caption in ["Empezar primer encuentro", "Ir a la tienda →", "Seguir sin tienda →"] or caption.begins_with("Ir al ") or caption.begins_with("Entrar al nivel") or caption == "Enfrentar a La Semilla →"
+
+static func legacy(scene, caption: String) -> bool:
+	if caption == "Empezar primer encuentro": return click_named(scene, "PlayNext")
+	if caption == "Ir a la tienda →":
+		if scene.game.phase == "reward" and not click_named(scene, "ContinueReward"): return false
+		return click_named(scene, "OpenShop")
+	if caption == "Seguir sin tienda →":
+		if not click_named(scene, "ContinueReward"): return false
+		return scene.game.phase != "lobby" or click_named(scene, "PlayNext")
+	# Salir de la tienda hacia el próximo encuentro: «Volver a la mesa» y después «Jugar contra…».
+	if not click_named(scene, "ShopAdvance"): return false
+	return click_named(scene, "PlayNext")
+
+static func click_named(scene, node_name: String) -> bool:
+	var control = scene.ui.find_child(node_name, true, false)
+	if control == null or not control is BaseButton or control.disabled: return false
+	control.pressed.emit()
+	return true

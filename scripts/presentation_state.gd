@@ -15,7 +15,7 @@ static func profile(game) -> Dictionary:
 static func finale_stage(game) -> String:
 	if game.campaign.is_empty() or game.level_encounters.size() < 4: return ""
 	if game.is_seed(): return "ending" if game.phase == "won" else "matrix"
-	if game.is_seed_shop_visit() and game.phase in ["reward", "repair", "shop", "purchase_target", "sticker_choice", "coin_choice"]: return "beaten"
+	if game.is_seed_shop_visit() and game.phase in ["reward", "repair", "lobby", "shop", "purchase_target", "sticker_choice", "coin_choice"]: return "beaten"
 	return ""
 
 func observe(game) -> Dictionary:

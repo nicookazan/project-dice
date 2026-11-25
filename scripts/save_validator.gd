@@ -8,7 +8,7 @@ const Shop = preload("res://scripts/shop.gd")
 const Stickers = preload("res://scripts/stickers.gd")
 const Numbers = preload("res://scripts/number_upgrades.gd")
 const Purchases = preload("res://scripts/purchases.gd")
-const PHASES = ["level_intro", "play", "hand_result", "reward", "repair", "shop", "purchase_target", "sticker_choice", "coin_choice", "won", "lost"]
+const PHASES = ["level_intro", "play", "hand_result", "reward", "repair", "lobby", "shop", "purchase_target", "sticker_choice", "coin_choice", "won", "lost"]
 const BossRules = preload("res://scripts/boss_rules.gd")
 const Campaign = preload("res://scripts/campaign.gd")
 
@@ -144,11 +144,11 @@ static func validate(data: Variant) -> String:
 	var hand_limit: int = Game.hand_limit_of(g.passives, g.boss_rule, BossRules.has_power(g.level_encounters[g.rival].kind) and not g.boss_shield_active, g.boss_state, g.hand)
 	if g.phase in ["play", "hand_result", "lost"] and g.hand > hand_limit: return "mano fuera del límite"
 	if not g.last_score.is_empty() and not score(g.last_score): return "resultado incompleto"
-	if g.phase in ["hand_result", "reward", "repair", "won", "lost"] and g.last_score.is_empty(): return "falta resultado anotado"
-	if g.phase in ["reward", "repair", "won", "shop", "purchase_target", "sticker_choice", "coin_choice"] and g.points < g.level_encounters[g.rival].target: return "cobro sin objetivo cumplido"
+	if g.phase in ["hand_result", "reward", "repair", "lobby", "won", "lost"] and g.last_score.is_empty(): return "falta resultado anotado"
+	if g.phase in ["reward", "repair", "lobby", "won", "shop", "purchase_target", "sticker_choice", "coin_choice"] and g.points < g.level_encounters[g.rival].target: return "cobro sin objetivo cumplido"
 	var has_next: bool = g.rival + 1 < g.level_encounters.size() or (not g.campaign.is_empty() and g.level_index + 1 < g.campaign.size())
-	if (g.phase == "won" and has_next) or (g.phase == "reward" and not has_next) or (g.phase == "lost" and (g.hand != hand_limit or g.points >= g.level_encounters[g.rival].target)): return "final inconsistente"
-	if g.phase in ["reward", "repair", "won", "shop", "purchase_target", "sticker_choice", "coin_choice"]:
+	if (g.phase == "won" and has_next) or (g.phase in ["reward", "lobby"] and not has_next) or (g.phase == "lost" and (g.hand != hand_limit or g.points >= g.level_encounters[g.rival].target)): return "final inconsistente"
+	if g.phase in ["reward", "repair", "lobby", "won", "shop", "purchase_target", "sticker_choice", "coin_choice"]:
 		for key in ["base", "hands", "excess", "interest", "total"]:
 			if not g.payout.get(key) is int: return "cobro incompleto"
 	if not g.shop_state.is_empty():
@@ -165,7 +165,7 @@ static func validate(data: Variant) -> String:
 	# Regalos de la mano con el maletín: solo en la visita que separa al guardián de La Semilla, y como mucho uno por sección.
 	if g.shop_gifts.size() > 4 or not g.shop_gifts.all(func(id): return id is String): return "regalos de tienda inválidos"
 	var seed_visit: bool = not g.campaign.is_empty() and g.rival + 1 < g.level_encounters.size() and g.level_encounters[g.rival + 1].kind == "seed"
-	if not g.shop_gifts.is_empty() and (not seed_visit or g.phase not in ["shop", "purchase_target", "sticker_choice", "coin_choice"]): return "regalos fuera de la mano con el maletín"
+	if not g.shop_gifts.is_empty() and (not seed_visit or g.phase not in ["lobby", "shop", "purchase_target", "sticker_choice", "coin_choice"]): return "regalos fuera de la mano con el maletín"
 	if g.phase == "purchase_target":
 		var p: Dictionary = g.pending_purchase
 		if not p.get("section") is String or not p.get("offer_id") is String or not p.get("offer") is Dictionary or not p.get("target") is Dictionary or not g.shop_state.has(p.section): return "compra pendiente incompleta"

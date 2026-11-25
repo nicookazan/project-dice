@@ -81,6 +81,6 @@ static func valid_progress(game: Dictionary) -> bool:
 			# En La Semilla el poder es el sorteado entre los jefes de la jugada; en el resto, el del jefe del nivel.
 			var rule: Dictionary = seed_rule(game.campaign, game.selected_bosses, game.run_seed) if plan[game.rival].kind == "seed" else chosen.rule
 			if game.boss_rule != rule: return false
-			var count: int = game.rival + (1 if game.phase in ["reward", "repair", "shop", "purchase_target", "sticker_choice", "coin_choice", "won"] else 0)
+			var count: int = game.rival + (1 if game.phase in ["reward", "repair", "lobby", "shop", "purchase_target", "sticker_choice", "coin_choice", "won"] else 0)
 			for i in range(count): completed.append(plan[i].id)
 	return completed == game.completed_encounters

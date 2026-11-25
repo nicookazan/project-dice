@@ -20,6 +20,7 @@ const ZONES := {
 	"score": Rect2(40, 681, 292, 47), "table": Rect2(712, 324, 350, 330), "cup": Rect2(1082, 324, 358, 330),
 	"groups": Rect2(366, 324, 330, 330), "notebook": Rect2(22, 25, 310, 630), "boss_hand": Rect2(560, 20, 330, 160),
 	"close": Rect2(375, 626, 236, 42), "next_hand": Rect2(725, 626, 262, 42), "choice_shop": Rect2(338, 565, 366, 56),
+	"payout_continue": Rect2(782, 510, 232, 56), "lobby_shop": Rect2(762, 430, 272, 58), "lobby_play": Rect2(384, 430, 276, 58),
 	"inventory": Rect2(40, 740, 700, 130), "thermos": Rect2(1180, 130, 220, 260), "advance": Rect2(1025, 25, 380, 93),
 	"numbers": Rect2(538, 252, 367, 179), "components": Rect2(929, 252, 388, 179), "coins": Rect2(525, 442, 380, 179),
 	"stickers": Rect2(929, 442, 401, 179), "cash": Rect2(518, 30, 193, 80), "seller": Rect2(60, 160, 440, 470)}
@@ -48,7 +49,11 @@ static func step(ctx: Dictionary) -> Dictionary:
 			return {"id": "close_1", "notes": [note("Llegaste al objetivo. Cerrá el encuentro para cobrar.", "close", "above")], "allow": ["close"], "select": []}
 		return {"id": "next_hand_1", "notes": [note("Todavía no llegaste al objetivo: jugá la segunda mano.", "next_hand", "above")], "allow": ["next_hand"], "select": []}
 	if rival == 0 and phase == "reward":
-		return {"id": "reward_1", "notes": [note("Ganaste y cobraste. Antes de seguir, pasá por la tienda: ahí se compran las mejoras.", "choice_shop", "above")], "allow": ["open_shop"], "select": []}
+		return {"id": "reward_1", "notes": [note("Ganaste y cobraste. Tocá Continuar.", "payout_continue", "above")], "allow": ["continue"], "select": []}
+	if rival == 0 and phase == "lobby" and not ctx.get("shop_visited", false):
+		return {"id": "lobby_shop_1", "notes": [note("Antes de seguir, pasá por la tienda: ahí se compran las mejoras.", "lobby_shop", "above")], "allow": ["open_shop"], "select": []}
+	if rival == 0 and phase == "lobby":
+		return {"id": "lobby_play_1", "notes": [note("Podés volver a la tienda las veces que quieras. Cuando estés listo, jugá contra el siguiente rival.", "lobby_play", "above")], "allow": ["play_next", "open_shop"], "select": []}
 	if phase == "shop" and rival == 0: return _shop()
 	if rival == 2 and phase == "play" and int(ctx.get("hand", 1)) == 1 and int(ctx.get("rolls_made", 0)) == 0:
 		return {"id": "boss_intro", "notes": [

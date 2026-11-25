@@ -51,7 +51,7 @@ static func run(scene, check: Callable) -> Dictionary:
 	var repairs := 0
 	for encounter in range(21):
 		if scene.game.phase == "level_intro":
-			check.call(UI.text_in(scene.ui, "NIVEL %d / 7" % (scene.game.level_index + 1)), "Campaign UI: announce level and boss before encounter")
+			check.call(UI.text_in(scene.ui, "Nivel %d · Rival 1/" % (scene.game.level_index + 1)) and UI.find_button(scene.ui, "Ir a la tienda").disabled, "Campaign UI: the encounter selection announces level and boss, shop closed on the first encounter")
 			reload_ui(scene, check, "level announcement")
 			Flow.click(scene, "Empezar primer encuentro")
 		check.call(scene.game.level_index == int(encounter / 3) and scene.game.rival == encounter % 3, "Campaign: exact sequential encounter " + str(encounter + 1))
@@ -89,33 +89,42 @@ static func run(scene, check: Callable) -> Dictionary:
 		if encounter == 20: break
 		check.call(scene.game.phase == "reward", "Campaign: each non-final victory reaches reward, not terminal win")
 		reload_ui(scene, check, "paid encounter " + str(encounter + 1))
-		Flow.click(scene, "Ir a la tienda →")
-		if encounter == 0:
-			PurchaseRoute.buy_controlled(scene, "face", "", check, 0, 0)
-			PurchaseRoute.buy_controlled(scene, "global", "", check, 0)
-			PurchaseRoute.buy_controlled(scene, "material", "steel", check, 0)
-			PurchaseRoute.buy_controlled(scene, "element", "earth", check, 0)
-			PurchaseRoute.buy_controlled(scene, "shell", "ruby", check, 0)
-			PurchaseRoute.buy_controlled(scene, "sticker", "trio", check)
-			PurchaseRoute.buy_controlled(scene, "coin", "even", check)
-		reload_ui(scene, check, "generated shop " + str(encounter + 1))
 		var gear := persistent_parts(scene.game)
-		var uninterrupted = Store.new("res://test-results/unused.json").restore_game(scene.checkpoint_data())
-		uninterrupted.leave_shop()
+		var uninterrupted
 		if scene.game.rival == 2:
+			# D20: después del jefe no hay tienda; «Continuar» lleva al nivel siguiente, cuyo primer encuentro va sin tienda.
 			level_boundaries += 1
-			Flow.click(scene, "Entrar al nivel %d →" % (scene.game.level_index + 2))
+			uninterrupted = Store.new("res://test-results/unused.json").restore_game(scene.checkpoint_data())
+			uninterrupted.continue_after_reward()
+			Flow.click(scene, "Continuar")
 			check.call(scene.game.phase == "level_intro" and scene.game.points == 0 and scene.game.dice[0].encounter_effects.is_empty() and scene.game.dice[0].hand_effects.is_empty(), "Campaign: boss-to-level clears score/counters before new announcement")
 			check.call(persistent_parts(scene.game) == gear and scene.game.selected_bosses.size() == scene.game.level_index + 1, "Campaign: faces/local/material/shell/element/coins/stickers/cash persist at boundary")
 			check.call(scene.background.environment_id == scene.game.campaign[scene.game.level_index].environment, "Campaign UI: environment changes with new level")
 		else:
-			Flow.click(scene, "Ir al %s →" % ("jefe" if scene.game.rival == 1 else "siguiente rival"))
-			check.call(scene.game.boss_rule == rule_before and scene.game.selected_bosses == chosen_before, "Campaign: normal advance keeps announced boss stable")
+			Flow.click(scene, "Continuar")
+			check.call(scene.game.phase == "lobby" and not UI.find_button(scene.ui, "Ir a la tienda").disabled, "Campaign: after a rival the selection offers the shop")
+			Flow.click(scene, "Ir a la tienda")
+			if encounter == 0:
+				PurchaseRoute.buy_controlled(scene, "face", "", check, 0, 0)
+				PurchaseRoute.buy_controlled(scene, "global", "", check, 0)
+				PurchaseRoute.buy_controlled(scene, "material", "steel", check, 0)
+				PurchaseRoute.buy_controlled(scene, "element", "earth", check, 0)
+				PurchaseRoute.buy_controlled(scene, "shell", "ruby", check, 0)
+				PurchaseRoute.buy_controlled(scene, "sticker", "trio", check)
+				PurchaseRoute.buy_controlled(scene, "coin", "even", check)
+			reload_ui(scene, check, "generated shop " + str(encounter + 1))
+			gear = persistent_parts(scene.game)
+			uninterrupted = Store.new("res://test-results/unused.json").restore_game(scene.checkpoint_data())
+			uninterrupted.leave_shop()
+			Flow.click(scene, "Volver a la mesa →")
+			Flow.click(scene, "Jugar contra %s" % ("el jefe" if scene.game.rival == 1 else "el siguiente rival"))
+			check.call(scene.game.boss_rule == rule_before and scene.game.selected_bosses == chosen_before and persistent_parts(scene.game) == gear, "Campaign: normal advance keeps announced boss stable")
 		check.call(scene.game.snapshot() == uninterrupted.snapshot(), "Campaign: next encounter/boss draw equals uninterrupted execution after reload")
 		await scene.get_tree().process_frame
 	# El guardián (encuentro 21) ya no cierra la versión: sigue La Semilla (docs/LA-SEMILLA.md).
 	check.call(scene.game.phase == "reward" and scene.game.level_index == 6 and scene.game.rival == 2 and scene.game.completed_encounters.size() == 21 and scene.game.is_seed_shop_visit(), "Campaign: the guardian (encounter 21) leads to La Semilla")
-	Flow.click(scene, "Seguir sin tienda →")
+	Flow.click(scene, "Continuar")
+	Flow.click(scene, "Jugar contra La Semilla")
 	check.call(scene.game.is_seed() and scene.game.phase == "play", "Campaign: La Semilla is played right after the guardian")
 	scene.game.debug_mode = true
 	scene.game.roll()

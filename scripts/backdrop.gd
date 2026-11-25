@@ -105,6 +105,10 @@ var hand_boss := ""
 ## Guardián de Dios (-1: sin figura, queda el triángulo provisional).
 var guardian := -1
 var shop_mode := false
+## Menú inicial (D20): sin mano en la ventana (queda la nube) y sin estrellas de la copa para tocar.
+var menu_mode := false
+## Menú y selección de encuentro (D20): del fondo solo responde el mate; las estrellas de la copa no.
+var quiet := false
 const WINDOWS = [Rect2(470, 0, 47, 217), Rect2(534, 0, 378, 219), Rect2(952, 0, 92, 215), Rect2(1198, 43, 73, 177)]
 var environment_id := "dia"
 var actor := "common"
@@ -138,7 +142,7 @@ func configure(profile: Dictionary, preferences: Dictionary) -> void:
 	# Las animaciones solo existen sobre la mesa y con movimiento: cualquier otro cambio las corta.
 	if shop_mode != last_shop_mode or not motion: props.stop_all()
 	last_shop_mode = shop_mode
-	for hit in copa_hits: hit.visible = not shop_mode and finale_stage != "matrix"
+	for hit in copa_hits: hit.visible = not shop_mode and not quiet and finale_stage != "matrix"
 	queue_redraw()
 	if is_instance_valid(pour_layer): pour_layer.queue_redraw()
 
@@ -382,6 +386,9 @@ func _draw_falling_table() -> void:
 
 ## La mano del jefe (o el guardián de Dios) en el cielo.
 func _draw_actor() -> void:
+	if menu_mode:
+		draw_texture_rect(CLOUD_V3, Rect2(552, 0, 262, 40), false)
+		return
 	# God remains a provisional silhouette; ordinary hands retain existing art.
 	var center := Vector2(667, 105 + (sin(elapsed * 1.1) * 3 if motion else 0))
 	if actor == "god" and guardian >= 0:

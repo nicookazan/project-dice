@@ -15,7 +15,7 @@ func _initialize() -> void:
 	await capture("menu")
 	UI.find_button(scene.ui, "Nueva partida debug").pressed.emit()
 	await capture("inicio")
-	UI.find_button(scene.ui, "Empezar primer encuentro").pressed.emit()
+	UI.find_button(scene.ui, "Jugar contra el siguiente rival").pressed.emit()
 	UI.find_button(scene.ui, "TIRAR (3)").pressed.emit()
 	await capture("mano")
 	UI.find_button(scene.ui, "ANOTAR MANO").pressed.emit()

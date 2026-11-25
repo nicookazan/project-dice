@@ -1,4 +1,6 @@
 extends RefCounted
+## Pantallas y diseños (D20): cobro «+$total» → selección de encuentro → tienda a la que se entra varias veces, menú
+## inicial sobre la mesa, mano oculta en el menú y ayuda de la mano del jefe debajo de la mano.
 const Game = preload("res://scripts/game.gd")
 const Profile = preload("res://scripts/validation_profile.gd")
 const Fixture = preload("res://tests/support/game_fixture.gd")
@@ -6,6 +8,8 @@ const UI = preload("res://tests/interface_tests.gd")
 const Store = preload("res://scripts/save_store.gd")
 const SaveTests = preload("res://tests/save_tests.gd")
 const CampaignTests = preload("res://tests/campaign_tests.gd")
+const StartMenu = preload("res://scripts/start_menu.gd")
+const EncounterLobby = preload("res://scripts/encounter_lobby.gd")
 
 static func reward_game():
 	var game = Game.new(920)
@@ -23,53 +27,164 @@ static func run(scene, check: Callable) -> void:
 	scene.detail.hide()
 	scene.cancel_navigation()
 	scene.profiles_enabled = false
+	_payout(scene, check)
+	_lobby(scene, check)
+	_shop_reentry(check)
+	_flow_rules(check)
+	_menu(scene, check)
+	_boss_help(scene, check)
+
+## PS5: sin desglose; la libreta en blanco, «+$total» y Continuar.
+static func _payout(scene, check: Callable) -> void:
 	scene.game = reward_game()
 	scene.render()
-	check.call(scene.ui.has_node("EncounterChoice") and UI.find_button(scene.ui, "Ir a la tienda →") != null and UI.find_button(scene.ui, "Seguir sin tienda →") != null, "Destination: victory offers shop and direct continuation on one screen")
+	var total = scene.ui.find_child("PayoutTotal", true, false)
+	var go = scene.ui.find_child("ContinueReward", true, false)
+	check.call(total != null and total.text == "+$%d" % scene.game.payout.total and go != null and not go.disabled, "Cobro: muestra solo el total cobrado y Continuar")
+	check.call(not UI.text_in(scene.ui, "Manos sobrantes") and not UI.text_in(scene.ui, "Intereses") and scene.ui.find_child("EncounterChoice", true, false) == null, "Cobro: sin cartel de desglose")
+	var note = scene.ui.find_child("PlayerNotebook", true, false)
+	check.call(note != null and UI.text_in(note, "LIBRETA") and not UI.text_in(note, "PUNTOS") and UI.dice_in(scene.ui).is_empty(), "Cobro: la libreta queda en blanco y la mesa sin dados")
+	var cash: int = scene.game.cash
+	go.pressed.emit()
+	check.call(scene.game.phase == "lobby" and scene.game.rival == 0 and scene.game.cash == cash, "Cobro: Continuar lleva a la selección sin volver a cobrar")
+
+## PS4: selección de encuentro.
+static func _lobby(scene, check: Callable) -> void:
+	scene.game = reward_game()
+	scene.game.continue_after_reward()
+	scene.render()
+	var play = scene.ui.find_child("PlayNext", true, false)
+	var shop = scene.ui.find_child("OpenShop", true, false)
+	var skip = scene.ui.find_child("Skip", true, false)
+	check.call(play != null and play.text == "Jugar contra el siguiente rival" and not play.disabled, "Selección: «Jugar contra el siguiente rival» habilitado")
+	check.call(skip != null and skip.disabled and shop != null and not shop.disabled, "Selección: «Saltear» en gris y la tienda abierta después de ganar")
+	check.call(UI.text_in(scene.ui, "%d PUNTOS" % scene.game.level_encounters[1].target) and UI.text_in(scene.ui, "Rival 2/3"), "Selección: objetivo y rival del próximo encuentro")
+	check.call(scene.ui.find_child("LobbyOptions", true, false) != null and UI.find_button(scene.ui, "Abandonar partida") != null and scene.ui.find_child("PlayerNotebook", true, false) == null and UI.find_button(scene.ui, "Menú") == null and UI.find_button(scene.ui, "TIRAR (3)") == null, "Selección: Opciones y Abandonar donde iba la libreta, sin botonera ni Menú")
+	check.call(scene.ui.find_child("BarProp_flag", true, false) == null and scene.ui.find_child("BarProp_soda_left", true, false) == null and scene.background.quiet and scene.background.copa_hits.all(func(hit): return not hit.visible), "Selección: bandera, sifones y estrellas no responden")
 	var service = Store.new("res://test-results/encounter-choice/" + str(Time.get_ticks_usec()) + ".json")
-	check.call(service.start(SaveTests.payload(scene.game)).ok, "Destination: intermediate choice is a durable reward checkpoint")
-	var stored: Dictionary = service.inspect().data
-	var persistent: Dictionary = CampaignTests.persistent_parts(scene.game)
+	check.call(service.start(SaveTests.payload(scene.game)).ok, "Selección: es un punto de guardado válido para «Continuar partida»")
 	var rng_before: int = scene.game.rng.state
 	var serial: int = scene.game.shop_offer_sequence
-	var advance = UI.find_button(scene.ui, "Seguir sin tienda →")
-	advance.pressed.emit()
-	var advanced: Dictionary = scene.game.snapshot()
-	advance.pressed.emit()
-	check.call(scene.game.rival == 1 and scene.game.phase == "play" and scene.game.snapshot() == advanced, "Destination: repeated direct-continuation click advances only one encounter")
-	check.call(scene.game.rng.state == rng_before and scene.game.shop_offer_sequence == serial and scene.game.shop_state.is_empty(), "Destination: skipping never generates offers or consumes shop RNG")
-	check.call(CampaignTests.persistent_parts(scene.game) == persistent and scene.game.groups.is_empty() and scene.game.rolls_made == 0 and scene.game.points == 0, "Destination: direct advance preserves inventory and credited reward, resetting encounter state")
-	check.call(scene.background.stickers == scene.game.cup.stickers and not scene.background.shop_mode, "Match thermos: purchased sticker levels reach the playing-table artwork")
-	scene.game = service.restore_game(stored)
-	scene.render()
-	UI.find_button(scene.ui, "Ir a la tienda →").pressed.emit()
-	check.call(scene.game.phase == "shop" and not scene.game.shop_state.is_empty() and CampaignTests.persistent_parts(scene.game) == persistent, "Destination: restored choice can visit shop without recollecting reward")
-	scene.game.leave_shop()
-	check.call(CampaignTests.persistent_parts(scene.game) == persistent and scene.game.rival == 1, "Destination: both routes preserve the same upgrades and money")
+	var persistent: Dictionary = CampaignTests.persistent_parts(scene.game)
+	play.pressed.emit()
+	check.call(scene.game.phase == "play" and scene.game.rival == 1 and scene.game.rng.state == rng_before and scene.game.shop_offer_sequence == serial and CampaignTests.persistent_parts(scene.game) == persistent, "Selección: jugar sin tienda no genera ofertas ni toca el azar")
+	# Primer encuentro de un nivel: la tienda en gris.
+	scene.start_new_run(921)
+	check.call(scene.game.phase == "level_intro" and not scene.game.shop_available() and scene.ui.find_child("OpenShop", true, false).disabled and not scene.game.open_shop(), "Selección: tienda cerrada en el primer encuentro del nivel")
+	scene.ui.find_child("PlayNext", true, false).pressed.emit()
+	check.call(scene.game.phase == "play" and scene.game.rival == 0, "Selección: Jugar arranca el primer encuentro")
+
+## La tienda se puede abrir varias veces entre dos encuentros sin volver a sortear nada.
+static func _shop_reentry(check: Callable) -> void:
+	var game = reward_game()
+	game.cash = 50
+	game.continue_after_reward()
+	check.call(game.open_shop() and game.phase == "shop", "Tienda: se abre desde la selección")
+	check.call(game.refresh_shop("coins"), "Tienda: renovar una sección")
+	var stock: Dictionary = game.shop_state.duplicate(true)
+	var rng_after: int = game.rng.state
+	var prices: Dictionary = game.reroll_prices.duplicate()
+	var cash: int = game.cash
+	check.call(game.exit_shop() and game.phase == "lobby" and game.rival == 0, "Tienda: salir vuelve a la selección sin avanzar")
+	check.call(game.open_shop() and game.shop_state == stock and game.rng.state == rng_after and game.reroll_prices == prices and game.cash == cash, "Tienda: volver a entrar conserva stock, precios de renovación y azar")
+	game.exit_shop()
+	check.call(game.play_next() and game.phase == "play" and game.rival == 1 and game.shop_state.is_empty(), "Tienda: el stock se descarta al jugar el siguiente encuentro")
+	var direct = reward_game()
+	check.call(direct.open_shop() and direct.leave_shop() and direct.phase == "play" and direct.rival == 1, "Tienda: el camino directo (abrir desde el cobro y salir al encuentro) sigue andando")
+
+static func _flow_rules(check: Callable) -> void:
 	var repair = reward_game()
 	repair.dice[0].shell = "ruby"
 	repair.dice[0].shell_broken = true
 	repair.phase = "repair"
 	repair.repair_resolution = {"status": "pending", "available_ids": [0], "next_phase": "reward"}
 	var before: Dictionary = repair.snapshot()
-	check.call(not repair.skip_shop() and repair.snapshot() == before, "Destination: pending repairs cannot be bypassed by direct continuation")
-	check.call(repair.resolve_repairs([]) and repair.phase == "reward" and repair.skip_shop() and repair.dice[0].shell_broken, "Destination: declining repairs reaches choice and preserves broken shell when skipping shop")
+	check.call(not repair.skip_shop() and not repair.continue_after_reward() and repair.snapshot() == before, "Flujo: la reparación pendiente no se saltea")
+	check.call(repair.resolve_repairs([]) and repair.phase == "reward" and repair.continue_after_reward() and repair.phase == "lobby" and repair.dice[0].shell_broken, "Flujo: reparación → cobro → selección")
 	var campaign = Game.new(921)
 	campaign.begin_campaign(921)
 	Profile.apply(campaign)
 	campaign.debug_mode = true
 	campaign.cup.stickers = {"trio": 2, "full": 1}
 	var intros := 0
+	var lobbies := 0
 	var wins := 0
 	for encounter in range(22):
 		if campaign.phase == "level_intro":
 			intros += 1
-			campaign.begin_level()
+			check.call(not campaign.shop_available(), "Flujo: sin tienda antes del primer encuentro del nivel %d" % (campaign.level_index + 1))
+			campaign.play_next()
 		campaign.roll()
 		if not campaign.score_hand() or not campaign.close_encounter(): break
 		wins += 1
 		if campaign.phase == "repair": campaign.resolve_repairs([])
-		if campaign.phase == "reward": campaign.skip_shop()
-	check.call(wins == 22 and intros == 7 and campaign.phase == "won" and campaign.completed_encounters.size() == 22 and campaign.shop_offer_sequence == 0, "Destination: all 22 encounters can skip shops, preserving seven level announcements and terminal La Semilla victory")
-	before = campaign.snapshot()
-	check.call(not campaign.skip_shop() and campaign.snapshot() == before and campaign.cup.stickers == {"trio": 2, "full": 1}, "Destination: final victory offers no further advance and retains purchased stickers")
+		if campaign.phase == "reward": campaign.continue_after_reward()
+		if campaign.phase == "lobby":
+			lobbies += 1
+			campaign.play_next()
+	check.call(wins == 22 and intros == 7 and lobbies == 15 and campaign.phase == "won" and campaign.completed_encounters.size() == 22 and campaign.shop_offer_sequence == 0, "Flujo: 22 encuentros con siete entradas de nivel, 15 selecciones con tienda (la de La Semilla incluida) y victoria final")
+	var boss = Game.new(922)
+	boss.begin_campaign(922)
+	Profile.apply(boss)
+	boss.debug_mode = true
+	boss.play_next()
+	for i in range(3):
+		boss.roll()
+		boss.score_hand()
+		boss.close_encounter()
+		if boss.phase == "repair": boss.resolve_repairs([])
+		if i < 2:
+			boss.continue_after_reward()
+			boss.play_next()
+	check.call(boss.phase == "reward" and boss.rival == 2 and boss.continue_after_reward() and boss.phase == "level_intro" and boss.level_index == 1 and not boss.shop_available(), "Flujo: después del jefe, Continuar entra al nivel siguiente sin tienda (D20)")
+
+## PS2: menú sobre el paño izquierdo, sin mano, con elección de modo, tutorial y Colecciones en el paño del medio.
+static func _menu(scene, check: Callable) -> void:
+	scene.open_menu_panel("")
+	scene.game.return_to_menu()
+	scene.session_started = false
+	scene.render()
+	var menu = scene.ui.find_child("MainMenu", true, false)
+	check.call(menu != null and not UI.text_in(menu, "DIOS NO JUEGA") and not menu is Panel, "Menú: sin recuadro ni título")
+	var names := ["NewRun", "Collections", "Options", "Quit"]
+	var inside := true
+	for node_name in names:
+		var item = menu.find_child(node_name, true, false)
+		inside = inside and item != null and StartMenu.PANO1.encloses(Rect2(item.position, item.size))
+	check.call(inside and UI.find_button(scene.ui, "Salir") != null and UI.find_button(scene.ui, "Colecciones") != null, "Menú: Nueva partida, Colecciones, Opciones y Salir sobre el paño izquierdo")
+	check.call(scene.background.menu_mode and scene.ui.find_child("MenuHand", true, false) == null and scene.ui.find_child("BarProp_flag", true, false) == null and scene.ui.find_child("MenuMate", true, false) != null and scene.ui.find_child("MenuMateCup", true, false) != null, "Menú: sin mano ni bandera/sifones; el mate responde")
+	check.call(scene.background.copa_hits.all(func(hit): return not hit.visible), "Menú: las estrellas de la copa no responden")
+	UI.find_button(scene.ui, "Colecciones").pressed.emit()
+	check.call(scene.menu_panel == "collections" and scene.ui.find_child("CollectionCoins", true, false) != null and scene.ui.find_child("CollectionStickers", true, false) != null, "Colecciones: secciones en el paño del medio")
+	check.call(StartMenu.coins_text().count("\n") >= 70 and "Trío" in StartMenu.stickers_text(), "Colecciones: monedas y stickers con nombre y descripción")
+	var snapshot: Dictionary = scene.game.snapshot()
+	scene.ui.find_child("CollectionCoins", true, false).pressed.emit()
+	check.call(scene.detail.visible and scene.game.snapshot() == snapshot, "Colecciones: mirar no cambia nada")
+	scene.detail.hide()
+	scene.ui.find_child("PanelBack", true, false).pressed.emit()
+	check.call(scene.menu_panel == "", "Colecciones: Volver cierra el paño")
+	UI.find_button(scene.ui, "Nueva partida").pressed.emit()
+	check.call(scene.menu_panel == "modes" and UI.find_button(scene.ui, "Campaña") != null and scene.ui.find_child("ModeSoon_0", true, false).disabled, "Menú: Nueva partida elige el modo; los otros en gris")
+	UI.find_button(scene.ui, "Campaña").pressed.emit()
+	check.call(scene.pending_tutorial_choice and scene.ui.find_child("TutorialYes", true, false) != null, "Menú: Campaña pregunta por el tutorial")
+	scene.ui.find_child("TutorialBack", true, false).pressed.emit()
+	check.call(scene.menu_panel == "modes" and not scene.pending_tutorial_choice, "Menú: Volver de la pregunta vuelve a los modos")
+	scene.open_menu_panel("")
+
+## PS6: la ayuda de la mano del jefe va debajo de la mano y no tapa la libreta.
+static func _boss_help(scene, check: Callable) -> void:
+	scene.start_new_run(923)
+	scene.game.play_next()
+	scene.render()
+	check.call(not scene.background.menu_mode and not scene.background.quiet, "Mano: vuelve a verse al empezar la partida")
+	var hand: Control = scene.ui.find_child("InspectBoss", true, false)
+	scene.hover_description_body.text = hand.tooltip_text if hand.tooltip_text != "" else "Ayuda de prueba"
+	scene.hover_description.reset_size()
+	scene.place_hover_description(hand)
+	var box := Rect2(scene.hover_description.position, scene.hover_description.size)
+	check.call(box.position.y >= hand.position.y + hand.size.y and not box.intersects(Rect2(22, 25, 310, 630)) and Rect2(0, 0, 1440, 900).encloses(box), "Mano: la ayuda sale debajo de la mano, sin tapar la libreta")
+	scene.place_hover_description(null)
+	check.call(scene.hover_description.position == Vector2(30, 400), "Mano: las demás ayudas siguen en su lugar")
+	scene.cancel_navigation()
+	scene.game.return_to_menu()
+	scene.session_started = false

@@ -249,10 +249,12 @@ func _initialize() -> void:
 	check(scene.get_child_count() > 2, "scene instantiates")
 	check(scene.game.phase == "menu" and find_button(scene, "Continuar") == null, "boot opens menu without fake continue")
 	find_button(scene, "Nueva partida").pressed.emit()
+	check(scene.menu_panel == "modes" and find_button(scene, "Campaña") != null and find_button(scene, "Próximamente").disabled, "new run first chooses the mode")
+	find_button(scene, "Campaña").pressed.emit()
 	check(scene.pending_tutorial_choice and find_button(scene, "Sí, jugar el tutorial") != null, "new run asks about the tutorial")
 	find_button(scene, "No, ir a la campaña").pressed.emit()
 	check(scene.game.phase == "level_intro" and not scene.game.tutorial, "declining the tutorial opens the level announcement")
-	find_button(scene, "Empezar primer encuentro").pressed.emit()
+	find_button(scene, "Jugar contra el siguiente rival").pressed.emit()
 	var throw_button = find_button(scene, "TIRAR (3)")
 	check(throw_button != null and not throw_button.disabled, "initial throw button enabled")
 	throw_button.pressed.emit()
@@ -423,7 +425,7 @@ func _initialize() -> void:
 	var balance: int = scene.game.cash
 	find_button(scene, "Reparar selección · $7").pressed.emit()
 	check(scene.game.cash == balance - 7 and scene.game.cash < 0 and scene.game.phase == "reward" and not scene.game.dice[0].shell_broken and scene.game.dice[1].shell_broken, "UI confirms selected repairs with debt and preserves unselected damage")
-	check(scene.repair_selection.is_empty() and find_button(scene, "Ir a la tienda →") != null, "UI confirmed repair clears selection and unlocks continuation")
+	check(scene.repair_selection.is_empty() and find_button(scene, "Continuar") != null, "UI confirmed repair clears selection and unlocks continuation")
 	scene.game.restart(87)
 	scene.game.rival = 2
 	scene.game.dice[0].shell = "ruby"
