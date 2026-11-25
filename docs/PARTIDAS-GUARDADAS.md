@@ -4,6 +4,8 @@ Contrato del 17/11/2026 (ficha [TU-tutorial](pasos/TU-tutorial.md), fases TU1–
 
 ## Vocabulario
 
+> **Cambio del 24/11/2026 (D20, PS1):** en la interfaz la corrida de juego se llama **partida** («Nueva partida», «Abandonar partida») y el perfil de metaprogreso se llama **progreso** («Progreso guardado», «Progreso 1», «2» y «3»). El formato y los nombres de archivo de abajo no cambian, para no perder progresos ya guardados. El resto de este contrato usa todavía los nombres viejos.
+
 - **Jugada** (en el código «run»): una corrida de juego, de empezar a ganar o perder. **No se guarda ni se continúa.** Salir a mitad la pierde y no cuenta en nada.
 - **Partida guardada**: el perfil que reúne las estadísticas de sus jugadas, los logros y las monedas desbloqueadas. Es **lo único que se guarda**. Hay tres ranuras: «Partida guardada 1», «2» y «3», sin nombre propio.
 

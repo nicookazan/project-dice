@@ -2,7 +2,7 @@
 
 Ítem 6 de los pendientes post-paso 20 · 24 de noviembre de 2026.
 
-**Estado actual:** PS0 completo; PS1 en curso (ver `ESTADO.md`).
+**Estado actual:** PS0 y PS1 completos; sigue PS2 (ver `ESTADO.md`).
 
 ## Objetivo
 Menú inicial sobre la mesa, pantalla de selección de encuentro (con tienda a la que se entra varias veces), cobro sin desglose, ayuda de la mano del jefe debajo de la mano y Colecciones. Decisiones en `DECISIONES.md` (D20).

@@ -63,7 +63,7 @@ static func run(scene, check: Callable) -> void:
 	scene.request_navigation("menu")
 	check.call(scene.confirmation.visible and not scene.game.debug_mode, "Debug UI: abandoning a run in progress asks first")
 	scene.confirm_navigation()
-	var debug_button = UI.find_button(scene.ui, "Nueva jugada debug")
+	var debug_button = UI.find_button(scene.ui, "Nueva partida debug")
 	check.call(scene.game.phase == "menu" and debug_button != null, "Debug UI: the menu offers a debug run in development builds")
 	debug_button.pressed.emit()
 	check.call(scene.game.debug_mode and scene.game.phase == "level_intro" and UI.text_in(scene.ui, "DEBUG"), "Debug UI: the debug run is marked and shows its indicator before the first encounter")

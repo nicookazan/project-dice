@@ -713,7 +713,7 @@ func continue_run() -> void:
 	var found: Dictionary = run_store.read_file(run_store.path)
 	var restored = run_store.restore_game(found.data) if found.ok and found.active else null
 	if restored == null:
-		profile_message = "No se pudo continuar: la partida guardada está dañada. Se conserva sin cambios."
+		profile_message = "No se pudo continuar: el guardado de la partida está dañado. Se conserva sin cambios."
 		render()
 		return
 	if is_instance_valid(background): background.thermos_configured = false
@@ -765,7 +765,7 @@ func show_game_menu() -> void:
 		["Seguir jugando", close_game_menu, true],
 		["Recorrido · M", func(): close_game_menu(); show_route(), false],
 		["Opciones", func(): close_game_menu(); show_options(), false],
-		["Abandonar jugada", func(): close_game_menu(); request_navigation("menu"), false]]
+		["Abandonar partida", func(): close_game_menu(); request_navigation("menu"), false]]
 	# Saltar niveles: solo en la campaña (el nivel de prueba tiene uno solo) y fuera de una compra a medio resolver.
 	if not game.campaign.is_empty():
 		var jump := ["Ir a otro nivel", func(): close_game_menu(); show_level_picker(), false]
@@ -818,10 +818,10 @@ func request_navigation(destination: String) -> void:
 	var in_progress: bool = session_started and game.phase not in ["menu", "won", "lost"]
 	pending_navigation = destination
 	if destination == "quit" or in_progress:
-		confirmation.title = {"quit": "Salir del juego", "menu": "Abandonar jugada", "new": "Nueva jugada", "new_debug": "Nueva jugada debug"}[destination]
+		confirmation.title = {"quit": "Salir del juego", "menu": "Abandonar partida", "new": "Nueva partida", "new_debug": "Nueva partida debug"}[destination]
 		confirmation.ok_button_text = {"quit": "Salir", "menu": "Abandonar", "new": "Empezar de nuevo", "new_debug": "Empezar de nuevo"}[destination]
 		confirmation.cancel_button_text = "Seguir jugando" if in_progress else "Cancelar"
-		confirmation.dialog_text = "¿Salir del juego?" + ("\nLa jugada en curso no cuenta para tus estadísticas." + resume_hint() if in_progress else "") if destination == "quit" else ("Abandonar la jugada no cuenta para tus estadísticas." + resume_hint() if destination == "menu" else "Hay una jugada en curso: empezar otra la pierde y no cuenta para tus estadísticas.")
+		confirmation.dialog_text = "¿Salir del juego?" + ("\nLa partida en curso no cuenta para tus estadísticas." + resume_hint() if in_progress else "") if destination == "quit" else ("Abandonar la partida no cuenta para tus estadísticas." + resume_hint() if destination == "menu" else "Hay una partida en curso: empezar otra la pierde y no cuenta para tus estadísticas.")
 		confirmation.popup_centered(Vector2i(620, 220))
 		return
 	confirm_navigation()
@@ -837,10 +837,10 @@ func confirm_navigation() -> void:
 	elif destination.begins_with("delete1_"):
 		var slot := int(destination.trim_prefix("delete1_"))
 		pending_navigation = "delete2_%d" % slot
-		confirmation.title = "Borrar partida guardada"
+		confirmation.title = "Borrar progreso"
 		confirmation.ok_button_text = "Sí, borrar"
 		confirmation.cancel_button_text = "No, conservarla"
-		confirmation.dialog_text = "¿Estás muy, muy seguro?\nSe pierden las estadísticas, los logros y las monedas desbloqueadas de la Partida guardada %d." % slot
+		confirmation.dialog_text = "¿Estás muy, muy seguro?\nSe pierden las estadísticas, los logros y las monedas desbloqueadas del Progreso %d." % slot
 		confirmation.popup_centered(Vector2i(620, 220))
 	elif destination.begins_with("delete2_"): delete_profile(int(destination.trim_prefix("delete2_")))
 	elif destination == "menu":
@@ -862,10 +862,10 @@ func request_load_profile(slot: int) -> void:
 		return
 	detail.hide()
 	pending_navigation = "load_%d" % slot
-	confirmation.title = "Cargar partida guardada"
+	confirmation.title = "Cargar progreso"
 	confirmation.ok_button_text = "Cargar"
 	confirmation.cancel_button_text = "Seguir jugando"
-	confirmation.dialog_text = "Hay una jugada en curso: cargar otra partida la pierde y no cuenta para tus estadísticas."
+	confirmation.dialog_text = "Hay una partida en curso: cargar otro progreso la pierde y no cuenta para tus estadísticas."
 	confirmation.popup_centered(Vector2i(620, 220))
 
 func load_profile(slot: int) -> void:
@@ -889,10 +889,10 @@ func load_profile(slot: int) -> void:
 func request_delete_profile(slot: int) -> void:
 	detail.hide()
 	pending_navigation = "delete1_%d" % slot
-	confirmation.title = "Borrar partida guardada"
+	confirmation.title = "Borrar progreso"
 	confirmation.ok_button_text = "Borrar"
 	confirmation.cancel_button_text = "Conservarla"
-	confirmation.dialog_text = "¿Seguro que querés borrar esta partida?\nPartida guardada %d." % slot
+	confirmation.dialog_text = "¿Seguro que querés borrar este progreso?\nProgreso %d." % slot
 	confirmation.popup_centered(Vector2i(620, 220))
 
 func delete_profile(slot: int) -> void:
@@ -914,7 +914,7 @@ func dialog_button(parent: Node, text_value: String, rect: Rect2, action: Callab
 
 ## Las tres ranuras con sus datos, «Cargar» y «Borrar».
 func show_profiles() -> void:
-	present_detail("Partidas guardadas", "")
+	present_detail("Progreso guardado", "")
 	detail_body.hide()
 	if is_instance_valid(profiles_panel):
 		detail.remove_child(profiles_panel)
@@ -930,7 +930,7 @@ func show_profiles() -> void:
 		var top := 4.0 + (slot - 1) * 140.0
 		var card := panel(profiles_panel, Rect2(0, top, 760, 128), Color("0d1728"), gold)
 		card.name = "Slot_%d" % slot
-		label(card, "Partida guardada %d%s" % [slot, "  ·  en uso" if slot == current else ""], Vector2(16, 10), 21, gold, 460)
+		label(card, "Progreso %d%s" % [slot, "  ·  en uso" if slot == current else ""], Vector2(16, 10), 21, gold, 460)
 		var text: String = "Vacía: se crea al cargarla." if entry.ok and not entry.exists else (ProfileStore.summary(entry.data) if entry.ok else entry.message)
 		label(card, text, Vector2(16, 42), 15, cream, 470)
 		var load_caption := "Cargar" if entry.ok and entry.exists else "Crear y cargar"
@@ -938,7 +938,7 @@ func show_profiles() -> void:
 		load_button.name = "Load_%d" % slot
 		var delete_button := dialog_button(card, "Borrar", Rect2(520, 70, 220, 40), func(): request_delete_profile(slot), not FileAccess.file_exists(profile_store.path_of(slot)))
 		delete_button.name = "Delete_%d" % slot
-	label(profiles_panel, profile_message if profile_message != "" else "Las partidas guardan estadísticas, logros y monedas desbloqueadas, no jugadas en curso.", Vector2(0, 424), 15, gold, 480)
+	label(profiles_panel, profile_message if profile_message != "" else "Tu progreso guarda estadísticas, logros y monedas desbloqueadas, no partidas en curso.", Vector2(0, 424), 15, gold, 480)
 	dialog_button(profiles_panel, "Volver a las opciones", Rect2(500, 428, 260, 38), show_options).name = "BackToOptions"
 	detail.popup_centered(Vector2i(820, 620))
 
@@ -1048,7 +1048,7 @@ func show_options() -> void:
 	settings_panel.add_child(faces_button)
 	var profiles_button := Button.new()
 	profiles_button.name = "Profiles"
-	profiles_button.text = "Partidas guardadas"
+	profiles_button.text = "Progreso guardado"
 	profiles_button.position = Vector2(440, 415)
 	profiles_button.size = Vector2(230, 40)
 	profiles_button.pressed.connect(show_profiles)
@@ -1237,7 +1237,7 @@ func render_entry() -> void:
 	var stops: Array = game.route().map(func(stop): return "%s: %d puntos" % [stop.name, stop.target])
 	label(card, "  →  ".join(stops) + "\n\n" + game.boss_name() + " · " + game.boss_rule.name.to_upper() + "\n" + BossRules.description(game.boss_rule) + "\n\nDos manos por encuentro y tres tiradas por mano.\nTras ganar: cobro, reparación opcional y tienda.", Vector2(40, 175), 22, cream, 760)
 	button(card, "Empezar primer encuentro", Rect2(150, 490, 540, 55), func(): act(game.begin_level), false, true)
-	button(card, "Abandonar jugada", Rect2(150, 565, 540, 45), func(): request_navigation("menu"))
+	button(card, "Abandonar partida", Rect2(150, 565, 540, 45), func(): request_navigation("menu"))
 
 ## Pantalla inicial: el bar a la derecha (con sus interacciones de siempre) y el menú a la izquierda.
 func render_menu() -> void:
@@ -1248,7 +1248,7 @@ func render_menu() -> void:
 	label(column, subtitle, Vector2(28, 118), 17, cream, 390)
 	if pending_tutorial_choice:
 		label(column, "¿QUERÉS JUGAR\nEL TUTORIAL?", Vector2(28, 168), 28, gold, 390)
-		label(column, "Te muestra cómo se tira, se agrupa, se anota y se compra. Aparece en cada jugada nueva.", Vector2(28, 250), 18, cream, 390)
+		label(column, "Te muestra cómo se tira, se agrupa, se anota y se compra. Aparece en cada partida nueva.", Vector2(28, 250), 18, cream, 390)
 		var yes := button(column, "Sí, jugar el tutorial", Rect2(40, 350, 360, 58), func(): start_new_run(-1, false, true), false, true)
 		yes.name = "TutorialYes"
 		var no := button(column, "No, ir a la campaña", Rect2(40, 424, 360, 52), func(): start_new_run())
@@ -1264,11 +1264,11 @@ func render_menu() -> void:
 			var resume := button(column, "Continuar partida", Rect2(40, 190, 360, 58), continue_run, false, true)
 			resume.name = "ContinueRun"
 			first_y = 262.0
-		var first := button(column, "Nueva jugada", Rect2(40, first_y, 360, 58), func(): request_navigation("new"), false, not can_continue)
+		var first := button(column, "Nueva partida", Rect2(40, first_y, 360, 58), func(): request_navigation("new"), false, not can_continue)
 		first.name = "NewRun"
 		var next_y := first_y + 72.0
 		if OS.has_feature("debug"):
-			var debug_button := button(column, "Nueva jugada debug", Rect2(40, next_y, 360, 48), func(): request_navigation("new_debug"))
+			var debug_button := button(column, "Nueva partida debug", Rect2(40, next_y, 360, 48), func(): request_navigation("new_debug"))
 			debug_button.name = "NewRunDebug"
 			next_y += 62
 		button(column, "Opciones", Rect2(40, next_y, 360, 48), show_options).name = "Options"
@@ -1315,7 +1315,7 @@ func render_tutorial_intro() -> void:
 	var start := button(bubble, "Empezar el tutorial", Rect2(120, 250, 360, 56), func(): act(game.begin_level), false, true)
 	start.name = "TutorialStart"
 	start.grab_focus()
-	button(ui, "Abandonar jugada", Rect2(1220, 23, 185, 38), func(): request_navigation("menu"))
+	button(ui, "Abandonar partida", Rect2(1220, 23, 185, 38), func(): request_navigation("menu"))
 
 func render() -> void:
 	sticker_animation = null
@@ -1893,7 +1893,7 @@ func inspect_coin(coin: String) -> void:
 	var data := Coins.definition(coin)
 	if data.is_empty(): return
 	var duration: String = {"equipped": "Mientras está equipada", "hand": "Mano actual", "encounter": "Encuentro actual", "instant": "Inmediata", "visit": "Visita actual a la tienda"}[data.duration]
-	var windows := {"play": "durante la jugada", "shop": "en la tienda", "repair": "en la fase de reparación"}
+	var windows := {"play": "durante la partida", "shop": "en la tienda", "repair": "en la fase de reparación"}
 	var use_windows: Array = data.use_contexts.map(func(window): return windows.get(window, window))
 	var context := "Pasiva al puntuar; no se consume." if data.type == "passive" else "Se usa " + ", ".join(use_windows) + "."
 	if data.type == "consumable" and "shop" not in data.use_contexts: context += " No se usa en tienda."
@@ -2397,9 +2397,9 @@ func render_result() -> void:
 	var modal := panel(ui, Rect2(400, 240, 640, 480), Color("263c3d"), gold)
 	if game.phase == "lost":
 		label(modal, "ESTA VEZ, GANÓ EL AZAR", Vector2(36, 33), 29, gold)
-		label(modal, "%d / %d puntos\n\n%s: se agotaron las manos sin llegar al objetivo.\nPodés volver a intentar con la misma semilla\no empezar una nueva jugada." % [game.points, game.target(), "Nivel %d, encuentro %d" % [game.level_index + 1, game.rival + 1] if not game.campaign.is_empty() else "Rival %d" % (game.rival + 1)], Vector2(36, 103), 21, cream, 560)
-		button(modal, "Reintentar misma semilla", Rect2(36, 306, 566, 49), func(): start_new_run(game.run_seed, false, false, true), false, true).tooltip_text = "Con la misma semilla la jugada no suma nada a tu partida guardada."
-		button(modal, "Nueva jugada", Rect2(36, 371, 566, 45), new_run_from_result)
+		label(modal, "%d / %d puntos\n\n%s: se agotaron las manos sin llegar al objetivo.\nPodés volver a intentar con la misma semilla\no empezar una nueva partida." % [game.points, game.target(), "Nivel %d, encuentro %d" % [game.level_index + 1, game.rival + 1] if not game.campaign.is_empty() else "Rival %d" % (game.rival + 1)], Vector2(36, 103), 21, cream, 560)
+		button(modal, "Reintentar misma semilla", Rect2(36, 306, 566, 49), func(): start_new_run(game.run_seed, false, false, true), false, true).tooltip_text = "Con la misma semilla la partida no suma nada a tu progreso."
+		button(modal, "Nueva partida", Rect2(36, 371, 566, 45), new_run_from_result)
 	else:
 		label(modal, "LA SEMILLA DERROTADA" if game.phase == "won" and not game.campaign.is_empty() else "JEFE SUPERADO" if game.phase == "won" else "ENCUENTRO GANADO", Vector2(36, 30), 32, gold)
 		if game.phase == "won": label(modal, ("VICTORIA · %d ENCUENTROS COMPLETADOS" % game.campaign_route().size()) if not game.campaign.is_empty() else "VICTORIA · NIVEL DE PRUEBA COMPLETADO", Vector2(36, 69), 16, cream)
@@ -2431,10 +2431,10 @@ func render_tutorial_end() -> void:
 	label(modal, intro, Vector2(36, 84), 19, cream, 566)
 	label(modal, "LOGRO · " + Achievements.name_of("tutorial_completed"), Vector2(36, 160), 22, gold, 566)
 	var gift := Coins.definition("vendor_gift")
-	label(modal, "Desbloqueaste la moneda «%s»:\n%s\nEn las próximas jugadas de esta partida guardada puede aparecer en la tienda." % [gift.name, gift.description], Vector2(36, 205), 19, cream, 566)
+	label(modal, "Desbloqueaste la moneda «%s»:\n%s\nEn las próximas partidas de este progreso puede aparecer en la tienda." % [gift.name, gift.description], Vector2(36, 205), 19, cream, 566)
 	if profile_message != "": label(modal, profile_message, Vector2(36, 345), 16, gold, 566)
-	elif not profiles_enabled or profile_slot == 0: label(modal, "Sin partida guardada activa: el logro no se guardó.", Vector2(36, 345), 16, gold, 566)
-	button(modal, "Nueva jugada", Rect2(36, 395, 566, 49), new_run_from_result, false, true).name = "TutorialEndNew"
+	elif not profiles_enabled or profile_slot == 0: label(modal, "Sin progreso activo: el logro no se guardó.", Vector2(36, 345), 16, gold, 566)
+	button(modal, "Nueva partida", Rect2(36, 395, 566, 49), new_run_from_result, false, true).name = "TutorialEndNew"
 	button(modal, "Volver al menú", Rect2(36, 457, 566, 40), func(): request_navigation("menu"))
 
 func render_encounter_choice() -> void:

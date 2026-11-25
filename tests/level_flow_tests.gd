@@ -7,7 +7,7 @@ const UI = preload("res://tests/interface_tests.gd")
 static func click(scene, caption: String) -> bool:
 	var control = UI.find_button(scene.ui, caption)
 	# Secondary options live inside the in-game menu panel: open it first when the button is not on screen.
-	if control == null and caption in ["Recorrido · M", "Opciones", "Abandonar jugada", "Seguir jugando"]:
+	if control == null and caption in ["Recorrido · M", "Opciones", "Abandonar partida", "Seguir jugando"]:
 		var menu = UI.find_button(scene.ui, "Menú")
 		if menu != null and not menu.disabled:
 			menu.pressed.emit()
@@ -102,12 +102,12 @@ static func run(scene, check: Callable) -> Dictionary:
 	scene.detail.hide()
 	scene.game.return_to_menu()
 	scene.render()
-	check.call(UI.find_button(scene.ui, "Nueva jugada") != null and UI.find_button(scene.ui, "Continuar") == null, "Flow: real menu has new run and no continue")
+	check.call(UI.find_button(scene.ui, "Nueva partida") != null and UI.find_button(scene.ui, "Continuar") == null, "Flow: real menu has new run and no continue")
 	var before: Dictionary = scene.game.snapshot()
 	click(scene, "Opciones")
 	check.call(scene.detail.visible and "F11" in scene.detail_text and scene.game.snapshot() == before, "Flow: options expose working display control and preserve game")
 	scene.detail.hide()
-	click(scene, "Nueva jugada")
+	click(scene, "Nueva partida")
 	check.call(scene.pending_tutorial_choice and UI.find_button(scene.ui, "No, ir a la campaña") != null and UI.find_button(scene.ui, "Sí, jugar el tutorial") != null, "Flow: a new run asks whether to play the tutorial")
 	click(scene, "No, ir a la campaña")
 	check.call(scene.game.phase == "level_intro" and UI.text_in(scene.ui, "GENERALA PROHIBIDA"), "Flow: level intro announces boss rule before first encounter")
@@ -117,15 +117,15 @@ static func run(scene, check: Callable) -> Dictionary:
 	click(scene, "Empezar primer encuentro")
 	check.call(scene.game.phase == "play" and scene.game.rival == 0 and not scene.game.begin_level(), "Flow: only first encounter starts, intro continuation is idempotent")
 	before = scene.game.snapshot()
-	check.call(UI.find_button(scene.ui, "Recorrido · M") == null and UI.find_button(scene.ui, "Abandonar jugada") == null and UI.find_button(scene.ui, "Opciones") == null and UI.find_button(scene.ui, "Menú") != null, "Flow: table keeps only the Menú button; secondary options are not loose on screen")
+	check.call(UI.find_button(scene.ui, "Recorrido · M") == null and UI.find_button(scene.ui, "Abandonar partida") == null and UI.find_button(scene.ui, "Opciones") == null and UI.find_button(scene.ui, "Menú") != null, "Flow: table keeps only the Menú button; secondary options are not loose on screen")
 	UI.find_button(scene.ui, "Menú").pressed.emit()
-	check.call(scene.ui.has_node("GameMenu") and UI.find_button(scene.ui, "Seguir jugando") != null and UI.find_button(scene.ui, "Recorrido · M") != null and UI.find_button(scene.ui, "Opciones") != null and UI.find_button(scene.ui, "Abandonar jugada") != null and UI.find_button(scene.ui, "Guardar y volver al menú") == null and scene.game.snapshot() == before, "Flow: Menú opens a panel with route, options and abandon (no save-and-exit) without changing state")
+	check.call(scene.ui.has_node("GameMenu") and UI.find_button(scene.ui, "Seguir jugando") != null and UI.find_button(scene.ui, "Recorrido · M") != null and UI.find_button(scene.ui, "Opciones") != null and UI.find_button(scene.ui, "Abandonar partida") != null and UI.find_button(scene.ui, "Guardar y volver al menú") == null and scene.game.snapshot() == before, "Flow: Menú opens a panel with route, options and abandon (no save-and-exit) without changing state")
 	UI.find_button(scene.ui, "Seguir jugando").pressed.emit()
 	check.call(not scene.ui.has_node("GameMenu") and scene.game.snapshot() == before, "Flow: closing the menu panel keeps the game untouched")
 	click(scene, "Recorrido · M")
 	check.call("40 → 70 → 110" in scene.detail_text and "trío + par" in scene.detail_text and scene.game.snapshot() == before, "Flow: route consultable during play without changing RNG or state")
 	scene.detail.hide()
-	click(scene, "Abandonar jugada")
+	click(scene, "Abandonar partida")
 	check.call(scene.confirmation.visible and scene.game.snapshot() == before, "Flow: active abandonment asks before changing state")
 	UI.key(scene, KEY_SPACE)
 	click(scene, "TIRAR (3)")
@@ -185,7 +185,7 @@ static func run(scene, check: Callable) -> Dictionary:
 	scene.game = loss
 	scene.render()
 	check.call(loss.phase == "lost" and loss.cash == 0 and loss.payout.is_empty() and not loss.open_shop(), "Flow: two insufficient hands show defeat without shop or reward")
-	check.call(UI.find_button(scene.ui, "Nueva jugada") != null and UI.find_button(scene.ui, "Volver al menú") != null, "Flow: defeat provides actual restart/menu actions")
+	check.call(UI.find_button(scene.ui, "Nueva partida") != null and UI.find_button(scene.ui, "Volver al menú") != null, "Flow: defeat provides actual restart/menu actions")
 	click(scene, "Volver al menú")
 	check.call(scene.game.phase == "menu" and not scene.confirmation.visible, "Flow: ended run returns to menu directly")
 

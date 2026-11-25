@@ -70,7 +70,7 @@ static func natural_run(scene, seed_value: int, profile: bool, ending: String, c
 	isolate(scene, profile)
 	scene.game.return_to_menu()
 	scene.render()
-	Flow.click(scene, "Nueva jugada")
+	Flow.click(scene, "Nueva partida")
 	Flow.click(scene, "No, ir a la campaña")
 	# Fixed regression seed is input; dice, stock, cash and outcomes are never injected.
 	scene.start_new_run(seed_value)

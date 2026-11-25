@@ -451,7 +451,7 @@ func campaign_route() -> Array:
 			if id in completed_encounters: status = "Superado"
 			elif level == level_index and stop == rival: status = "Derrota" if phase == "lost" else "Actual"
 			if stop == 3:
-				result.append({"level": level + 1, "position": 4, "status": status, "name": Campaign.SEED_NAME, "target": Campaign.seed_target(chosen.target) if not chosen.is_empty() else 0, "rule": "Uno de los poderes de los jefes de la jugada"})
+				result.append({"level": level + 1, "position": 4, "status": status, "name": Campaign.SEED_NAME, "target": Campaign.seed_target(chosen.target) if not chosen.is_empty() else 0, "rule": "Uno de los poderes de los jefes de la partida"})
 				continue
 			result.append({"level": level + 1, "position": stop + 1, "status": status, "name": "Rival %d" % (stop + 1) if stop < 2 else (chosen.get("name", "Dios" if level == 6 else "Jefe sin sortear")), "target": campaign[level].targets[stop] if stop < 2 else chosen.get("target", 0), "rule": chosen.get("rule", {}).get("name", "Se anuncia al entrar al nivel") if stop == 2 else "Sin regla especial"})
 	return result

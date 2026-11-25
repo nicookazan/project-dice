@@ -233,14 +233,14 @@ static func _test_ui(scene, check: Callable) -> void:
 	scene.session_started = false
 	scene.pending_tutorial_choice = false
 	scene.render()
-	check.call(UI.find_button(scene.ui, "Continuar") == null and UI.find_button(scene.ui, "Nueva jugada") != null, "Save UI: the menu has Nueva jugada and no Continuar")
+	check.call(UI.find_button(scene.ui, "Continuar") == null and UI.find_button(scene.ui, "Nueva partida") != null, "Save UI: the menu has Nueva jugada and no Continuar")
 	var before := FileAccess.file_exists(ProjectSettings.globalize_path("user://saves/partida-v1.json"))
 	scene.start_new_run(221)
 	Flow.click(scene, "Empezar primer encuentro")
 	Flow.click(scene, "TIRAR (3)")
 	var after := FileAccess.file_exists(ProjectSettings.globalize_path("user://saves/partida-v1.json"))
 	check.call(before == after and UI.find_button(scene.ui, "Menú") != null, "Save UI: playing a run never writes the old save file")
-	Flow.click(scene, "Abandonar jugada")
+	Flow.click(scene, "Abandonar partida")
 	check.call(scene.confirmation.visible, "Save UI: abandoning a run in progress asks for confirmation")
 	scene.confirmation.get_ok_button().pressed.emit()
 	check.call(scene.game.phase == "menu" and UI.find_button(scene.ui, "Continuar") == null, "Save UI: abandoning returns to the menu without a way to continue")

@@ -45,7 +45,7 @@ static func _test_profile_store(folder: String, check: Callable) -> void:
 	# Ranuras independientes.
 	store.create(2)
 	check.call(store.read(2).data == ProfileStore.empty_data() and not store.read(2).data.unlocked_coins.has("vendor_gift"), "Partidas: cada ranura tiene su propio progreso")
-	check.call("Jugadas: 3" in ProfileStore.summary(store.read(1).data) and "Tutorial completado" in ProfileStore.summary(store.read(1).data), "Partidas: el resumen muestra jugadas y logros")
+	check.call("Partidas: 3" in ProfileStore.summary(store.read(1).data) and "Tutorial completado" in ProfileStore.summary(store.read(1).data), "Partidas: el resumen muestra jugadas y logros")
 	# Archivo dañado: se conserva sin cambios.
 	var path: String = store.path_of(3)
 	var file := FileAccess.open(path, FileAccess.WRITE)
@@ -294,25 +294,25 @@ static func _test_ui(scene, folder: String, check: Callable) -> void:
 	scene.render()
 	# Pantalla inicial.
 	var column = _find(scene.ui, "MainMenu")
-	check.call(column != null and UI.find_button(scene.ui, "Nueva jugada") != null and UI.find_button(scene.ui, "Opciones") != null and UI.find_button(scene.ui, "Salir del juego") != null and UI.find_button(scene.ui, "Continuar") == null, "Menú: Nueva jugada, Opciones y Salir del juego, sin Continuar")
-	check.call(UI.find_button(scene.ui, "Nueva jugada debug") != null and column.position.x < 720 and _find(scene.ui, "MenuMate") != null and _find(scene.ui, "MenuHand") != null, "Menú: la columna va a la izquierda y el mate y la mano de Dios quedan en el bar (debug solo en desarrollo)")
+	check.call(column != null and UI.find_button(scene.ui, "Nueva partida") != null and UI.find_button(scene.ui, "Opciones") != null and UI.find_button(scene.ui, "Salir del juego") != null and UI.find_button(scene.ui, "Continuar") == null, "Menú: Nueva jugada, Opciones y Salir del juego, sin Continuar")
+	check.call(UI.find_button(scene.ui, "Nueva partida debug") != null and column.position.x < 720 and _find(scene.ui, "MenuMate") != null and _find(scene.ui, "MenuHand") != null, "Menú: la columna va a la izquierda y el mate y la mano de Dios quedan en el bar (debug solo en desarrollo)")
 	check.call(not _find(scene.ui, "NewRun").focus_mode == Control.FOCUS_NONE, "Menú: se navega con el teclado (los botones toman foco)")
 	scene.request_navigation("quit")
 	check.call(scene.confirmation.visible and scene.pending_navigation == "quit", "Menú: Salir del juego pide confirmación")
 	scene.cancel_navigation()
 	# Primera jugada: se crea la Partida guardada 1.
-	UI.find_button(scene.ui, "Nueva jugada").pressed.emit()
+	UI.find_button(scene.ui, "Nueva partida").pressed.emit()
 	check.call(scene.pending_tutorial_choice and UI.find_button(scene.ui, "Sí, jugar el tutorial") != null and UI.find_button(scene.ui, "No, ir a la campaña") != null and not scene.session_started, "Menú: cada jugada nueva pregunta por el tutorial")
 	UI.find_button(scene.ui, "Volver").pressed.emit()
-	check.call(not scene.pending_tutorial_choice and UI.find_button(scene.ui, "Nueva jugada") != null, "Menú: la pregunta se puede cancelar")
-	UI.find_button(scene.ui, "Nueva jugada").pressed.emit()
+	check.call(not scene.pending_tutorial_choice and UI.find_button(scene.ui, "Nueva partida") != null, "Menú: la pregunta se puede cancelar")
+	UI.find_button(scene.ui, "Nueva partida").pressed.emit()
 	UI.find_button(scene.ui, "No, ir a la campaña").pressed.emit()
 	check.call(scene.game.phase == "level_intro" and not scene.game.tutorial and scene.profile_slot == 1 and scene.profile_store.read(1).exists and scene.preferences.last_profile == 1, "Partidas: la primera jugada crea la Partida guardada 1 y la deja como última usada")
 	# Abandonar no escribe nada; terminar sí.
 	scene.game.begin_level()
 	scene.render()
 	var empty_stats: Dictionary = scene.profile_store.read(1).data
-	Flow.click(scene, "Abandonar jugada")
+	Flow.click(scene, "Abandonar partida")
 	scene.confirmation.get_ok_button().pressed.emit()
 	check.call(scene.game.phase == "menu" and scene.profile_store.read(1).data == empty_stats, "Partidas: abandonar una jugada no escribe estadísticas")
 	scene.start_new_run(777)
@@ -338,7 +338,7 @@ static func _test_ui(scene, folder: String, check: Callable) -> void:
 	profiles_button.pressed.emit()
 	var panel: Control = _find(scene.detail, "ProfilesPanel")
 	check.call(panel != null and _find(panel, "Slot_1") != null and _find(panel, "Slot_2") != null and _find(panel, "Slot_3") != null, "Opciones: el panel muestra las tres ranuras")
-	check.call("Jugadas: 1" in _all_text(_find(panel, "Slot_1")) and "en uso" in _all_text(_find(panel, "Slot_1")) and "Vacía" in _all_text(_find(panel, "Slot_2")), "Opciones: cada ranura muestra sus datos y cuál está en uso")
+	check.call("Partidas: 1" in _all_text(_find(panel, "Slot_1")) and "en uso" in _all_text(_find(panel, "Slot_1")) and "Vacía" in _all_text(_find(panel, "Slot_2")), "Opciones: cada ranura muestra sus datos y cuál está en uso")
 	check.call(_find(panel, "Delete_2").disabled and not _find(panel, "Delete_1").disabled, "Opciones: no se puede borrar una ranura vacía")
 	_find(panel, "Load_2").pressed.emit()
 	check.call(scene.profile_store.read(2).exists and scene.preferences.last_profile == 2 and scene.pending_tutorial_choice and scene.game.phase == "menu" and not scene.detail.visible, "Opciones: Cargar una ranura vacía la crea, la deja en uso y arranca la pregunta del tutorial")
@@ -387,7 +387,7 @@ static func _test_ui(scene, folder: String, check: Callable) -> void:
 	check.call(final_stats.achievements == ["tutorial_completed"] and final_stats.unlocked_coins == ["vendor_gift"] and final_stats.plays == after_loss.plays and final_stats.wins == after_loss.wins, "Tutorial: el logro y la moneda se guardan y no suman jugadas")
 	check.call(scene.game.unlocked_coins == ["vendor_gift"], "Tutorial: la partida en curso ya conoce la moneda desbloqueada")
 	# La jugada siguiente de esa partida puede ofrecer la moneda; otra partida no.
-	UI.find_button(scene.ui, "Nueva jugada").pressed.emit()
+	UI.find_button(scene.ui, "Nueva partida").pressed.emit()
 	check.call(scene.game.phase == "menu" and scene.pending_tutorial_choice, "Tutorial: «Nueva jugada» vuelve a preguntar por el tutorial")
 	UI.find_button(scene.ui, "No, ir a la campaña").pressed.emit()
 	check.call(scene.game.unlocked_coins == ["vendor_gift"], "Partidas: la jugada siguiente de la partida con el logro trae la moneda desbloqueada")
@@ -404,7 +404,7 @@ static func _test_ui(scene, folder: String, check: Callable) -> void:
 	scene.start_new_run(-1, false, true)
 	scene.game.begin_level()
 	scene.render()
-	Flow.click(scene, "Abandonar jugada")
+	Flow.click(scene, "Abandonar partida")
 	scene.confirmation.get_ok_button().pressed.emit()
 	check.call(scene.profile_store.read(3).data.achievements.is_empty(), "Tutorial: abandonarlo no da el logro")
 	scene.profile_store = old_store
