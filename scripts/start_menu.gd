@@ -14,6 +14,21 @@ const ValidationProfile = preload("res://scripts/validation_profile.gd")
 ## Paños de la mesa (coordenadas lógicas 1440 × 900), dentro del borde dorado. El izquierdo tiene el costado inclinado.
 const PANO1 := Rect2(350, 320, 340, 330)
 const PANO2 := Rect2(712, 320, 372, 330)
+## Borde dorado del paño del medio: el izquierdo es recto (x 712) y el derecho se abre con la perspectiva de la mesa.
+const PANO2_LEFT := 712.0
+
+## Centro horizontal del paño del medio a la altura `y` (el borde derecho va de x 1028 arriba a x 1083 abajo).
+static func pano2_center(y: float) -> float:
+	return (PANO2_LEFT + 1040.0 + (y - 400.0) * 0.18) / 2.0
+
+## Eje de la columna del paño del medio: su centro a media altura. Todo va alineado en esa columna (centrar cada fila
+## a su altura las escalonaba).
+static func pano2_axis() -> float:
+	return roundf(pano2_center(PANO2.get_center().y))
+
+## Rectángulo de ancho `w` centrado en el eje del paño del medio.
+static func pano2_row(y: float, w: float, h: float) -> Rect2:
+	return Rect2(roundf(pano2_axis() - w / 2.0), y, w, h)
 ## Columna de botones del paño izquierdo, ya corrida para no tocar el costado inclinado.
 const COLUMN_X := 412.0
 const COLUMN_W := 256.0
@@ -63,39 +78,39 @@ static func pixelate(host, container: Control) -> void:
 	container.theme = pixel_theme
 	container.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 
-## Paño del medio: título y, debajo, una columna de botones centrada.
+## Paño del medio: título y, debajo, una columna de botones centrada entre los bordes dorados (`pano2_row`).
 static func _panel(host, menu: Control, title: String, subtitle := "") -> Dictionary:
-	var x := PANO2.position.x + 46
-	var w := PANO2.size.x - 92
-	var heading := _centered(host, menu, title, Rect2(x, PANO2.position.y + 16, w, 30), 24, host.gold)
+	var w := 272.0
+	var heading := _centered(host, menu, title, pano2_row(PANO2.position.y + 16, w, 30), 24, host.gold)
 	heading.name = "PanelTitle"
 	var y := PANO2.position.y + 56
 	if subtitle != "":
-		_centered(host, menu, subtitle, Rect2(x - 10, y - 6, w + 20, 44), 16, host.cream)
+		_centered(host, menu, subtitle, pano2_row(y - 6, w + 20, 44), 16, host.cream)
 		y += 44
-	return {"x": x, "w": w, "y": y}
+	return {"w": w, "y": y}
 
 static func _back(host, menu: Control, target: String) -> Button:
-	var back: Button = host.button(menu, "Volver", Rect2(PANO2.position.x + 106, PANO2.end.y - 58, PANO2.size.x - 212, 40), func(): host.open_menu_panel(target))
+	var back: Button = host.button(menu, "Volver", pano2_row(PANO2.end.y - 58, 160, 40), func(): host.open_menu_panel(target))
 	back.name = "PanelBack"
 	return back
 
 static func _modes(host, menu: Control) -> void:
 	var at := _panel(host, menu, "ELEGÍ UN MODO")
-	var campaign: Button = host.button(menu, "Campaña", Rect2(at.x, at.y, at.w, 52), host.choose_campaign, false, true)
+	var campaign: Button = host.button(menu, "Campaña", pano2_row(at.y, at.w, 52), host.choose_campaign, false, true)
 	campaign.name = "ModeCampaign"
 	for index in GREY_MODES:
-		var grey: Button = host.button(menu, "Próximamente", Rect2(at.x, at.y + 66 + index * 60, at.w, 46), func(): pass, true)
+		var grey: Button = host.button(menu, "Próximamente", pano2_row(at.y + 66 + index * 60, at.w, 46), func(): pass, true)
 		grey.name = "ModeSoon_%d" % index
 		grey.tooltip_text = "Modo todavía sin definir."
 	_back(host, menu, "")
 	campaign.grab_focus()
 
+## La pregunta del tutorial: solo la primera vez, con un progreso nuevo (D20; después se juega desde Opciones).
 static func _tutorial(host, menu: Control) -> void:
 	var at := _panel(host, menu, "CAMPAÑA", "¿Querés jugar el tutorial?")
-	var yes: Button = host.button(menu, "Sí, jugar el tutorial", Rect2(at.x, at.y + 6, at.w, 50), func(): host.start_new_run(-1, false, true), false, true)
+	var yes: Button = host.button(menu, "Sí, jugar el tutorial", pano2_row(at.y + 6, at.w, 50), func(): host.start_new_run(-1, false, true), false, true)
 	yes.name = "TutorialYes"
-	var no: Button = host.button(menu, "No, ir a la campaña", Rect2(at.x, at.y + 68, at.w, 48), func(): host.start_new_run())
+	var no: Button = host.button(menu, "No, ir a la campaña", pano2_row(at.y + 68, at.w, 48), func(): host.start_new_run())
 	no.name = "TutorialNo"
 	_back(host, menu, "modes").name = "TutorialBack"
 	yes.grab_focus()
@@ -111,7 +126,7 @@ static func _collections(host, menu: Control) -> void:
 	var first: Button
 	for index in sections.size():
 		var section: Array = sections[index]
-		var item: Button = host.button(menu, section[1], Rect2(at.x, at.y - 4 + index * 52, at.w, 44), section[2])
+		var item: Button = host.button(menu, section[1], pano2_row(at.y - 4 + index * 52, at.w, 44), section[2])
 		item.name = section[0]
 		if index == 0: first = item
 	_back(host, menu, "")

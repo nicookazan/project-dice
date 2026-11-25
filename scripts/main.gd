@@ -84,6 +84,9 @@ var session_started := false
 var tutorial_seen: Array = []
 var tutorial_current: Dictionary = {}
 var pending_tutorial_choice := false
+## Ranura del progreso recién creado que todavía no vio la pregunta del tutorial (D20: solo se pregunta la primera vez);
+## 0 si no hay ninguno.
+var tutorial_offer_slot := 0
 ## Qué muestra el paño del medio en el menú inicial (D20): "" nada, "modes" elegir modo, "tutorial" la pregunta del
 ## tutorial, "collections" Colecciones. "tutorial" va siempre junto con `pending_tutorial_choice`.
 var menu_panel := ""
@@ -799,15 +802,15 @@ func show_level_picker() -> void:
 		go.name = "Level_%d" % (index + 1)
 	button(card, "Volver", Rect2(60, 430, 480, 48), func(): show_game_menu()).name = "Back"
 
-## Destinos: "menu" (abandonar la jugada), "new" (nueva jugada: pregunta por el tutorial), "new_debug" (solo desarrollo),
+## Destinos: "menu" (abandonar la jugada), "new" (nueva partida: elegir modo), "tutorial" (jugar el tutorial, desde Opciones), "new_debug" (solo desarrollo),
 ## "quit" (salir del juego). Las jugadas no se guardan: abandonar o salir las pierde y no suma estadísticas.
 func request_navigation(destination: String) -> void:
-	if destination not in ["menu", "new", "new_debug", "quit"]: return
+	if destination not in ["menu", "new", "new_debug", "quit", "tutorial"]: return
 	var in_progress: bool = session_started and game.phase not in ["menu", "won", "lost"]
 	pending_navigation = destination
 	if destination == "quit" or in_progress:
-		confirmation.title = {"quit": "Salir del juego", "menu": "Abandonar partida", "new": "Nueva partida", "new_debug": "Nueva partida debug"}[destination]
-		confirmation.ok_button_text = {"quit": "Salir", "menu": "Abandonar", "new": "Empezar de nuevo", "new_debug": "Empezar de nuevo"}[destination]
+		confirmation.title = {"quit": "Salir del juego", "menu": "Abandonar partida", "new": "Nueva partida", "new_debug": "Nueva partida debug", "tutorial": "Jugar el tutorial"}[destination]
+		confirmation.ok_button_text = {"quit": "Salir", "menu": "Abandonar", "new": "Empezar de nuevo", "new_debug": "Empezar de nuevo", "tutorial": "Empezar el tutorial"}[destination]
 		confirmation.cancel_button_text = "Seguir jugando" if in_progress else "Cancelar"
 		confirmation.dialog_text = "¿Salir del juego?" + ("\nLa partida en curso no cuenta para tus estadísticas." + resume_hint() if in_progress else "") if destination == "quit" else ("Abandonar la partida no cuenta para tus estadísticas." + resume_hint() if destination == "menu" else "Hay una partida en curso: empezar otra la pierde y no cuenta para tus estadísticas.")
 		confirmation.popup_centered(Vector2i(620, 220))
@@ -821,6 +824,7 @@ func confirm_navigation() -> void:
 	if destination == "quit": get_tree().quit()
 	elif destination == "new": new_run_from_result()
 	elif destination == "new_debug": start_new_run(-1, true)
+	elif destination == "tutorial": start_new_run(-1, false, true)
 	elif destination.begins_with("load_"): load_profile(int(destination.trim_prefix("load_")))
 	elif destination.begins_with("delete1_"):
 		var slot := int(destination.trim_prefix("delete1_"))
@@ -862,6 +866,8 @@ func load_profile(slot: int) -> void:
 	var found: Dictionary = profile_store.read(slot)
 	if found.ok and not found.exists:
 		found = profile_store.create(slot)
+		# Progreso recién creado: la primera Campaña pregunta por el tutorial.
+		if found.ok: tutorial_offer_slot = slot
 	if not found.ok:
 		profile_message = found.message
 		if is_instance_valid(profiles_panel): show_profiles()
@@ -931,7 +937,7 @@ func show_profiles() -> void:
 	dialog_button(profiles_panel, "Volver a las opciones", Rect2(500, 428, 260, 38), show_options).name = "BackToOptions"
 	detail.popup_centered(Vector2i(820, 620))
 
-## Cada jugada nueva pregunta si se quiere jugar el tutorial. No: sigue la campaña; sí: jugada guiada.
+## La pregunta del tutorial (solo la primera vez, ver `choose_campaign`). No: sigue la campaña; sí: jugada guiada.
 func ask_tutorial() -> void:
 	open_menu_panel("tutorial")
 
@@ -941,9 +947,18 @@ func open_menu_panel(panel_name: String) -> void:
 	pending_tutorial_choice = panel_name == "tutorial"
 	render()
 
-## «Campaña» en la elección de modo: sigue la pregunta del tutorial.
+## «Campaña» en la elección de modo: arranca directo. Solo la primera vez (sin progreso todavía, o con uno recién
+## creado) pregunta por el tutorial; después el tutorial se juega desde Opciones.
 func choose_campaign() -> void:
-	ask_tutorial()
+	if should_offer_tutorial():
+		tutorial_offer_slot = 0
+		ask_tutorial()
+	else: start_new_run()
+
+func should_offer_tutorial() -> bool:
+	if not profiles_enabled: return false
+	var slot := active_profile(false)
+	return slot == 0 or slot == tutorial_offer_slot
 
 func cancel_navigation() -> void:
 	var cancelled := pending_navigation
@@ -1051,6 +1066,16 @@ func show_options() -> void:
 	profiles_button.size = Vector2(230, 40)
 	profiles_button.pressed.connect(show_profiles)
 	settings_panel.add_child(profiles_button)
+	# El tutorial se juega desde acá (D20); solo la primera vez, al estrenar un progreso, se pregunta al elegir Campaña.
+	var tutorial_button := Button.new()
+	tutorial_button.name = "PlayTutorial"
+	tutorial_button.text = "Jugar el tutorial"
+	tutorial_button.position = Vector2(440, 457)
+	tutorial_button.size = Vector2(230, 36)
+	tutorial_button.pressed.connect(func():
+		detail.hide()
+		request_navigation("tutorial"))
+	settings_panel.add_child(tutorial_button)
 	label(settings_panel, "Las señales siempre incluyen texto. Ninguna opción cambia la partida.\n" + detail_text, Vector2(12, 498), 17, cream, 725)
 	var status := label(settings_panel, preference_store.last_error if preference_store.last_error != "" else "Opciones guardadas aparte de la partida.", Vector2(12, 585), 16, gold, 725)
 	status.name = "PreferenceStatus"

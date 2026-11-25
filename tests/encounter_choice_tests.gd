@@ -187,10 +187,20 @@ static func _menu(scene, check: Callable) -> void:
 	check.call(scene.menu_panel == "", "Colecciones: Volver cierra el paño")
 	UI.find_button(scene.ui, "Nueva partida").pressed.emit()
 	check.call(scene.menu_panel == "modes" and UI.find_button(scene.ui, "Campaña") != null and scene.ui.find_child("ModeSoon_0", true, false).disabled, "Menú: Nueva partida elige el modo; los otros en gris")
-	UI.find_button(scene.ui, "Campaña").pressed.emit()
-	check.call(scene.pending_tutorial_choice and scene.ui.find_child("TutorialYes", true, false) != null, "Menú: Campaña pregunta por el tutorial")
+	# Los botones del paño del medio van centrados entre sus bordes dorados (el derecho sigue la perspectiva).
+	var centered := true
+	for node_name in ["PanelTitle", "ModeCampaign", "ModeSoon_0", "ModeSoon_1", "PanelBack"]:
+		var node: Control = scene.ui.find_child(node_name, true, false)
+		# Eje: centro del recuadro a media altura (borde izquierdo x 712, derecho x 1055 a la altura y 485).
+		if absf(node.get_global_rect().get_center().x - (712.0 + 1040.0 + 85.0 * 0.18) / 2.0) > 1.5: centered = false
+	check.call(centered, "Menú: los botones del paño del medio quedan centrados en el recuadro, en una sola columna")
+	scene.open_menu_panel("tutorial")
 	scene.ui.find_child("TutorialBack", true, false).pressed.emit()
 	check.call(scene.menu_panel == "modes" and not scene.pending_tutorial_choice, "Menú: Volver de la pregunta vuelve a los modos")
+	UI.find_button(scene.ui, "Campaña").pressed.emit()
+	check.call(scene.session_started and scene.game.phase == "level_intro" and not scene.game.tutorial and not scene.pending_tutorial_choice, "Menú: Campaña arranca la partida directo (sin progreso a estrenar)")
+	scene.game.return_to_menu()
+	scene.session_started = false
 	scene.open_menu_panel("")
 
 ## PS6: la ayuda de la mano del jefe va debajo de la mano y no tapa la libreta.

@@ -308,7 +308,7 @@ static func _test_ui(scene, folder: String, check: Callable) -> void:
 	# Primera jugada: se crea la Partida guardada 1.
 	UI.find_button(scene.ui, "Nueva partida").pressed.emit()
 	UI.find_button(scene.ui, "Campaña").pressed.emit()
-	check.call(scene.pending_tutorial_choice and UI.find_button(scene.ui, "Sí, jugar el tutorial") != null and UI.find_button(scene.ui, "No, ir a la campaña") != null and not scene.session_started, "Menú: cada jugada nueva pregunta por el tutorial")
+	check.call(scene.pending_tutorial_choice and UI.find_button(scene.ui, "Sí, jugar el tutorial") != null and UI.find_button(scene.ui, "No, ir a la campaña") != null and not scene.session_started, "Menú: la primera vez, sin progreso, Campaña pregunta por el tutorial")
 	UI.find_button(scene.ui, "Volver").pressed.emit()
 	check.call(not scene.pending_tutorial_choice and UI.find_button(scene.ui, "Nueva partida") != null, "Menú: la pregunta se puede cancelar")
 	UI.find_button(scene.ui, "Nueva partida").pressed.emit()
@@ -396,9 +396,28 @@ static func _test_ui(scene, folder: String, check: Callable) -> void:
 	# La jugada siguiente de esa partida puede ofrecer la moneda; otra partida no.
 	UI.find_button(scene.ui, "Nueva partida").pressed.emit()
 	UI.find_button(scene.ui, "Campaña").pressed.emit()
-	check.call(scene.game.phase == "menu" and scene.pending_tutorial_choice, "Tutorial: «Nueva jugada» vuelve a preguntar por el tutorial")
-	UI.find_button(scene.ui, "No, ir a la campaña").pressed.emit()
+	check.call(scene.game.phase == "level_intro" and not scene.pending_tutorial_choice and not scene.game.tutorial, "Tutorial: con progreso ya usado, Campaña arranca directo sin preguntar")
 	check.call(scene.game.unlocked_coins == ["vendor_gift"], "Partidas: la jugada siguiente de la partida con el logro trae la moneda desbloqueada")
+	# Desde Opciones se juega el tutorial cuando se quiera.
+	scene.show_options()
+	var play_tutorial: Button = scene.detail.find_child("PlayTutorial", true, false)
+	check.call(play_tutorial != null, "Tutorial: Opciones tiene «Jugar el tutorial»")
+	play_tutorial.pressed.emit()
+	check.call(scene.confirmation.visible and scene.pending_navigation == "tutorial", "Tutorial: desde una partida en curso pide confirmar")
+	scene.confirmation.get_ok_button().pressed.emit()
+	check.call(scene.game.tutorial and scene.game.phase == "level_intro", "Tutorial: «Jugar el tutorial» arranca el tutorial")
+	# Un progreso recién creado pregunta una sola vez.
+	scene.game.return_to_menu()
+	scene.session_started = false
+	scene.load_profile(2)
+	UI.find_button(scene.ui, "Campaña").pressed.emit()
+	check.call(scene.pending_tutorial_choice and UI.find_button(scene.ui, "Sí, jugar el tutorial") != null, "Partidas: un progreso recién creado pregunta por el tutorial")
+	UI.find_button(scene.ui, "No, ir a la campaña").pressed.emit()
+	scene.game.return_to_menu()
+	scene.session_started = false
+	scene.open_menu_panel("modes")
+	UI.find_button(scene.ui, "Campaña").pressed.emit()
+	check.call(scene.game.phase == "level_intro" and not scene.pending_tutorial_choice, "Partidas: la segunda vez ya no pregunta")
 	scene.profile_store.create(3)
 	scene.remember_profile(3)
 	scene.game.return_to_menu()

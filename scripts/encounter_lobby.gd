@@ -7,10 +7,11 @@ const StartMenu = preload("res://scripts/start_menu.gd")
 
 const PLAY_RECT := Rect2(380, 430, 292, 58)
 const SKIP_RECT := Rect2(434, 572, 176, 42)
-const SHOP_RECT := Rect2(762, 430, 272, 58)
+## Centrados en el eje del paño del medio (`StartMenu.pano2_axis`, x 884: el borde derecho sigue la perspectiva).
+const SHOP_RECT := Rect2(748, 430, 272, 58)
 const OPTIONS_RECT := Rect2(60, 300, 236, 50)
 const ABANDON_RECT := Rect2(60, 366, 236, 50)
-const CONTINUE_RECT := Rect2(782, 510, 232, 56)
+const CONTINUE_RECT := Rect2(768, 510, 232, 56)
 const SHOP_CLOSED_TEXT := "Se abre después de ganar\nel primer encuentro del nivel."
 
 ## Lo que muestra la selección del próximo encuentro: objetivo, a quién se enfrenta y la línea de nivel/rival/jefe.
@@ -65,8 +66,8 @@ static func build(host) -> void:
 	var shop: Button = host.button(lobby, "Ir a la tienda", SHOP_RECT, func(): host.act(game.open_shop), not game.shop_available() or not host.tutorial_allows("open_shop"), game.shop_available())
 	shop.name = "OpenShop"
 	if not game.shop_available(): shop.tooltip_text = "La tienda se abre después de ganar el primer encuentro del nivel."
-	_centered(host, lobby, shop_caption(game), Rect2(SHOP_RECT.position.x - 20, 500, SHOP_RECT.size.x + 40, 50), 15, host.cream).name = "ShopCaption"
-	_centered(host, lobby, "Tenés %s" % host.money_text(game.cash), Rect2(SHOP_RECT.position.x, 380, SHOP_RECT.size.x, 30), 20, host.gold).name = "LobbyCash"
+	_centered(host, lobby, shop_caption(game), StartMenu.pano2_row(500, SHOP_RECT.size.x + 40, 50), 15, host.cream).name = "ShopCaption"
+	_centered(host, lobby, "Tenés %s" % host.money_text(game.cash), StartMenu.pano2_row(380, SHOP_RECT.size.x, 30), 20, host.gold).name = "LobbyCash"
 	host.button(lobby, "Opciones", OPTIONS_RECT, host.show_options).name = "LobbyOptions"
 	host.button(lobby, "Abandonar partida", ABANDON_RECT, func(): host.request_navigation("menu")).name = "LobbyAbandon"
 	if not play.disabled: play.grab_focus()
@@ -83,7 +84,7 @@ static func build_payout(host) -> void:
 	StartMenu.pixelate(host, payout)
 	host.ui.add_child(payout)
 	# El número se dibuja a la mitad y se escala ×2 sin suavizado: así se ven los píxeles de la letra, como en la tienda.
-	var big := _centered(host, payout, "+$%d" % total, Rect2(area.position.x, 404, area.size.x / 2.0, 44), 36, host.gold)
+	var big := _centered(host, payout, "+$%d" % total, Rect2(StartMenu.pano2_axis() - area.size.x / 2.0, 404, area.size.x / 2.0, 44), 36, host.gold)
 	big.name = "PayoutTotal"
 	big.scale = Vector2(2, 2)
 	big.add_theme_color_override("font_outline_color", Color("2a0a10"))

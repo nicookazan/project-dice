@@ -6,7 +6,7 @@ Fecha: 25 de octubre de 2026. Este documento guía la implementación; no afirma
 
 **Actualización del 22/11/2026:** vuelve «Continuar partida», pero acotada: al visitar una tienda se guarda la jugada (`user://saves/ultima-tienda-v1.json`) y el menú ofrece volver a la última tienda; se borra al terminar la jugada o empezar otra, y no guarda tutorial ni debug. Revierte la parte de D18 que decía que las jugadas no se continúan. Los metales son tres: hierro, cobre y oro (se quitaron hierro oxidado y cobre oxidado).
 
-**Actualización del 17/11/2026 (D18):** las jugadas ya no se guardan ni se continúan; lo único que se guarda son tres partidas con estadísticas, logros y monedas desbloqueadas ([PARTIDAS-GUARDADAS](PARTIDAS-GUARDADAS.md)). Cada jugada nueva pregunta por el tutorial ([TUTORIAL](TUTORIAL.md)). Existe una moneda bloqueada, «El regalo del vendedor» (C58), acumulable. Donde este documento hable de guardar o continuar una jugada, manda lo nuevo.
+**Actualización del 17/11/2026 (D18):** las jugadas ya no se guardan ni se continúan; lo único que se guarda son tres partidas con estadísticas, logros y monedas desbloqueadas ([PARTIDAS-GUARDADAS](PARTIDAS-GUARDADAS.md)). El tutorial se pregunta solo la primera vez y después se juega desde Opciones ([TUTORIAL](TUTORIAL.md), cambio del 25/11 en D20). Existe una moneda bloqueada, «El regalo del vendedor» (C58), acumulable. Donde este documento hable de guardar o continuar una jugada, manda lo nuevo.
 
 ## Fuentes y precedencia
 

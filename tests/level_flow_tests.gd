@@ -110,8 +110,7 @@ static func run(scene, check: Callable) -> Dictionary:
 	scene.detail.hide()
 	click(scene, "Nueva partida")
 	click(scene, "Campaña")
-	check.call(scene.pending_tutorial_choice and UI.find_button(scene.ui, "No, ir a la campaña") != null and UI.find_button(scene.ui, "Sí, jugar el tutorial") != null, "Flow: a new run asks whether to play the tutorial")
-	click(scene, "No, ir a la campaña")
+	check.call(not scene.pending_tutorial_choice and UI.find_button(scene.ui, "Sí, jugar el tutorial") == null and scene.session_started, "Flow: Campaña starts directly (the tutorial lives in Opciones)")
 	check.call(scene.game.phase == "level_intro" and UI.text_in(scene.ui, "Rival 1/3") and scene.ui.find_child("InspectBoss", true, false) != null, "Flow: the encounter selection announces the first encounter; the boss rule is read on the hand")
 	check.call(scene.game.cash == 0 and scene.game.passives.is_empty() and scene.game.consumable == "" and scene.game.cup.material == "leather", "Flow: new run starts leather, zero money and zero coins")
 	check.call(scene.game.dice == preload("res://scripts/dice_state.gd").create_dice() and scene.game.shop_state.is_empty(), "Flow: five base dice and no initial shop")
@@ -256,9 +255,11 @@ static func run(scene, check: Callable) -> Dictionary:
 ## Botones de antes de D20 que siguen usando los recorridos largos. Se traducen al flujo nuevo con los botones reales:
 ## el cobro tiene «Continuar», la selección de encuentro «Jugar contra…» e «Ir a la tienda», y la tienda «Volver a la mesa».
 static func legacy_caption(caption: String) -> bool:
-	return caption in ["Empezar primer encuentro", "Ir a la tienda →", "Seguir sin tienda →"] or caption.begins_with("Ir al ") or caption.begins_with("Entrar al nivel") or caption == "Enfrentar a La Semilla →"
+	return caption in ["No, ir a la campaña", "Empezar primer encuentro", "Ir a la tienda →", "Seguir sin tienda →"] or caption.begins_with("Ir al ") or caption.begins_with("Entrar al nivel") or caption == "Enfrentar a La Semilla →"
 
 static func legacy(scene, caption: String) -> bool:
+	# Campaña ya arranca la partida sin preguntar por el tutorial (salvo la primera vez de un progreso).
+	if caption == "No, ir a la campaña": return scene.session_started
 	if caption == "Empezar primer encuentro": return click_named(scene, "PlayNext")
 	if caption == "Ir a la tienda →":
 		if scene.game.phase == "reward" and not click_named(scene, "ContinueReward"): return false

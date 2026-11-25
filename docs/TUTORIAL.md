@@ -4,7 +4,7 @@ Contrato del 17/11/2026 (ficha [TU-tutorial](pasos/TU-tutorial.md), fases TU4–
 
 ## Qué es
 
-Una jugada de un solo nivel, idéntica en objetivos al nivel 1: **40** (rival 1), **70** (rival 2) y **125** (jefe: El Vendedor). Se pregunta en cada jugada nueva; no existe «Saltear tutorial». Como toda jugada, no se guarda: abandonarla no da el logro ni la moneda.
+Una jugada de un solo nivel, idéntica en objetivos al nivel 1: **40** (rival 1), **70** (rival 2) y **125** (jefe: El Vendedor). Se pregunta solo la primera vez, al elegir Campaña sin progreso o con un progreso recién creado; después se juega desde Opciones → «Jugar el tutorial» (cambio del 25/11/2026, D20). No existe «Saltear tutorial». Como toda jugada, no se guarda: abandonarla no da el logro ni la moneda.
 
 - `Game.begin_tutorial()` arma los tres encuentros fijos (`TutorialScript.ENCOUNTERS`), sin campaña ni sorteo de jefes, y marca `Game.tutorial`. Es estado en memoria: no entra en `snapshot()`. Usa las tablas de tienda del perfil de prueba (`ValidationProfile.apply`), igual que la campaña.
 - «Ir a otro nivel» no aparece (no hay campaña).
