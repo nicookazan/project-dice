@@ -1,5 +1,6 @@
 extends SceneTree
-## Boceto de la tienda con más monedas (pedido del 25/11/2026). Reinterpreta el dibujo del autor sobre el maletín real:
+## Boceto de la tienda con más monedas (pedido del 25/11/2026). Reinterpreta el dibujo del autor sobre el maletín real.
+## Opción A (abajo); la opción B invierte las filas:
 ##   arriba: 4 monedas pasivas (ancho) | 1 moneda de un uso (angosto)
 ##   abajo:  2 componentes (elemento, material, gema) | 2 números (+número, cambio de cara) | 2 stickers o paquetes
 ## El acolchado del maletín se repite cada 24 × 16 píxeles de arte: la división vertical original se borra copiando el
@@ -21,13 +22,20 @@ const MID_Y := 217
 const TOP_SHIFT := 96
 const BOTTOM_SHIFTS := [-72, 72]
 
-## Secciones nuevas en pantalla (1440 × 900) y cuántas tarjetas lleva cada una.
+## Secciones nuevas en pantalla (1440 × 900) y cuántas tarjetas lleva cada una. Opción A: monedas arriba.
 const ZONES := {
 	"coins": [Rect2(540, 252, 528, 179), 4],
 	"once": [Rect2(1146, 252, 176, 179), 1],
 	"components": [Rect2(530, 442, 204, 179), 2],
 	"numbers": [Rect2(812, 442, 210, 179), 2],
 	"stickers": [Rect2(1100, 442, 228, 179), 2]}
+## Opción B, con las filas invertidas: componentes, números y stickers arriba; monedas y la de un uso abajo.
+const ZONES_B := {
+	"components": [Rect2(540, 252, 222, 179), 2],
+	"numbers": [Rect2(788, 252, 254, 179), 2],
+	"stickers": [Rect2(1074, 252, 240, 179), 2],
+	"coins": [Rect2(534, 442, 560, 179), 4],
+	"once": [Rect2(1122, 442, 208, 179), 1]}
 
 var scene
 
@@ -47,8 +55,12 @@ func _initialize() -> void:
 	await capture("boceto-tienda-0-hoy")
 	fill_offers()
 	scene.render()
-	lay_out()
+	lay_out(ZONES, [TOP_SHIFT], BOTTOM_SHIFTS)
 	await capture("boceto-tienda-1-propuesta")
+	fill_offers()
+	scene.render()
+	lay_out(ZONES_B, BOTTOM_SHIFTS, [TOP_SHIFT])
+	await capture("boceto-tienda-2-filas-invertidas")
 	print("BOCETO TIENDA: listo")
 	quit()
 
@@ -72,13 +84,13 @@ func fill_offers() -> void:
 	state.coins.configured = true
 
 ## Esconde las cuatro secciones de hoy, pone el maletín con las divisiones nuevas y arma las cinco secciones.
-func lay_out() -> void:
+func lay_out(zones: Dictionary, top_shifts: Array, bottom_shifts: Array) -> void:
 	for section in ["numbers", "components", "coins", "stickers"]:
 		var old: Node = scene.ui.find_child("Shop_" + section, false, false)
 		if old != null: old.hide()
 	var art := TextureRect.new()
 	art.name = "BocetoMaletin"
-	art.texture = ImageTexture.create_from_image(briefcase())
+	art.texture = ImageTexture.create_from_image(briefcase(top_shifts, bottom_shifts))
 	art.position = Vector2(REGION.position) * 2.0
 	art.size = Vector2(REGION.size) * 2.0
 	art.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
@@ -86,9 +98,9 @@ func lay_out() -> void:
 	art.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	scene.ui.add_child(art)
 	scene.ui.move_child(art, 0)
-	for section in ZONES:
-		var rect: Rect2 = ZONES[section][0]
-		var count: int = ZONES[section][1]
+	for section in zones:
+		var rect: Rect2 = zones[section][0]
+		var count: int = zones[section][1]
 		var zone := Control.new()
 		zone.name = "Boceto_" + section
 		zone.position = rect.position
@@ -110,8 +122,8 @@ func lay_out() -> void:
 			var slot: int = 4 if section == "once" else index
 			scene.shop_card(zone, stock_section, slot, Rect2(12 + index * width, 28, width, 145))
 
-## El maletín con las divisiones movidas, recortado a REGION.
-func briefcase() -> Image:
+## El maletín con las divisiones movidas (corrimientos de la fila de arriba y de la de abajo), recortado a REGION.
+func briefcase(top_shifts: Array, bottom_shifts: Array) -> Image:
 	var source: Image = load("res://assets/art/pixel-v3/tienda-v3.png").get_image()
 	source.convert(Image.FORMAT_RGBA8)
 	var art: Image = source.duplicate()
@@ -123,8 +135,8 @@ func briefcase() -> Image:
 			art.set_pixel(x, y, source.get_pixel(x - 48, y))
 	# 2. Divisiones nuevas: la franja original (con esquineros) corrida; arriba una, abajo dos.
 	for y in range(top, bottom):
-		var shifts: Array = [TOP_SHIFT] if y < MID_Y else BOTTOM_SHIFTS
-		if y in [MID_Y, MID_Y + 1]: shifts = [TOP_SHIFT] + BOTTOM_SHIFTS
+		var shifts: Array = top_shifts if y < MID_Y else bottom_shifts
+		if y in [MID_Y, MID_Y + 1]: shifts = top_shifts + bottom_shifts
 		for shift in shifts:
 			for x in range(STRIP_X, STRIP_X + STRIP_W):
 				var pixel := source.get_pixel(x, y)
