@@ -65,3 +65,5 @@ Generado por código (`py -3.13 tools/art/make_semilla.py`) en `assets/art/pixel
 ## Pendiente
 
 Premio al ganar, contenido de los créditos, música y efectos (D10), objetivo final (D07/D11), campo para ingresar semilla a mano (sin confirmar) y sesión humana de juego.
+
+**25/11/2026:** si La Semilla sorteó el poder de Don Cebador (`thermos_theft`), solo anula los stickers: el termo no se mueve de la mesa (`Game.thermos_stolen()` es falso en La Semilla). Tras vencer al guardián se entra directo a la mano con el maletín (tienda obligatoria después de cada jefe).

@@ -354,9 +354,10 @@ func is_seed(index: int = -1) -> bool:
 func is_seed_shop_visit() -> bool:
 	return not campaign.is_empty() and rival + 1 < level_encounters.size() and level_encounters[rival + 1].kind == "seed"
 
-## Don Cebador se lleva el termo mientras se juega su encuentro (presentación y botón del termo).
+## Don Cebador te cambia el termo mientras se juega su encuentro (presentación y botón del termo). La Semilla, si sorteó
+## ese poder, solo anula los stickers: el termo no se mueve de la mesa (25/11/2026).
 func thermos_stolen() -> bool:
-	return boss_power_on() and BossRules.is_power(boss_rule, "thermos_theft") and phase in ["play", "hand_result", "lost"]
+	return boss_power_on() and BossRules.is_power(boss_rule, "thermos_theft") and phase in ["play", "hand_result", "lost"] and not is_seed()
 
 ## El poder del jefe está en juego: hay jefe y el Escudo (U14) no lo apaga en esta mano.
 ## Toda consulta al poder (`boss_rule`) pasa por acá; la memoria del jefe entre manos no.
@@ -805,6 +806,10 @@ func close_encounter() -> bool:
 		"reward": payout, "cash_before": cash_before, "cash_after": cash})
 	return true
 
+## Lo que quedó de este cobro después de pagar la reparación de gemas (puede ser negativo). Es lo que muestra «+$total».
+func net_payout() -> int:
+	return int(payout.get("total", 0)) - int(repair_resolution.get("cost", 0))
+
 func repair_quote(ids: Array) -> Dictionary:
 	return Gems.repair_quote(dice, ids, {"half": CoinEffects.gem_rule(passives, "repair_half"), "free_one": repair_resolution.get("free_one", false)})
 
@@ -868,9 +873,9 @@ func charged_price(offer: Dictionary) -> int:
 ## Pantalla de selección de encuentro (D20). «level_intro»: al empezar un nivel, con el primer encuentro preparado y la
 ## tienda cerrada. «lobby»: entre dos encuentros del mismo nivel, después del cobro; `rival` sigue siendo el encuentro
 ## ganado y la tienda se puede abrir las veces que se quiera.
-## ¿Hay selección con tienda después de vencer al jefe? D20 lo lee literal: no; el cobro del jefe lleva directo al
-## nivel siguiente, cuyo primer encuentro va sin tienda. Cambiar a true deja la tienda también después del jefe.
-const SHOP_AFTER_BOSS := false
+## Después de vencer al jefe la próxima parada es sí o sí la tienda (pedido del autor, 25/11/2026): el cobro del jefe
+## entra directo a la tienda; al salir queda la selección con el primer encuentro del nivel siguiente.
+const SHOP_AFTER_BOSS := true
 
 func in_lobby() -> bool:
 	return phase in ["level_intro", "lobby"]
@@ -887,9 +892,12 @@ func shop_available() -> bool:
 ## Del cobro (+$total) a la selección de encuentro. La reparación, si hacía falta, ya pasó antes del cobro.
 func continue_after_reward() -> bool:
 	if phase != "reward" or not has_next_encounter(): return false
+	var after_boss: bool = is_boss(rival)
 	if rival + 1 >= level_encounters.size() and not SHOP_AFTER_BOSS: return _advance_encounter()
 	phase = "lobby"
 	message = "Elegí: jugar contra el siguiente rival o pasar por la tienda."
+	# Tras el jefe no se elige: se entra a la tienda (si no se pudiera abrir, queda la selección con la tienda a mano).
+	if after_boss: open_shop()
 	return true
 
 ## Jugar el encuentro que muestra la selección. Si el siguiente es de otro nivel, se entra al nivel y se juega enseguida.

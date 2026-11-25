@@ -45,6 +45,13 @@ static func _payout(scene, check: Callable) -> void:
 	check.call(not UI.text_in(scene.ui, "Manos sobrantes") and not UI.text_in(scene.ui, "Intereses") and scene.ui.find_child("EncounterChoice", true, false) == null, "Cobro: sin cartel de desglose")
 	var note = scene.ui.find_child("PlayerNotebook", true, false)
 	check.call(note != null and UI.text_in(note, "LIBRETA") and not UI.text_in(note, "PUNTOS") and UI.dice_in(scene.ui).is_empty(), "Cobro: la libreta queda en blanco y la mesa sin dados")
+	# Neto: si se pagó una reparación de gemas, el número muestra lo que quedó de este cobro.
+	scene.game.repair_resolution.cost = scene.game.payout.total + 3
+	scene.render()
+	check.call(scene.ui.find_child("PayoutTotal", true, false).text == "-$3", "Cobro: muestra lo ganado menos lo pagado por reparar gemas")
+	scene.game.repair_resolution.cost = 0
+	scene.render()
+	go = scene.ui.find_child("ContinueReward", true, false)
 	var cash: int = scene.game.cash
 	go.pressed.emit()
 	check.call(scene.game.phase == "lobby" and scene.game.rival == 0 and scene.game.cash == cash, "Cobro: Continuar lleva a la selección sin volver a cobrar")
@@ -109,6 +116,7 @@ static func _flow_rules(check: Callable) -> void:
 	campaign.cup.stickers = {"trio": 2, "full": 1}
 	var intros := 0
 	var lobbies := 0
+	var shops := 0
 	var wins := 0
 	for encounter in range(22):
 		if campaign.phase == "level_intro":
@@ -120,10 +128,14 @@ static func _flow_rules(check: Callable) -> void:
 		wins += 1
 		if campaign.phase == "repair": campaign.resolve_repairs([])
 		if campaign.phase == "reward": campaign.continue_after_reward()
+		# Tras cada jefe se entra sí o sí a la tienda (25/11); al salir queda la selección.
+		if campaign.phase == "shop":
+			shops += 1
+			campaign.exit_shop()
 		if campaign.phase == "lobby":
 			lobbies += 1
 			campaign.play_next()
-	check.call(wins == 22 and intros == 7 and lobbies == 15 and campaign.phase == "won" and campaign.completed_encounters.size() == 22 and campaign.shop_offer_sequence == 0, "Flujo: 22 encuentros con siete entradas de nivel, 15 selecciones con tienda (la de La Semilla incluida) y victoria final")
+	check.call(wins == 22 and intros == 1 and lobbies == 21 and shops == 7 and campaign.phase == "won" and campaign.completed_encounters.size() == 22, "Flujo: 22 encuentros, una entrada de nivel (las demás pasan por la tienda del jefe), 21 selecciones con tienda y 7 tiendas obligatorias tras los jefes (guardián incluido), y victoria final")
 	var boss = Game.new(922)
 	boss.begin_campaign(922)
 	Profile.apply(boss)
@@ -137,7 +149,9 @@ static func _flow_rules(check: Callable) -> void:
 		if i < 2:
 			boss.continue_after_reward()
 			boss.play_next()
-	check.call(boss.phase == "reward" and boss.rival == 2 and boss.continue_after_reward() and boss.phase == "level_intro" and boss.level_index == 1 and not boss.shop_available(), "Flujo: después del jefe, Continuar entra al nivel siguiente sin tienda (D20)")
+	check.call(boss.phase == "reward" and boss.rival == 2 and boss.continue_after_reward() and boss.phase == "shop" and not boss.shop_state.is_empty(), "Flujo: después del jefe, Continuar entra sí o sí a la tienda")
+	check.call(boss.exit_shop() and boss.phase == "lobby" and boss.lobby_next_index() == -1 and boss.shop_available() and EncounterLobby.next_encounter(boss).line.begins_with("Nivel 2 · Rival 1/3"), "Flujo: al salir de esa tienda, la selección anuncia el primer rival del nivel siguiente")
+	check.call(boss.play_next() and boss.level_index == 1 and boss.rival == 0 and boss.phase == "play", "Flujo: desde ahí se juega el primer encuentro del nivel siguiente")
 
 ## PS2: menú sobre el paño izquierdo, sin mano, con elección de modo, tutorial y Colecciones en el paño del medio.
 static func _menu(scene, check: Callable) -> void:

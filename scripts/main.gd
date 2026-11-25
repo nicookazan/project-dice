@@ -377,10 +377,10 @@ func inspect_thermos() -> void:
 	if game.thermos_stolen(): show_thermos_detail()
 	elif not background.shop_mode: background.props.play("thermos")
 
-## Detalle del termo robado: explica el robo y que los stickers no aportan mientras dure el jefe.
+## Detalle del termo cambiado: explica el cambio y que los stickers no aportan mientras dure el jefe.
 func show_thermos_detail() -> void:
-	present_detail("Termo robado", "Don Cebador te robó el termo: flota junto a su mano y los %d stickers pegados no aportan nada mientras dure el jefe.
-Te lo devuelve flotando cuando lo venzas." % game.cup.stickers.size(), true)
+	present_detail("Termo cambiado", "Don Cebador te cambió el termo: el tuyo flota junto a su mano y en la mesa quedó el suyo, sin stickers. Tus %d stickers no aportan nada mientras dure el jefe.
+Cuando lo venzas, te lo devuelve." % game.cup.stickers.size(), true)
 
 func box(bg: Color, border := Color.TRANSPARENT, width := 0) -> StyleBoxFlat:
 	var s := StyleBoxFlat.new()
@@ -1239,8 +1239,10 @@ func update_hover_description() -> void:
 ## va arriba. El resto de las ayudas sigue en su lugar de siempre, sobre la libreta.
 func place_hover_description(hovered: Control) -> void:
 	var offer := offer_card_of(hovered)
+	# En la tienda todo sale arriba de lo señalado: la tarjeta del objeto a la venta, o la moneda o el dado propio.
+	if offer == null and is_instance_valid(background) and background.shop_mode and hovered != null: offer = hovered
 	if offer != null:
-		# En la tienda, lo que hace cada objeto sale arriba de su tarjeta (abajo si no entra).
+		# Arriba de la tarjeta o del objeto (abajo si no entra).
 		var card_rect := offer.get_global_rect()
 		var box := hover_description.size
 		var above := Vector2(card_rect.get_center().x - box.x / 2.0, card_rect.position.y - box.y - 6.0)
@@ -1870,7 +1872,7 @@ func render_inventory() -> void:
 		b.name = "EquippedCoin_" + str(i)
 		for state in ["normal", "hover", "pressed", "disabled", "focus"]: b.add_theme_stylebox_override(state, StyleBoxEmpty.new())
 		add_coin(b, coin, Rect2(1, 1, 58, 58))
-		b.tooltip_text = Rules.COINS[coin].name + "\n" + coin_state_text(game.coin_inventory.equipped[i]) + Rules.COINS[coin].description
+		b.tooltip_text = Rules.COINS[coin].name + "\n" + Rules.COINS[coin].description + coin_total_line(game.coin_inventory.equipped[i].instance_id)
 		if BossRules.suspended(game.boss_context(), "coin", coin):
 			label(b, "SUSP", Vector2(1, 43), 11, gold)
 			b.tooltip_text += " Suspendida por el jefe; conserva su espacio."
@@ -1889,6 +1891,15 @@ func render_inventory() -> void:
 	# Opciones en la esquina de la libreta (D20); la ayuda sigue a mano desde Opciones y con la tecla de ayuda.
 	# En la selección de encuentro ya están Opciones y Abandonar sobre la libreta: no se repite.
 	if not game.in_lobby(): button(ui, "Opciones", Rect2(1273, 748, 120, 60), show_options).name = "TableOptions"
+
+## Línea «Total: …» para la ayuda de una moneda propia que acumula (Acumulada, Veterana, Racha, Gastada, Cazajefes);
+## vacía para las demás. `instance`: id de la instancia equipada o de un uso.
+func coin_total_line(instance: int) -> String:
+	for owned in game.coin_inventory.equipped + game.coin_inventory.consumables:
+		if owned.get("instance_id", -1) != instance: continue
+		var state := coin_state_text(owned).strip_edges()
+		return "" if state.is_empty() else "\nTotal: " + state
+	return ""
 
 ## Progress of coins that keep state (C18, C48-C51), one line for tooltips and the inspector.
 func coin_state_text(instance: Dictionary) -> String:
@@ -2248,7 +2259,7 @@ func owned_shop_coin(coin: String, instance: int, rect: Rect2) -> Button:
 	node.drag_allowed = func(): return can_sell_dragged_coin({"shop_coin": coin, "instance_id": instance})
 	node.drag_started.connect(show_coin_sale_overlay)
 	node.drag_finished.connect(hide_coin_sale_overlay)
-	node.tooltip_text = Coins.definition(coin).name + "\n" + Coins.definition(coin).description
+	node.tooltip_text = Coins.definition(coin).name + "\n" + Coins.definition(coin).description + coin_total_line(instance)
 	node.mouse_default_cursor_shape = Control.CURSOR_DRAG
 	for state in ["normal", "hover", "pressed", "disabled", "focus"]: node.add_theme_stylebox_override(state, StyleBoxEmpty.new())
 	node.pressed.connect(func():

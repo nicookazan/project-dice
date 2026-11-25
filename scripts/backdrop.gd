@@ -91,10 +91,16 @@ const CUP_RECT = Rect2(1260, 400, 145, 180)
 const HAND_RECT = Rect2(624, 31, 122, 112)
 const GOD_RECT = Rect2(567, 25, 200, 170)
 const CUP_MOUTH = Vector2(1330, 425)
-## Termo robado por Don Cebador: flota junto a la mano mientras dura el jefe (solo presentación).
-const STOLEN_THERMOS_POS := Vector2(792, 34)
-const STOLEN_THERMOS_SCALE := 0.42
-const STOLEN_THERMOS_RECT := Rect2(792, 30, 62, 152)
+## Don Cebador te cambia el termo (25/11/2026): el tuyo queda inclinado junto a su mano, donde estaba el suyo (capa de
+## atrás de su mano, cuadro 0), y el suyo, sin stickers, queda en la mesa mientras dura el jefe (solo presentación).
+const THERMOS_SIZE := Vector2(144, 350)
+const THERMOS_TABLE_CENTER := Vector2(1203, 168) + Vector2(72, 175)
+const THERMOS_SWAP_CENTER := Vector2(791, 122)
+const THERMOS_SWAP_ROTATION := -0.47
+const THERMOS_SWAP_SCALE := 0.37
+const SWAP_ARC := 70.0
+const SWAP_BOSS := "l2_cebador"
+const STOLEN_THERMOS_RECT := Rect2(744, 52, 96, 144)
 const THERMOS_FLIGHT_SECONDS := 2.6
 var thermos_stolen := false
 var thermos_t := 0.0
@@ -357,12 +363,11 @@ func _draw_table_and_props() -> void:
 	var thermos_bob := 2.0 * roundf(sin(elapsed * 1.3) * 1.5) if motion and thermos_t >= 1.0 else 0.0
 	var sway := 2.0 * roundf(sin(thermos_t * TAU * 2.0) * 3.0) if motion and thermos_t > 0.0 and thermos_t < 1.0 else 0.0
 	if pour_frame < 0:
-		var thermos_origin := THERMOS_ORIGIN.lerp(STOLEN_THERMOS_POS, lift) + Vector2(sway, thermos_bob)
-		draw_set_transform(thermos_origin + finale.shake(), 0.0, Vector2.ONE * lerpf(1.0, STOLEN_THERMOS_SCALE, lift))
-		draw_texture_rect(THERMOS_TABLE_V3, Rect2(Vector2.ZERO, Vector2(144, 350)), false)
-		# Every sticker sits on its own fixed spot of the thermos (same layout as the shop).
-		for id in StickerDefinitions.NAMES:
-			if stickers.has(id): StickerArt.draw_on_thermos(self, Vector2.ZERO, id, 86.0, 46.0, int(stickers[id]))
+		# Cambio de termos con Don Cebador: el suyo (sin stickers) baja a la mesa y el tuyo sube a su lado, cada uno por
+		# un arco contrario para que se crucen. Sin cambio (lift 0) solo se dibuja el tuyo en la mesa.
+		var arc := sin(lift * PI) * SWAP_ARC
+		if lift > 0.0: _draw_thermos_pose(THERMOS_SWAP_CENTER.lerp(THERMOS_TABLE_CENTER, lift) + Vector2(-sway, arc), lerpf(THERMOS_SWAP_ROTATION, 0.0, lift), lerpf(THERMOS_SWAP_SCALE, 1.0, lift), {})
+		_draw_thermos_pose(THERMOS_TABLE_CENTER.lerp(THERMOS_SWAP_CENTER, lift) + Vector2(sway, thermos_bob - arc), lerpf(0.0, THERMOS_SWAP_ROTATION, lift), lerpf(1.0, THERMOS_SWAP_SCALE, lift), stickers)
 		draw_set_transform(finale.shake(), 0.0, Vector2.ONE)
 	draw_texture_rect(MATE_V3, Rect2(1088, 310, 136, 236), false)
 	if not cup_hidden: draw_texture_rect(CUP_V3, Rect2(1280, 426, 144, 188), false)
@@ -418,7 +423,8 @@ func _draw_actor() -> void:
 	if hand_boss != "":
 		var clip_frame := props.hand_clip_frame(hand_boss)
 		var clip_dy := 0.0 if clip_frame > 0 else bob
-		props.draw_hand_clip(self, hand_boss, true, clip_frame, clip_dy)
+		# El termo de Don Cebador (capa de atrás) deja de dibujarse mientras está cambiado: lo dibuja `_draw_thermos_pose`.
+		if not (hand_boss == SWAP_BOSS and thermos_t > 0.0): props.draw_hand_clip(self, hand_boss, true, clip_frame, clip_dy)
 		draw_texture_rect(CLOUD_V3, Rect2(552, 0, 262, 40), false)
 		props.draw_hand_clip(self, hand_boss, false, clip_frame, clip_dy)
 		return
@@ -427,3 +433,12 @@ func _draw_actor() -> void:
 	elif hand_row >= 0: draw_texture_rect_region(BOSS_HANDS, Rect2(624, 34 + bob, 122, 106), Rect2(frame * HAND_SIZE.x, hand_row * HAND_SIZE.y, HAND_SIZE.x, HAND_SIZE.y))
 	else: draw_texture_rect_region(HAND_V3, Rect2(624, 34 + bob, 122, 106), Rect2(frame * 61, 0, 61, 53))
 
+
+## Un termo de la mesa (144 × 350) con centro, giro y escala; `with_stickers` vacío dibuja el de Don Cebador, liso.
+func _draw_thermos_pose(center: Vector2, rotation: float, scale: float, with_stickers: Dictionary) -> void:
+	draw_set_transform(center + finale.shake(), rotation, Vector2.ONE * scale)
+	var top_left := -THERMOS_SIZE / 2.0
+	draw_texture_rect(THERMOS_TABLE_V3, Rect2(top_left, THERMOS_SIZE), false)
+	# Cada sticker va en su lugar fijo del termo (el mismo esquema que en la tienda).
+	for id in StickerDefinitions.NAMES:
+		if with_stickers.has(id): StickerArt.draw_on_thermos(self, top_left, id, 86.0, 46.0, int(with_stickers[id]))

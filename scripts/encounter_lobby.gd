@@ -72,10 +72,11 @@ static func build(host) -> void:
 	host.button(lobby, "Abandonar partida", ABANDON_RECT, func(): host.request_navigation("menu")).name = "LobbyAbandon"
 	if not play.disabled: play.grab_focus()
 
-## Al ganar: solo el total cobrado sobre la mesa y «Continuar», que lleva a la selección de encuentro.
+## Al ganar: solo lo cobrado (neto de la reparación de gemas) sobre la mesa y «Continuar», que lleva a la selección de encuentro.
 static func build_payout(host) -> void:
 	var game = host.game
-	var total: int = int(game.payout.get("total", 0))
+	# Neto: lo cobrado menos lo que se pagó por reparar gemas antes de este cartel.
+	var total: int = game.net_payout()
 	var area := StartMenu.PANO2
 	var payout := Control.new()
 	payout.name = "Payout"
@@ -84,7 +85,7 @@ static func build_payout(host) -> void:
 	StartMenu.pixelate(host, payout)
 	host.ui.add_child(payout)
 	# El número se dibuja a la mitad y se escala ×2 sin suavizado: así se ven los píxeles de la letra, como en la tienda.
-	var big := _centered(host, payout, "+$%d" % total, Rect2(StartMenu.pano2_axis() - area.size.x / 2.0, 404, area.size.x / 2.0, 44), 36, host.gold)
+	var big := _centered(host, payout, ("+$%d" if total >= 0 else "-$%d") % absi(total), Rect2(StartMenu.pano2_axis() - area.size.x / 2.0, 404, area.size.x / 2.0, 44), 36, host.gold)
 	big.name = "PayoutTotal"
 	big.scale = Vector2(2, 2)
 	big.add_theme_color_override("font_outline_color", Color("2a0a10"))

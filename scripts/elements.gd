@@ -10,11 +10,11 @@ const CATALOG = {
 		"gain": 0.5, "applies_to_leftovers": false
 	},
 	"fire": {
-		"name": "Fuego", "condition": "Cara 4, 5 o 6 en una combinación desde par.",
+		"name": "Fuego", "condition": "+5 puntos cuando este dado muestra 4, 5 o 6 y está en un grupo armado (par o más). Si queda suelto, no suma.",
 		"gain": 5.0, "applies_to_leftovers": false
 	},
 	"water": {
-		"name": "Agua", "condition": "Cara 1, 2 o 3 en una combinación desde par.",
+		"name": "Agua", "condition": "+5 puntos cuando este dado muestra 1, 2 o 3 y está en un grupo armado (par o más). Si queda suelto, no suma.",
 		"gain": 5.0, "applies_to_leftovers": false
 	},
 	"electricity": {

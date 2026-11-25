@@ -92,12 +92,19 @@ static func run(scene, check: Callable) -> Dictionary:
 		var gear := persistent_parts(scene.game)
 		var uninterrupted
 		if scene.game.rival == 2:
-			# D20: después del jefe no hay tienda; «Continuar» lleva al nivel siguiente, cuyo primer encuentro va sin tienda.
+			# Después del jefe la próxima parada es sí o sí la tienda (25/11); al volver a la mesa se juega el nivel siguiente.
 			level_boundaries += 1
 			uninterrupted = Store.new("res://test-results/unused.json").restore_game(scene.checkpoint_data())
 			uninterrupted.continue_after_reward()
+			uninterrupted.exit_shop()
+			uninterrupted.play_next()
 			Flow.click(scene, "Continuar")
-			check.call(scene.game.phase == "level_intro" and scene.game.points == 0 and scene.game.dice[0].encounter_effects.is_empty() and scene.game.dice[0].hand_effects.is_empty(), "Campaign: boss-to-level clears score/counters before new announcement")
+			check.call(scene.game.phase == "shop" and scene.game.level_index == int(encounter / 3), "Campaign: after the boss the next stop is the shop")
+			Flow.click(scene, "Volver a la mesa →")
+			check.call(scene.game.phase == "lobby" and scene.game.lobby_next_index() == -1, "Campaign: leaving that shop shows the selection for the next level")
+			gear = persistent_parts(scene.game)
+			Flow.click(scene, "Jugar contra el siguiente rival")
+			check.call(scene.game.phase == "play" and scene.game.rival == 0 and scene.game.points == 0 and scene.game.dice[0].encounter_effects.is_empty() and scene.game.dice[0].hand_effects.is_empty(), "Campaign: boss-to-level clears score/counters before new announcement")
 			check.call(persistent_parts(scene.game) == gear and scene.game.selected_bosses.size() == scene.game.level_index + 1, "Campaign: faces/local/material/shell/element/coins/stickers/cash persist at boundary")
 			check.call(scene.background.environment_id == scene.game.campaign[scene.game.level_index].environment, "Campaign UI: environment changes with new level")
 		else:
@@ -124,6 +131,9 @@ static func run(scene, check: Callable) -> Dictionary:
 	# El guardián (encuentro 21) ya no cierra la versión: sigue La Semilla (docs/LA-SEMILLA.md).
 	check.call(scene.game.phase == "reward" and scene.game.level_index == 6 and scene.game.rival == 2 and scene.game.completed_encounters.size() == 21 and scene.game.is_seed_shop_visit(), "Campaign: the guardian (encounter 21) leads to La Semilla")
 	Flow.click(scene, "Continuar")
+	# Tras el guardián también se entra sí o sí a la tienda: la mano con el maletín.
+	check.call(scene.game.phase == "shop" and scene.game.is_seed_shop_visit(), "Campaign: after the guardian the next stop is the hand with the briefcase")
+	Flow.click(scene, "Volver a la mesa →")
 	Flow.click(scene, "Jugar contra La Semilla")
 	check.call(scene.game.is_seed() and scene.game.phase == "play", "Campaign: La Semilla is played right after the guardian")
 	scene.game.debug_mode = true
