@@ -296,3 +296,23 @@ Versión 1 · 25 de octubre de 2026. Este registro evita bloquear todo el proyec
 9. Rayos de los guardianes: blancos y semitransparentes. Música y efectos, más adelante (D10).
 
 **Fuente:** [diseño en Notion](https://app.notion.com/p/422c28142b55807f8c72f79c1a366033) y [plan](https://app.notion.com/p/422c28142b558089aaeccc27942b4245).
+
+## D20 — Pantallas y diseños
+
+**Estado:** plan aprobado por el autor el 24/11/2026 («lo veo muy bien»); las decisiones por defecto del plan se aplican sin cambios hasta que el autor diga otra cosa.
+
+**Pasos afectados:** PS0–PS7 ([ficha](PS-pantallas.md)); toca 14 (menú y flujo), 15 (continuar), 11 (tienda) y el tutorial (D18).
+
+**Decisiones:**
+
+1. En la interfaz, «partida» reemplaza a «jugada» (Nueva partida, Abandonar partida…). Lo que D18 llamaba «partida guardada» (las tres ranuras de metaprogreso) pasa a llamarse «progreso». «Jugada» sigue significando una combinación de dados («jugadas posibles»).
+2. Menú inicial sobre el paño izquierdo, sin recuadro: Continuar partida (si hay), Nueva partida, Colecciones, Opciones, Salir y «Nueva partida debug» solo en desarrollo. Nueva partida elige el modo en el paño del medio (Campaña y modos en gris) y ahí mismo pregunta por el tutorial. El debug arranca directo.
+3. En el menú no hay mano en la ventana y solo responden los botones y el mate (termo que ceba el mate y el mate mismo). Durante el encuentro y en la tienda el fondo no cambia.
+4. Después de ganar: «+$total» sin desglose y Continuar; después la reparación (si hay gemas rotas) y después la selección de encuentro. Hoy la reparación va antes del cobro.
+5. Selección de encuentro (fase `lobby`): reemplaza al anuncio de nivel y al cartel de destino. «Jugar contra el siguiente rival», objetivo, nivel/rival/jefe en chico, «Saltear» en gris (sin acción), «Ir a la tienda», y en lugar de la libreta, Opciones y Abandonar partida.
+6. La tienda está en gris en el primer encuentro de cada nivel (lectura literal de la ficha; queda en `shop_available()` por si se cambia). Entre dos encuentros se puede entrar las veces que se quiera: el stock se genera la primera vez y se conserva, igual que precios de renovación y descuentos.
+7. La ayuda de la mano del jefe sale centrada debajo de la mano.
+
+**Preguntas abiertas (no frenan el trabajo):** si la tienda en gris es en cada nivel o solo al empezar; si la libreta del cobro queda en blanco o desaparece; cuántos modos en gris; si se ve todo el catálogo en Colecciones.
+
+**Fuente:** [ficha en Notion](https://app.notion.com/p/422c28142b55801781bdfeb9107c8e15), [plan](https://app.notion.com/p/423c28142b558008bee4c30a69584556) y [bocetos](https://claude.ai/artifact/88nJDsVTnGX6u2urfwMGd1).

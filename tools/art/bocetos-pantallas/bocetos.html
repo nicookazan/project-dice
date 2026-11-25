@@ -1,0 +1,101 @@
+<title>Bocetos de pantallas</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@500;700&family=Inter:wght@400;600&display=swap">
+<style>
+/* Layout: una columna de pantallas, cada una con su "hoy" y su "propuesta"; colores del paño, la madera y el dorado del juego. */
+:root {
+  --bg: #1a0d10;
+  --panel: #2a1217;
+  --fg: #f3e6cc;
+  --muted: #bfa98a;
+  --gold: #edbb67;
+  --line: #5a2a31;
+  --display: "Pixelify Sans", "Courier New", monospace;
+  --body: "Inter", system-ui, sans-serif;
+  color-scheme: dark;
+}
+body { background: var(--bg); color: var(--fg); font-family: var(--body); line-height: 1.55; }
+.wrap { max-width: 1180px; margin: 0 auto; padding-block: 40px 72px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+h1, h2 { font-family: var(--display); color: var(--gold); text-wrap: balance; font-weight: 700; letter-spacing: .02em; }
+h1 { font-size: clamp(1.9rem, 4vw, 2.6rem); margin: 0 0 .4rem; }
+h2 { font-size: 1.5rem; margin: 0 0 .5rem; }
+.lead { color: var(--muted); max-width: 68ch; margin: 0 0 2rem; }
+section { border-top: 2px solid var(--line); padding-block: 2rem; }
+section > p { max-width: 70ch; margin: 0 0 1rem; }
+.tag { font-family: var(--display); font-size: .85rem; letter-spacing: .08em; text-transform: uppercase; color: var(--gold); margin: 0 0 .35rem; }
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 460px), 1fr)); gap: 20px; margin-top: 1rem; }
+figure { margin: 0; background: var(--panel); border: 1px solid var(--line); padding: 10px; min-width: 0; }
+figure img { display: block; width: 100%; image-rendering: pixelated; }
+figcaption { font-size: .9rem; color: var(--muted); padding-top: .5rem; }
+figcaption b { color: var(--fg); font-weight: 600; }
+.full figure { margin-top: 1rem; }
+ul.q { margin: .5rem 0 0; padding-left: 1.2rem; max-width: 72ch; }
+ul.q li { margin-bottom: .35rem; }
+a { color: var(--gold); }
+a:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+</style>
+
+<div class="wrap">
+  <h1>Pantallas y diseños · bocetos</h1>
+  <p class="lead">Ítem 6 de los pendientes. Montados dentro del juego con los botones y fuentes reales, sobre la mesa de siempre. Nada de esto está integrado: es para aprobar antes de implementar. El plan está en Notion, en «Plan de implementación».</p>
+
+  <section>
+    <p class="tag">Puntos 1, 2 y 3</p>
+    <h2>Menú inicial sobre el paño 1</h2>
+    <p>Sin recuadro ni título. Los botones se apoyan en la tela izquierda, dentro del borde dorado. La mano del fondo no está (queda la nube) y solo responden los botones y el mate.</p>
+    <div class="pair">
+      <figure><img src="img/base-menu.png" alt="Menú actual: recuadro azul con título a la izquierda" width="1280" height="800"><figcaption><b>Hoy.</b> Recuadro azul con título, mano en la ventana.</figcaption></figure>
+      <figure><img src="img/boceto-1a-menu.png" alt="Menú propuesto: cinco botones sobre el paño izquierdo" width="1440" height="900"><figcaption><b>Propuesta.</b> Nueva partida, Colecciones, Opciones, Salir y el debug (solo en desarrollo).</figcaption></figure>
+    </div>
+    <div class="pair">
+      <figure><img src="img/boceto-1b-nueva-partida-modo.png" alt="Nueva partida: selección de modo en el paño del medio" width="1440" height="900"><figcaption><b>Nueva partida.</b> El paño 2 muestra los modos: Campaña activa y los otros en gris.</figcaption></figure>
+      <figure><img src="img/boceto-1c-nueva-partida-tutorial.png" alt="Después de Campaña, la pregunta del tutorial en el paño del medio" width="1440" height="900"><figcaption><b>Después de Campaña.</b> Propuesta: la pregunta del tutorial va en el mismo paño.</figcaption></figure>
+    </div>
+  </section>
+
+  <section>
+    <p class="tag">Punto 4</p>
+    <h2>Selección de encuentro</h2>
+    <p>Reemplaza al cartel «Empezar primer encuentro» y al de «¿Cómo querés seguir?». Paño 1: objetivo, «Jugar contra el siguiente rival», nivel/rival/jefe en chico y «Saltear» en gris. Paño 2: «Ir a la tienda». Donde estaba la libreta, Opciones y Abandonar partida. Sin botonera de juego.</p>
+    <div class="pair">
+      <figure><img src="img/base-anuncio.png" alt="Anuncio de nivel actual" width="1280" height="800"><figcaption><b>Hoy.</b> Cartel del nivel con recorrido y poder del jefe.</figcaption></figure>
+      <figure><img src="img/boceto-4a-seleccion-primer-encuentro.png" alt="Selección del primer encuentro con la tienda en gris" width="1440" height="900"><figcaption><b>Primer encuentro del nivel.</b> La tienda en gris.</figcaption></figure>
+    </div>
+    <div class="full">
+      <figure><img src="img/boceto-4b-seleccion-rival-2.png" alt="Selección del rival 2 con la tienda habilitada" width="1440" height="900"><figcaption><b>Rival 2.</b> La tienda se puede abrir las veces que quieras antes de jugar.</figcaption></figure>
+    </div>
+  </section>
+
+  <section>
+    <p class="tag">Punto 5</p>
+    <h2>Al ganar un encuentro</h2>
+    <p>Sin desglose: la libreta queda en blanco y sobre la mesa aparece el total cobrado y Continuar, que lleva a la selección de encuentro (pasando por la reparación si hay gemas rotas).</p>
+    <div class="pair">
+      <figure><img src="img/base-cobro.png" alt="Cartel de cobro actual con desglose" width="1280" height="800"><figcaption><b>Hoy.</b> Cartel con desglose y dos destinos.</figcaption></figure>
+      <figure><img src="img/boceto-5-cobro.png" alt="Cobro propuesto: +$16 y Continuar sobre el paño" width="1440" height="900"><figcaption><b>Propuesta.</b> «+$16» y Continuar.</figcaption></figure>
+    </div>
+  </section>
+
+  <section>
+    <p class="tag">Punto 6</p>
+    <h2>Ayuda de la mano del jefe</h2>
+    <p>El recuadro que aparece al pasar el mouse por la mano sale debajo de ella, no encima de la libreta.</p>
+    <div class="pair">
+      <figure><img src="img/boceto-6a-mano-hoy.png" alt="Ayuda de la mano encima de la libreta" width="1440" height="900"><figcaption><b>Hoy.</b> Tapa la libreta.</figcaption></figure>
+      <figure><img src="img/boceto-6b-mano-propuesta.png" alt="Ayuda de la mano debajo de la mano" width="1440" height="900"><figcaption><b>Propuesta.</b> Centrado debajo de la mano.</figcaption></figure>
+    </div>
+  </section>
+
+  <section>
+    <p class="tag">Para decidir</p>
+    <h2>Preguntas que cambian los bocetos</h2>
+    <ul class="q">
+      <li>Tienda en gris: ¿en el rival 1 de cada nivel (se pierde la tienda después de cada jefe) o solo al empezar la partida?</li>
+      <li>Al ganar, ¿la libreta queda en blanco (como en el boceto) o desaparece?</li>
+      <li>¿«Continuar partida» sigue en el menú cuando hay una guardada?</li>
+      <li>¿La pregunta del tutorial va después de elegir Campaña?</li>
+      <li>¿Cuántos modos en gris y con qué texto?</li>
+      <li>Colecciones (1b) tiene su propio boceto más adelante.</li>
+    </ul>
+  </section>
+</div>
