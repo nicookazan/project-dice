@@ -45,17 +45,31 @@ func _initialize() -> void:
 	await capture("8-seleccion-rival-2")
 	press("OpenShop")
 	await capture("9-tienda")
+	for offer in ["Offer_0", "Offer_1"]:
+		var cards: Array = scene.ui.find_children(offer, "", true, false)
+		if cards.is_empty(): continue
+		var target: Control = cards[cards.size() - 1].find_child("ObjectHover", true, false)
+		if target == null: continue
+		hover_at(target)
+		await capture("9b-tienda-ayuda-" + offer)
 	press("ShopAdvance")
 	await capture("10-vuelta-de-la-tienda")
 	press("PlayNext")
-	var hand: Control = scene.ui.find_child("InspectBoss", true, false)
-	var motion := InputEventMouseMotion.new()
-	motion.position = hand.get_global_rect().get_center() * Vector2(root.size) / Vector2(1440, 900)
-	Input.warp_mouse(motion.position)
-	root.push_input(motion, true)
+	hover_at(scene.ui.find_child("InspectBoss", true, false))
 	await capture("11-ayuda-mano")
+	scene.game.roll()
+	preload("res://tests/support/game_fixture.gd").set_values(scene.game, [5, 5, 5, 2, 2])
+	scene.game.form_group([0, 1, 2, 3, 4])
+	scene.render()
+	await capture("12-mesa-grupo-desarmar")
 	print("PANTALLAS REVIEW: listo")
 	quit()
+
+func hover_at(control: Control) -> void:
+	var motion := InputEventMouseMotion.new()
+	motion.position = control.get_global_rect().get_center() * Vector2(root.size) / Vector2(1440, 900)
+	Input.warp_mouse(motion.position)
+	root.push_input(motion, true)
 
 func press(node_name: String) -> void:
 	var control = scene.ui.find_child(node_name, true, false)

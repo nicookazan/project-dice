@@ -209,3 +209,45 @@ static func _boss_help(scene, check: Callable) -> void:
 	scene.cancel_navigation()
 	scene.game.return_to_menu()
 	scene.session_started = false
+	_table_and_shop(scene, check)
+
+## Ajustes de la mesa y la tienda: Desarmar no tapa los dados, Opciones en la esquina y la ayuda de la tienda arriba.
+static func _table_and_shop(scene, check: Callable) -> void:
+	scene.start_new_run(924)
+	scene.game.play_next()
+	scene.game.roll()
+	Fixture.set_values(scene.game, [6, 6, 2, 3, 4])
+	scene.game.form_group([0, 1])
+	scene.render()
+	var ungroup: Control = scene.ui.find_child("Ungroup_0", true, false)
+	var overlaps := false
+	for die in UI.dice_in(scene.ui):
+		if die.locked and ungroup != null and ungroup.get_global_rect().intersects(die.get_global_rect()): overlaps = true
+	check.call(ungroup != null and not overlaps, "Mesa: Desarmar queda arriba de los dados del grupo, sin taparlos")
+	var options: Button = scene.ui.find_child("TableOptions", true, false)
+	check.call(options != null and options.text == "Opciones" and UI.find_button(scene.ui, "Ayuda") == null, "Mesa: donde estaba Ayuda ahora está Opciones")
+	options.pressed.emit()
+	check.call(scene.detail.visible and scene.detail.title == "Opciones y controles", "Mesa: el botón abre Opciones")
+	scene.detail.hide()
+	scene.game = reward_game()
+	scene.game.continue_after_reward()
+	scene.render()
+	check.call(scene.ui.find_child("TableOptions", true, false) == null and scene.ui.find_child("LobbyOptions", true, false) != null, "Selección: Opciones no se repite en la esquina")
+	scene.game.open_shop()
+	scene.render()
+	var card: Control = scene.ui.find_child("Offer_0", true, false)
+	var hover: Control = card.find_child("ObjectHover", true, false) if card != null else null
+	if hover == null:
+		check.call(false, "Tienda: hay un objeto a la venta para revisar la ayuda")
+	else:
+		scene.hover_description_body.text = hover.tooltip_text
+		scene.hover_description.reset_size()
+		scene.place_hover_description(hover)
+		var box := Rect2(scene.hover_description.position, scene.hover_description.size)
+		var card_rect := card.get_global_rect()
+		var fits_above: bool = card_rect.position.y - box.size.y - 6.0 >= 12.0
+		check.call((box.end.y <= card_rect.position.y) if fits_above else (box.position.y >= card_rect.end.y), "Tienda: la ayuda del objeto sale arriba de su tarjeta (abajo solo si no entra)")
+		check.call(Rect2(0, 0, 1440, 900).encloses(box) and not box.intersects(card_rect), "Tienda: la ayuda entra en pantalla y no tapa el objeto")
+	scene.cancel_navigation()
+	scene.game.return_to_menu()
+	scene.session_started = false

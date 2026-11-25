@@ -119,7 +119,7 @@ static func run(scene, check: Callable) -> Dictionary:
 	click(scene, "Empezar primer encuentro")
 	check.call(scene.game.phase == "play" and scene.game.rival == 0 and not scene.game.begin_level(), "Flow: only first encounter starts, intro continuation is idempotent")
 	before = scene.game.snapshot()
-	check.call(UI.find_button(scene.ui, "Recorrido · M") == null and UI.find_button(scene.ui, "Abandonar partida") == null and UI.find_button(scene.ui, "Opciones") == null and UI.find_button(scene.ui, "Menú") != null, "Flow: table keeps only the Menú button; secondary options are not loose on screen")
+	check.call(UI.find_button(scene.ui, "Recorrido · M") == null and UI.find_button(scene.ui, "Abandonar partida") == null and scene.ui.find_child("TableOptions", true, false) != null and UI.find_button(scene.ui, "Menú") != null, "Flow: table keeps the Menú button and Opciones in the notebook corner; route and abandon are not loose on screen")
 	UI.find_button(scene.ui, "Menú").pressed.emit()
 	check.call(scene.ui.has_node("GameMenu") and UI.find_button(scene.ui, "Seguir jugando") != null and UI.find_button(scene.ui, "Recorrido · M") != null and UI.find_button(scene.ui, "Opciones") != null and UI.find_button(scene.ui, "Abandonar partida") != null and UI.find_button(scene.ui, "Guardar y volver al menú") == null and scene.game.snapshot() == before, "Flow: Menú opens a panel with route, options and abandon (no save-and-exit) without changing state")
 	UI.find_button(scene.ui, "Seguir jugando").pressed.emit()

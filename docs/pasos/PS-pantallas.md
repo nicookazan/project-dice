@@ -2,7 +2,7 @@
 
 Ítem 6 de los pendientes post-paso 20 · 24 de noviembre de 2026.
 
-**Estado actual:** PS0–PS7 implementados (PS2–PS7 juntos en `feature/pantallas`, a pedido del autor). Falta la prueba del autor dentro del juego y un boceto propio para Colecciones (ver `ESTADO.md`).
+**Estado actual:** PS0–PS7 implementados (PS2–PS7 juntos en `feature/pantallas`, a pedido del autor), con los ajustes del 25/11: Desarmar arriba de los dados, Opciones en la esquina de la libreta y la ayuda de la tienda arriba de cada objeto. Falta la prueba del autor dentro del juego y un boceto propio para Colecciones (ver `ESTADO.md`).
 
 ## Objetivo
 Menú inicial sobre la mesa, pantalla de selección de encuentro (con tienda a la que se entra varias veces), cobro sin desglose, ayuda de la mano del jefe debajo de la mano y Colecciones. Decisiones en `DECISIONES.md` (D20).

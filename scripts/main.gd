@@ -1230,6 +1230,15 @@ func update_hover_description() -> void:
 ## La ayuda de la mano del jefe sale centrada debajo de la mano (D20, PS6), dentro de la pantalla; si no entra abajo,
 ## va arriba. El resto de las ayudas sigue en su lugar de siempre, sobre la libreta.
 func place_hover_description(hovered: Control) -> void:
+	var offer := offer_card_of(hovered)
+	if offer != null:
+		# En la tienda, lo que hace cada objeto sale arriba de su tarjeta (abajo si no entra).
+		var card_rect := offer.get_global_rect()
+		var box := hover_description.size
+		var above := Vector2(card_rect.get_center().x - box.x / 2.0, card_rect.position.y - box.y - 6.0)
+		if above.y < 12.0: above.y = card_rect.end.y + 6.0
+		hover_description.position = Vector2(clampf(above.x, 12.0, 1440.0 - box.x - 12.0), clampf(above.y, 12.0, 888.0 - box.y))
+		return
 	if hovered == null or hovered.name != "InspectBoss":
 		hover_description.position = HOVER_DEFAULT
 		return
@@ -1240,6 +1249,15 @@ func place_hover_description(hovered: Control) -> void:
 	at.x = clampf(at.x, 12.0, 1440.0 - box_size.x - 12.0)
 	at.y = clampf(at.y, 12.0, 888.0 - box_size.y)
 	hover_description.position = at
+
+## La tarjeta de la tienda (`Offer_N`) que contiene al control, o null si no está en una.
+func offer_card_of(hovered: Control) -> Control:
+	if not background.shop_mode: return null
+	var node: Node = hovered
+	while node != null and node != ui:
+		if node is Control and String(node.name).begins_with("Offer_"): return node
+		node = node.get_parent()
+	return null
 
 func _input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_F11 and not confirmation.visible:
@@ -1749,7 +1767,8 @@ func render_table() -> void:
 			add_die(content, index, Vector2(x, y + 27), true)
 			x += 60
 		if not group.locked and game.phase == "play" and not game.tutorial:
-			button(content, "Desarmar", Rect2(211, y - 4, 112, 29), func(): act(func(): game.ungroup(current_index)))
+			# Arriba de la fila de dados, a la altura del nombre del grupo, para no taparlos.
+			button(content, "Desarmar", Rect2(211, y - 13, 112, 26), func(): act(func(): game.ungroup(current_index))).name = "Ungroup_%d" % current_index
 		y += 103
 	plays_panel = null
 	if not plays.is_empty():
@@ -1855,7 +1874,9 @@ func render_inventory() -> void:
 		if BossRules.suspended(game.boss_context(), "coin", stored):
 			label(use, "SUSP", Vector2(1, 43), 11, gold)
 			use.tooltip_text = "Suspendida por el jefe. No se consume y conserva su espacio."
-	button(ui, "Ayuda", Rect2(1273, 748, 120, 60), show_help)
+	# Opciones en la esquina de la libreta (D20); la ayuda sigue a mano desde Opciones y con la tecla de ayuda.
+	# En la selección de encuentro ya están Opciones y Abandonar sobre la libreta: no se repite.
+	if not game.in_lobby(): button(ui, "Opciones", Rect2(1273, 748, 120, 60), show_options).name = "TableOptions"
 
 ## Progress of coins that keep state (C18, C48-C51), one line for tooltips and the inspector.
 func coin_state_text(instance: Dictionary) -> String:
