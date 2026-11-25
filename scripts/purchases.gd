@@ -8,7 +8,7 @@ const Numbers = preload("res://scripts/number_upgrades.gd")
 const Gems = preload("res://scripts/gems.gd")
 const Elements = preload("res://scripts/elements.gd")
 const TARGETED = ["material", "shell", "element", "face"]
-const KINDS = {"coins": ["coin", "coin_pack"], "components": ["material", "shell", "element"], "numbers": ["global", "face"], "stickers": ["sticker", "pack"]}
+const KINDS = {"coins": ["coin", "coin_pack"], "single_use": ["coin"], "components": ["material", "shell", "element"], "numbers": ["global", "face"], "stickers": ["sticker", "pack"]}
 
 static func error(code: String, message: String) -> Dictionary:
 	return {"ok": false, "code": code, "message": message, "cost": 0, "changes": {}}

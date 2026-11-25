@@ -154,7 +154,7 @@ static func _test_files(check: Callable) -> void:
 	var v4_loaded: Dictionary = legacy_service.inspect()
 	check.call(v4_loaded.ok and not v4_loaded.data.game.debug_mode and v4_loaded.data.game == old_game.snapshot(), "Save: version 4 migrates to normal mode without activating cheats or changing progress")
 	var independent = shop_game("face", {"number": 4})
-	independent.reroll_prices = {"coins": 4, "components": 2, "numbers": 3, "stickers": 1}
+	independent.reroll_prices = {"coins": 4, "single_use": 5, "components": 2, "numbers": 3, "stickers": 1}
 	var independent_clone = roundtrip(independent, check)
 	check.call(independent_clone.reroll_prices == independent.reroll_prices, "Save: independent zone prices survive exact reload")
 	var duplicated = shop_game("coin", {"coin_id": "full"})

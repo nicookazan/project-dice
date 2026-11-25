@@ -1,7 +1,7 @@
 extends RefCounted
 ## Versioned local checkpoints. Variant bytes preserve int64 RNG; objects are disabled.
 const FORMAT := "dios-no-juega-save"
-const VERSION := 10
+const VERSION := 11
 const BossRules = preload("res://scripts/boss_rules.gd")
 const Game = preload("res://scripts/game.gd")
 const Validator = preload("res://scripts/save_validator.gd")
@@ -77,6 +77,10 @@ func read_file(file_path: String) -> Dictionary:
 		data = data.duplicate(true)
 		var seed_error: String = preload("res://scripts/save_migrations.gd").seed_v10(data.game)
 		if seed_error != "": return error("state", seed_error)
+	if envelope.version <= 10 and data is Dictionary and data.get("game") is Dictionary:
+		data = data.duplicate(true)
+		var single_use_error: String = preload("res://scripts/save_migrations.gd").single_use_v11(data.game)
+		if single_use_error != "": return error("state", single_use_error)
 	var reason: String = Validator.validate(data)
 	if reason != "": return error("state", "El guardado contiene un estado inválido: " + reason)
 	return {"ok": true, "active": data.game.phase in ACTIVE, "code": "valid", "message": "", "data": data, "source": file_path}

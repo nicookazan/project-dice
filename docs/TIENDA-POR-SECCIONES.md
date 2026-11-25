@@ -2,6 +2,8 @@
 
 Modelo y generador implementados y probados el 26 de octubre de 2026. D01/D02/D04 siguen pendientes para precios, probabilidades y contenido comercial final. Las tablas completas de demostración son exclusivas de tests/shop_tests.gd. La partida normal genera monedas con economía provisional heredada y muestra las demás secciones sin ofertas hasta configurarlas.
 
+> **Actualización del 25/11/2026 (D20, opción B del boceto `tools/art/bocetos-tienda/`):** el maletín tiene cinco secciones. Arriba: componentes (2), números (2) y stickers (2). Abajo: monedas (4: tres pasivas sueltas y el paquete de monedas en el cuarto lugar) y **single_use** (1 moneda de un uso). Las sueltas de `coins` ya no traen monedas de un uso; esas salen solo en `single_use` (de la misma tabla de monedas, con las mismas reglas de bloqueadas, una vez por partida y pasivas propias). El paquete sigue sorteando entre las dos clases. Orden del sorteo (fija el azar): `Shop.SECTIONS` = coins, single_use, components, numbers, stickers. Cada sección tiene su renovación y su contador. Arte: `tienda-secciones-v4.png` (`tools/art/make_tienda_secciones.gd`). Guardado v11: las partidas de antes reciben la sección vacía sin re-sortear. La tabla de abajo es la histórica.
+
 ## Stock identificado y distribución
 
 | Sección | Espacios | Contenido permitido |

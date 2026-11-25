@@ -10,6 +10,8 @@ static func run(scene, check: Callable) -> Dictionary:
 	scene.game = Shop.game_at_shop(162)
 	scene.game.passives = ["even", "odd"]
 	scene.game.cash = 24
+	# La oferta que se revisa queda fija (el sorteo de la tienda cambió con la sección de un uso).
+	scene.game.shop_state.numbers.slots[0] = {"kind": "global", "effect": {"number": 4, "amount": 2}, "rarity": "common", "price": 3, "offer_id": "style_0"}
 	scene.render()
 	var before: Dictionary = scene.game.snapshot()
 	var numbers = scene.ui.get_node("Shop_numbers")

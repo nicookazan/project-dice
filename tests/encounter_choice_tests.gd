@@ -255,6 +255,16 @@ static func _table_and_shop(scene, check: Callable) -> void:
 	check.call(not UI.text_in(scene.ui, scene.game.message) and scene.ui.find_child("ShopError", true, false) == null, "Tienda: no queda texto de estado abajo")
 	scene.inspect_thermos()
 	check.call(not scene.detail.visible, "Tienda: tocar el termo no abre ningún panel")
+	# Opción B (25/11): cinco secciones; abajo las monedas (pasivas sueltas y el paquete) y la de un uso, aparte.
+	var single: Control = scene.ui.find_child("Shop_single_use", true, false)
+	var coins_zone: Control = scene.ui.find_child("Shop_coins", true, false)
+	var once_offer: Dictionary = scene.game.shop_state.single_use.slots[0]
+	check.call(single != null and single.find_children("Offer_*", "", false, false).size() == 1 and once_offer.get("kind") == "coin" and Coins.definition(once_offer.effect.coin_id).type == "consumable", "Tienda: la moneda de un uso tiene su sección, con una sola oferta")
+	check.call(coins_zone != null and coins_zone.position.y > single.position.y - 1 and scene.ui.find_child("Shop_stickers", true, false).position.y < coins_zone.position.y and scene.game.shop_state.coins.slots.slice(0, 3).all(func(o): return o.is_empty() or Coins.definition(o.effect.coin_id).type == "passive"), "Tienda: arriba componentes, números y stickers; abajo monedas pasivas y la de un uso")
+	var old_game: Dictionary = scene.game.snapshot()
+	old_game.reroll_prices.erase("single_use")
+	old_game.shop_state.erase("single_use")
+	check.call(preload("res://scripts/save_migrations.gd").single_use_v11(old_game) == "" and old_game.reroll_prices.single_use == 1 and old_game.shop_state.single_use == {"slots": [{}], "configured": false}, "Guardado v11: una partida de antes recibe la sección de un uso vacía, sin re-sortear")
 	var card: Control = scene.ui.find_child("Offer_0", true, false)
 	var hover: Control = card.find_child("ObjectHover", true, false) if card != null else null
 	if hover == null:

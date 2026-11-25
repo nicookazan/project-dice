@@ -34,6 +34,7 @@ const Gems = preload("res://scripts/gems.gd")
 const Stickers = preload("res://scripts/stickers.gd")
 const Coins = preload("res://scripts/coins.gd")
 const CoinEffects = preload("res://scripts/coin_effects.gd")
+const Shop = preload("res://scripts/shop.gd")
 const Purchases = preload("res://scripts/purchases.gd")
 const ProfileStore = preload("res://scripts/profile_store.gd")
 const SaveStore = preload("res://scripts/save_store.gd")
@@ -2046,7 +2047,7 @@ func shop_card(parent: Node, section: String, index: int, rect: Rect2) -> void:
 		return
 	shop_hook(card, false)
 	var text: Array = shop_offer_text(offer)
-	var compact := section == "coins"
+	var compact := section in ["coins", "single_use"]
 	shop_icon(card, offer, Rect2((rect.size.x - 100) / 2, 10, 100, 91))
 	var object_hover := HoverPanel.new()
 	object_hover.name = "ObjectHover"
@@ -2092,6 +2093,10 @@ func shop_card(parent: Node, section: String, index: int, rect: Rect2) -> void:
 	purchase.add_theme_color_override("font_color", ShopFixtures.TAG_INK)
 	purchase.add_theme_color_override("font_hover_color", ShopFixtures.TAG_INK_SOLD)
 	purchase.add_theme_color_override("font_disabled_color", Color("8a7a60"))
+
+## Secciones del maletín en pantalla (coinciden con las divisiones de `tienda-secciones-v4.png`).
+const SHOP_ZONES := {"components": Rect2(540, 252, 222, 179), "numbers": Rect2(788, 252, 254, 179), "stickers": Rect2(1074, 252, 240, 179),
+	"coins": Rect2(534, 442, 560, 179), "single_use": Rect2(1122, 442, 208, 179)}
 
 func render_shop() -> void:
 	shop_frame(Rect2(30, 14, 400, 75), true)
@@ -2141,9 +2146,9 @@ func render_shop() -> void:
 			var use_button := button(ui, "Usar", Rect2(offset, 880, 62, 18), func(): act(func(): game.use_consumable(slot_index)), game.phase != "shop")
 			use_button.name = "UseShopCoin_" + str(slot)
 			use_button.add_theme_font_size_override("font_size", 13)
-	var zones := {"numbers": Rect2(538, 252, 367, 179), "components": Rect2(929, 252, 388, 179), "coins": Rect2(525, 442, 380, 179), "stickers": Rect2(929, 442, 401, 179)}
-	var titles := {"numbers": "Números y caras", "components": "Componentes", "coins": "Monedas", "stickers": "Stickers"}
-	var renew_names := {"coins": "monedas", "components": "componentes", "numbers": "números", "stickers": "stickers"}
+	# Opción B del boceto (D20): arriba componentes, números y stickers; abajo las monedas (ancha) y la de un uso.
+	var zones := SHOP_ZONES
+	var renew_names := {"coins": "monedas", "single_use": "moneda de un uso", "components": "componentes", "numbers": "números", "stickers": "stickers"}
 	for section in zones:
 		var section_id: String = section
 		var zone := panel(ui, zones[section], Color.TRANSPARENT)
@@ -2155,7 +2160,7 @@ func render_shop() -> void:
 		title.name = "Title"
 		for state in ["normal", "hover", "pressed"]: title.add_theme_stylebox_override(state, StyleBoxEmpty.new())
 		title.add_theme_font_size_override("font_size", 18)
-		var count := 4 if section == "coins" else 2
+		var count: int = Shop.SIZES[section]
 		var width: float = (zones[section].size.x - 24) / count
 		for index in range(count): shop_card(zone, section, index, Rect2(12 + index * width, 28, width, 145))
 		var stock: Dictionary = game.shop_state.get(section, {"slots": [], "configured": false})

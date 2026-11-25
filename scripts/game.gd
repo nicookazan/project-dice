@@ -113,7 +113,7 @@ var offers: Array:
 			if value[i] == "": continue
 			shop_offer_sequence += 1
 			shop_state.coins.slots[i] = {"offer_id": str(shop_offer_sequence), "kind": "coin", "price": Coins.definition(value[i]).get("price", 0), "effect": {"coin_id": value[i]}}
-var reroll_prices: Dictionary = {"coins": 1, "components": 1, "numbers": 1, "stickers": 1}
+var reroll_prices: Dictionary = {"coins": 1, "single_use": 1, "components": 1, "numbers": 1, "stickers": 1}
 var last_score: Dictionary = {}
 var payout: Dictionary = {}
 var history: Array = []
@@ -179,7 +179,7 @@ func _start_encounter() -> void:
 	last_score = {}
 	shop_state = {}
 	shop_gifts = []
-	reroll_prices = {"coins": 1, "components": 1, "numbers": 1, "stickers": 1}
+	reroll_prices = {"coins": 1, "single_use": 1, "components": 1, "numbers": 1, "stickers": 1}
 	events = []
 	breakage_by_hand = {}
 	repair_resolution = {}
@@ -834,7 +834,7 @@ func _generated_shop() -> Dictionary:
 		staged_rng = fixed.state
 	var serial: int = shop_offer_sequence
 	var seen: Array = once_coins_seen.duplicate()
-	for section in ["coins", "components", "numbers", "stickers"]:
+	for section in Shop.SECTIONS:
 		var generated := Shop.generate(section, shop_tables, sticker_catalog, passives, staged_rng, serial, seen, [] if tutorial else unlocked_coins)
 		if not generated.valid: return {"valid": false}
 		state[section] = generated.section
@@ -847,7 +847,7 @@ func _generated_shop() -> Dictionary:
 ## gratis cuestan 0; las tandas nuevas que trae el restock tienen su precio normal.
 static func seed_shop_cut(state: Dictionary) -> Dictionary:
 	var result := state.duplicate(true)
-	for section in ["coins", "components", "numbers", "stickers"]:
+	for section in Shop.SECTIONS:
 		var slots: Array = result[section].slots
 		for index in range(1, slots.size()): slots[index] = {}
 	return result
@@ -855,7 +855,7 @@ static func seed_shop_cut(state: Dictionary) -> Dictionary:
 ## Ids de las ofertas en pie de la tienda (para marcar el regalo de la mano).
 static func offer_ids(state: Dictionary) -> Array:
 	var result: Array = []
-	for section in ["coins", "components", "numbers", "stickers"]:
+	for section in Shop.SECTIONS:
 		for offer in state.get(section, {}).get("slots", []):
 			if not offer.is_empty(): result.append(offer.offer_id)
 	return result
@@ -929,7 +929,7 @@ func open_shop() -> bool:
 	phase = "shop"
 	impulses = []
 	visit_discount = 0.0
-	reroll_prices = {"coins": 1, "components": 1, "numbers": 1, "stickers": 1}
+	reroll_prices = {"coins": 1, "single_use": 1, "components": 1, "numbers": 1, "stickers": 1}
 	free_renewals = int(CoinEffects.sum_of(passives, "free_renewals"))
 	if from_lobby: message = "Comprá mejoras. Podés salir a la mesa y volver a entrar."
 	return true

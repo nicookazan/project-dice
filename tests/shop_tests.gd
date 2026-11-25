@@ -9,7 +9,10 @@ static func tables() -> Dictionary:
 	return {
 		"coins": [
 			{"kind": "coin", "effect": {"coin_id": "full"}, "price": 4, "weight": 1},
-			{"kind": "coin", "effect": {"coin_id": "roll"}, "price": 2, "weight": 1}],
+			{"kind": "coin", "effect": {"coin_id": "roll"}, "price": 2, "weight": 1},
+			{"kind": "coin", "effect": {"coin_id": "generala"}, "price": 4, "weight": 1},
+			{"kind": "coin", "effect": {"coin_id": "straight"}, "price": 4, "weight": 1},
+			{"kind": "coin", "effect": {"coin_id": "even"}, "price": 4, "weight": 1}],
 		"components": [
 			{"kind": "element", "effect": {"id": "fire"}, "price": 3, "weight": 1},
 			{"kind": "material", "effect": {"id": "steel"}, "price": 4, "weight": 1},
@@ -66,8 +69,8 @@ static func _test_generation(check: Callable) -> void:
 	one_type.coins = [one_type.coins[1]]
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 121
-	var generated := Shop.generate("coins", one_type, StickerTests.definitions(), [], rng.state, 0)
-	check.call(generated.section.slots.all(func(item): return item.effect.coin_id == "roll"), "shop: all four coin slots may be consumables without guaranteed passive slots")
+	var generated := Shop.generate("single_use", one_type, StickerTests.definitions(), [], rng.state, 0)
+	check.call(generated.section.slots.size() == 1 and generated.section.slots[0].effect.coin_id == "roll" and Shop.generate("coins", one_type, StickerTests.definitions(), [], rng.state, 0).section.slots.all(func(item): return item.is_empty()), "shop: single-use coins go to their own section, never to the passive coin slots")
 	one_type.coins = [tables().coins[0]]
 	generated = Shop.generate("coins", one_type, StickerTests.definitions(), [], rng.state, 0)
 	check.call(generated.section.slots[0].effect.coin_id == "full" and generated.section.slots.filter(func(item): return item.is_empty()).size() == 3, "shop: a single eligible passive fills one slot without repeating it in the other three")
@@ -179,5 +182,5 @@ static func _test_stock(check: Callable) -> Dictionary:
 	game.points = game.target()
 	game.score_hand()
 	game.close_encounter()
-	check.call(game.open_shop() and game.reroll_prices == {"coins": 1, "components": 1, "numbers": 1, "stickers": 1} and game.shop_offer_sequence > evidence.shop_offer_sequence, "shop: next visit resets every section price and creates fresh unique offer IDs")
+	check.call(game.open_shop() and game.reroll_prices == {"coins": 1, "single_use": 1, "components": 1, "numbers": 1, "stickers": 1} and game.shop_offer_sequence > evidence.shop_offer_sequence, "shop: next visit resets every section price and creates fresh unique offer IDs")
 	return evidence

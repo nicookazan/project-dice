@@ -8,7 +8,9 @@ const ENCOUNTERS := [
 ## Plata con la que se entra a la tienda guiada.
 const SHOP_CASH := 20
 ## Semilla fija de la tienda del tutorial (se busca con tools/tutorial_shop_seeds.gd; el autor puede cambiarla).
-const SHOP_SEED := 2
+## 53 desde el 25/11/2026 (la tienda suma la sección de un uso y cambió el sorteo): gema, elemento, cara, mejora de número,
+## sticker, tres monedas pasivas, paquete y una de un uso. Falta la aprobación del autor.
+const SHOP_SEED := 53
 ## Tiradas guionadas del primer encuentro: [mano][tirada] = valores que salen, para los dados que se tiran, en orden de id.
 ## Mano 1: 4 4 2 6 3 → se conservan los 4 y se tiran los otros tres → 4 1 5 → trío de cuatros.
 ## Mano 2: 6 6 3 3 2 → se tira el último dado → 3 → full.
@@ -22,8 +24,8 @@ const ZONES := {
 	"close": Rect2(375, 626, 236, 42), "next_hand": Rect2(725, 626, 262, 42), "choice_shop": Rect2(338, 565, 366, 56),
 	"payout_continue": Rect2(768, 510, 232, 56), "lobby_shop": Rect2(748, 430, 272, 58), "lobby_play": Rect2(380, 430, 292, 58),
 	"inventory": Rect2(40, 740, 700, 130), "thermos": Rect2(1180, 130, 220, 260), "advance": Rect2(1025, 25, 380, 93),
-	"numbers": Rect2(538, 252, 367, 179), "components": Rect2(929, 252, 388, 179), "coins": Rect2(525, 442, 380, 179),
-	"stickers": Rect2(929, 442, 401, 179), "cash": Rect2(518, 30, 193, 80), "seller": Rect2(60, 160, 440, 470)}
+	"components": Rect2(540, 252, 222, 179), "numbers": Rect2(788, 252, 254, 179), "coins": Rect2(534, 442, 560, 179), "single_use": Rect2(1122, 442, 208, 179),
+	"stickers": Rect2(1074, 252, 240, 179), "cash": Rect2(518, 30, 193, 80), "seller": Rect2(60, 160, 440, 470)}
 
 static func rolls_for(hand: int, roll_number: int, count: int) -> Array:
 	## Valores guionados para la tirada `roll_number` (0 = primera) de la mano `hand` (1 = primera), o [] si no hay.
@@ -88,10 +90,11 @@ static func _first_encounter(ctx: Dictionary) -> Dictionary:
 static func _shop() -> Dictionary:
 	return {"id": "shop", "notes": [
 		note("Acá comprás mejoras con la plata que cobraste. Tenés $%d." % SHOP_CASH, "cash", "below"),
-		note("Stickers: potencian una categoría y se pegan en el termo.", "stickers", "below"),
-		note("Números y caras: mejoran un número o cambian una cara de un dado.", "numbers", "left"),
-		note("Componentes: gemas, elementos y materiales, para uno de tus cinco dados.", "components", "above"),
-		note("Monedas: pasivas que cambian las reglas, o de un solo uso. Podés vender las tuyas arrastrándolas al maletín.", "coins", "left")], "blocking": true, "allow": ["all"], "select": []}
+		note("Números y caras: mejoran un número o cambian una cara de un dado.", "numbers", "above"),
+		note("Stickers: potencian una categoría y se pegan en el termo.", "stickers", "above"),
+		note("Componentes: gemas, elementos y materiales, para uno de tus cinco dados.", "components", "left"),
+		note("Monedas: pasivas que cambian las reglas. Podés vender las tuyas arrastrándolas al maletín.", "coins", "left"),
+		note("Moneda de un uso: se gasta al usarla.", "single_use", "below")], "blocking": true, "allow": ["all"], "select": []}
 
 ## ¿La acción está permitida en este paso? "all" deja todo; sin paso (o sin notas esperadas) no se bloquea nada.
 static func allows(current: Dictionary, action: String) -> bool:

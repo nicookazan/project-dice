@@ -176,7 +176,7 @@ static func run(scene, check: Callable) -> Dictionary:
 	var routes: Array = []
 	for profile in [false, true]:
 		routes.append(winning_route(scene, profile, check))
-		routes.append(natural_run(scene, 0, profile, "lost", check))
+		routes.append(losing_route(scene, profile, check))
 	controlled_shop(scene, check)
 	var historic_score: Dictionary = scene.game.last_score.duplicate(true)
 	for kind in ["global"]: buy_controlled(scene, kind, "", check)
@@ -275,6 +275,19 @@ static func _test_score_matrix(scene, check: Callable) -> void:
 ## The shop catalog decides which coins a bot can buy, so a fixed seed is not guaranteed to win
 ## forever. The route is fixed input (no injected dice, stock or cash): the first candidate seed
 ## that wins is used, and every reload check still runs.
+## Primera semilla (0, 11–30) cuyo recorrido natural pierde: el sorteo de la tienda cambia con el catálogo y las secciones.
+static func losing_route(scene, profile: bool, check: Callable) -> Dictionary:
+	var result: Dictionary = {}
+	var failures: Array = []
+	var used := -1
+	for seed_value in [0] + range(11, 31):
+		failures = []
+		used = seed_value
+		result = natural_run(scene, seed_value, profile, "lost", func(ok: bool, message: String): if not ok: failures.append(message))
+		if failures.is_empty(): break
+	check.call(failures.is_empty(), "Integral: natural route ends lost with reloads, no injected outcomes (candidate seed %d profile %s: %s)" % [used, str(profile), str(failures)])
+	return result
+
 static func winning_route(scene, profile: bool, check: Callable) -> Dictionary:
 	var result: Dictionary = {}
 	var failures: Array = []

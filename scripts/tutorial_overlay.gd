@@ -42,6 +42,7 @@ func setup(step_notes: Array, show_notes: bool, gold: Color, cream: Color, block
 		dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 		dim.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		add_child(dim)
+		var placed: Array = []
 		for entry in notes:
 			var zone: Rect2 = Tutorial.ZONES.get(entry.zone, Rect2(560, 300, 320, 200))
 			var frame := Panel.new()
@@ -69,6 +70,8 @@ func setup(step_notes: Array, show_notes: bool, gold: Color, cream: Color, block
 			bubble.add_child(text)
 			var height := 34.0 + 22.0 * ceilf(entry.text.length() / 28.0)
 			var rect := bubble_rect(zone, entry.side, Vector2(BUBBLE_WIDTH, height))
+			rect = clear_of(rect, placed)
+			placed.append(rect)
 			bubble.position = rect.position
 			bubble.size = rect.size
 			var skin := StyleBoxFlat.new()
@@ -143,3 +146,12 @@ func _process(_delta: float) -> void:
 			var rect := target.get_global_rect().grow(3)
 			glow.position = rect.position
 			glow.size = rect.size
+
+## Si un cartel pisa a otro ya puesto, se corre al costado (lejos del otro) lo justo para no tocarlo, sin salirse.
+static func clear_of(rect: Rect2, placed: Array) -> Rect2:
+	for other in placed:
+		if not rect.grow(4.0).intersects(other): continue
+		if rect.get_center().x >= other.get_center().x: rect.position.x = other.end.x + 8.0
+		else: rect.position.x = other.position.x - rect.size.x - 8.0
+		rect.position.x = clampf(rect.position.x, 8.0, SCREEN.x - rect.size.x - 8.0)
+	return rect

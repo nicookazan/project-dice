@@ -115,6 +115,8 @@ static func _test_purchase(check: Callable) -> void:
 	check.call(not poor.purchase_offer("coins", _pack(poor).offer_id).ok and poor.phase == "shop", "MON7: sin plata no se compra el paquete")
 	var gold = _shop_game(19, ["gold"])
 	gold.cash = 0
+	# El crédito de la Moneda de oro es $10: se fija el paquete chico ($7) para no depender de qué tamaño salió.
+	gold.shop_state.coins.slots[3].price = 7
 	var gold_offer: Dictionary = _pack(gold)
 	var bought: Dictionary = gold.purchase_offer("coins", gold_offer.offer_id)
 	check.call(bought.ok and gold.cash < 0 and gold.phase == "coin_choice", "MON7: Moneda de oro permite comprar el paquete con deuda")

@@ -1,7 +1,8 @@
 extends Control
 const ART = preload("res://assets/art/club-table-v2.png")
 const SHOP_ART = preload("res://assets/art/shop-table-v1.png")
-const SELLER_ART = preload("res://assets/art/pixel-v3/tienda-v3.png")
+## Tienda con las secciones de la opción B (D20, 25/11/2026): `tools/art/make_tienda_secciones.gd` a partir de `tienda-v3.png`.
+const SELLER_ART = preload("res://assets/art/pixel-v3/tienda-secciones-v4.png")
 ## El vendedor es una nube con una mano (TX7, make_vendedor_nube.py): la tienda se dibuja sin vendedor y encima van la nube
 ## animada (40 cuadros del video del autor, 4 por segundo, en bucle; coordenadas lógicas de 720×450 → pantalla ×2) y la
 ## mano original, quieta, delante de la nube. Hoy solo se usa el primer cuadro (sin volutas) con un vaivén suave; el resto del atlas queda sin usar.
