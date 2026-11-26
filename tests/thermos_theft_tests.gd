@@ -3,6 +3,7 @@ extends RefCounted
 const Backdrop = preload("res://scripts/backdrop.gd")
 const CatalogTests = preload("res://tests/boss_catalog_tests.gd")
 const Presentation = preload("res://scripts/presentation_state.gd")
+const BossRules = preload("res://scripts/boss_rules.gd")
 
 static func profile(stolen: bool) -> Dictionary:
 	return {"environment": "tarde", "actor": "common", "level": 1, "thermos_stolen": stolen}
@@ -56,10 +57,19 @@ static func run(scene, check: Callable) -> void:
 	var button: Button = scene.ui.get_node("InspectThermos")
 	check.call(button.position == Backdrop.STOLEN_THERMOS_RECT.position, "Thermos theft: the thermos button follows the floating thermos")
 	button.pressed.emit()
-	check.call(scene.detail.title == "Termo robado" and "robó" in scene.detail_text and scene.game.snapshot() == before, "Thermos theft: the button explains the theft without changing the game")
+	check.call(scene.detail.title == "Termo cambiado" and "cambió" in scene.detail_text and scene.game.snapshot() == before, "Thermos theft: the button explains the swap without changing the game")
 	scene.detail.hide()
 	scene.game = rival
 	scene.render()
 	check.call(scene.ui.get_node("InspectThermos").position == Backdrop.THERMOS_RECT.position, "Thermos theft: the button is back on the table outside the boss")
 	cebador.phase = "reward"
 	check.call(not cebador.thermos_stolen(), "Thermos theft: it is returned when the boss is beaten")
+	# Cambio de termos (25/11): con Don Cebador su termo (capa de atrás de la mano) deja de dibujarse mientras está
+	# cambiado; los dos termos se cruzan y el tuyo termina donde estaba el suyo.
+	check.call(Backdrop.SWAP_BOSS == "l2_cebador" and Backdrop.THERMOS_SWAP_CENTER.y < Backdrop.THERMOS_TABLE_CENTER.y and Backdrop.STOLEN_THERMOS_RECT.has_point(Backdrop.THERMOS_SWAP_CENTER), "Thermos swap: your thermos ends where Don Cebador's was, and the button follows it")
+	# La Semilla con ese poder: anula los stickers, pero el termo no se mueve.
+	var seed_game = preload("res://tests/la_semilla_tests.gd").at_guardian_reward(703)
+	seed_game.open_shop()
+	seed_game.leave_shop()
+	seed_game.boss_rule = cebador.boss_rule.duplicate(true)
+	check.call(seed_game.is_seed() and seed_game.phase == "play" and BossRules.is_power(seed_game.boss_rule, "thermos_theft") and not seed_game.thermos_stolen() and not Presentation.profile(seed_game).thermos_stolen, "Thermos swap: La Semilla with that power only cancels the stickers; the thermos stays on the table")

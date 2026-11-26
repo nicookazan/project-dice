@@ -173,16 +173,12 @@ static func run(scene, check: Callable) -> Dictionary:
 	scene.game.cup.stickers = {"trio": 2}
 	scene.game.sticker_catalog = preload("res://tests/sticker_tests.gd").definitions()
 	before = scene.game.snapshot()
-	scene.show_thermos_detail()
-	check.call("Termo del mate" in scene.detail_text and "Trío · nivel 2" in scene.detail_text and "+6 puntos" in scene.detail_text, "UI: thermos inspection shows owned sticker level and actual effect")
-	check.call(not scene.detail_body.visible and scene.thermos_panel.artwork.stickers == {"trio": 2}, "UI: thermos inspection presents actual owned artwork instead of the text list")
-	scene.thermos_panel.get_node("Sticker_trio").mouse_entered.emit()
-	check.call(scene.thermos_panel.title.text == "Trío · nivel 2" and "+6 puntos" in scene.thermos_panel.description.text and "+1" in scene.thermos_panel.description.text, "UI: sticker hover instantly exposes total points and multiplier at its owned level")
-	scene.thermos_panel.get_node("Sticker_trio").mouse_exited.emit()
-	check.call(scene.thermos_panel.title.text == "Tus stickers" and scene.game.snapshot() == before, "UI: leaving thermos sticker resets hint without changing game or RNG")
-	scene.detail.hide()
+	scene.background.shop_mode = true
+	scene.inspect_thermos()
+	check.call(not scene.detail.visible and scene.game.snapshot() == before, "UI: clicking the thermos in the shop opens nothing (no leftover thermos panel)")
+	scene.background.shop_mode = false
 	scene.inspect_coin("boost")
-	check.call(not scene.thermos_panel.visible and scene.detail_body.visible, "UI: subsequent detail dialogs restore their own content after thermos inspection")
+	check.call(scene.detail_body.visible, "UI: detail dialogs show their own text")
 	check.call("Duración: Encuentro actual" in scene.detail_text and "No se usa en tienda" in scene.detail_text, "UI: coin inspection explains duration and allowed use context")
 	scene.detail.hide()
 	scene.show_help()
@@ -192,17 +188,17 @@ static func run(scene, check: Callable) -> Dictionary:
 	scene.game = ShopTests.game_at_shop(151)
 	scene.render()
 	var rectangles: Dictionary = {}
-	for section in ["coins", "components", "numbers", "stickers", "cup"]:
+	for section in ["coins", "single_use", "components", "stickers", "cup"]:
 		var panel = scene.ui.get_node("Shop_" + section)
 		rectangles[section] = panel.get_rect()
 		check.call(Rect2(0, 0, 1440, 900).encloses(panel.get_rect()), "UI: commercial zone stays within logical viewport " + section)
-	check.call(rectangles.numbers.position.y < rectangles.coins.position.y and rectangles.coins.position.x < rectangles.components.position.x and rectangles.cup.position.x < rectangles.coins.position.x and rectangles.cup.size.y > rectangles.cup.size.x and rectangles.numbers.position.x < rectangles.stickers.position.x, "UI: shop places the upright thermos at lower left, separate from all merchandise")
+	check.call(rectangles.components.position.y < rectangles.coins.position.y and rectangles.components.position.x < rectangles.stickers.position.x and rectangles.coins.position.x < rectangles.single_use.position.x and rectangles.cup.position.x < rectangles.coins.position.x and rectangles.cup.size.y > rectangles.cup.size.x, "UI: shop places the upright thermos at lower left, separate from all merchandise")
 	var separated := true
 	var zones: Array = rectangles.keys()
 	for a in range(zones.size()):
 		for b in range(a + 1, zones.size()): separated = separated and not rectangles[zones[a]].intersects(rectangles[zones[b]])
 	check.call(separated, "UI: five simultaneous commercial zones never overlap")
-	for section in ["coins", "components", "numbers", "stickers"]:
+	for section in ["coins", "single_use", "components", "stickers"]:
 		var refresh = scene.ui.get_node("Shop_" + section + "/Refresh")
 		check.call(refresh.text.is_empty() and "$1" in refresh.tooltip_text and refresh.position.y < 0, "UI: each section has a retry icon beside its header with price on hover " + section)
 	before = scene.game.snapshot()
@@ -267,9 +263,12 @@ static func run(scene, check: Callable) -> Dictionary:
 	scene.selected = []
 	scene.game = PurchaseTests.fixture("global", {"number": 4, "amount": 2}, 3)
 	scene.render()
-	find_button(scene, "$3").pressed.emit()
+	# Los números ya no se ven en la tienda (son recompensa); la compra del stock guardado sigue aplicándose igual.
+	scene.game.purchase_offer("numbers", scene.game.shop_state.numbers.slots[0].offer_id)
+	scene.render()
 	check.call(scene.game.global_points == {"4": 2} and scene.game.cash == 97, "UI: real purchase applies global improvement from stored offer")
-	find_button(scene, "Ir al siguiente rival →").pressed.emit()
+	find_button(scene, "Volver a la mesa →").pressed.emit()
+	find_button(scene, "Jugar contra el siguiente rival").pressed.emit()
 	find_button(scene, "TIRAR (3)").pressed.emit()
 	Fixture.set_results(scene.game, [4, 4, 4, 4, 4])
 	scene.render()

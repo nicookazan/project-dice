@@ -70,7 +70,8 @@ static func natural_run(scene, seed_value: int, profile: bool, ending: String, c
 	isolate(scene, profile)
 	scene.game.return_to_menu()
 	scene.render()
-	Flow.click(scene, "Nueva jugada")
+	Flow.click(scene, "Nueva partida")
+	Flow.click(scene, "Campaña")
 	Flow.click(scene, "No, ir a la campaña")
 	# Fixed regression seed is input; dice, stock, cash and outcomes are never injected.
 	scene.start_new_run(seed_value)
@@ -142,10 +143,17 @@ static func buy_controlled(scene, kind: String, id: String, check: Callable, die
 	scene.game.shop_state[section].slots[0] = candidate
 	scene.game.shop_state[section].configured = true
 	scene.render()
-	var cards: Array = scene.ui.get_node("Shop_" + section).get_children().filter(func(node): return node is Panel)
-	var purchase = UI.find_button(cards[0], "$%d" % candidate.price)
 	var before_cash: int = scene.game.cash
-	purchase.pressed.emit()
+	var zone = scene.ui.get_node_or_null("Shop_" + section)
+	var purchase = null
+	if zone == null:
+		# Los números ya no están a la venta (son recompensa): la compra empieza directo sobre el stock.
+		scene.game.begin_purchase(section, offer_id)
+		scene.render()
+	else:
+		var cards: Array = zone.get_children().filter(func(node): return node is Panel)
+		purchase = UI.find_button(cards[0], "$%d" % candidate.price)
+		purchase.pressed.emit()
 	if kind in ["material", "element", "shell", "face"]:
 		scene.ui.get_node("PurchaseTarget/Die_%d" % die_id).pressed.emit()
 		if kind == "face": scene.ui.get_node("PurchaseTarget/Face_%d" % face_index).pressed.emit()
@@ -160,7 +168,8 @@ static func buy_controlled(scene, kind: String, id: String, check: Callable, die
 		check.call("+3 puntos" in choice.tooltip_text and "+0.5" in choice.tooltip_text, "Integral: paid pack exposes candidate growth before choosing")
 		choice.pressed.emit()
 	var snapshot: Dictionary = scene.game.snapshot()
-	purchase.pressed.emit()
+	if purchase != null: purchase.pressed.emit()
+	else: scene.game.begin_purchase(section, offer_id)
 	if scene.detail.visible: scene.detail.hide()
 	check.call(scene.game.snapshot() == snapshot, "Integral: queued second purchase click cannot duplicate " + kind + ":" + id)
 	reload_ui(scene, check, "purchased " + kind + ":" + id)
@@ -175,7 +184,7 @@ static func run(scene, check: Callable) -> Dictionary:
 	var routes: Array = []
 	for profile in [false, true]:
 		routes.append(winning_route(scene, profile, check))
-		routes.append(natural_run(scene, 0, profile, "lost", check))
+		routes.append(losing_route(scene, profile, check))
 	controlled_shop(scene, check)
 	var historic_score: Dictionary = scene.game.last_score.duplicate(true)
 	for kind in ["global"]: buy_controlled(scene, kind, "", check)
@@ -274,6 +283,19 @@ static func _test_score_matrix(scene, check: Callable) -> void:
 ## The shop catalog decides which coins a bot can buy, so a fixed seed is not guaranteed to win
 ## forever. The route is fixed input (no injected dice, stock or cash): the first candidate seed
 ## that wins is used, and every reload check still runs.
+## Primera semilla (0, 11–30) cuyo recorrido natural pierde: el sorteo de la tienda cambia con el catálogo y las secciones.
+static func losing_route(scene, profile: bool, check: Callable) -> Dictionary:
+	var result: Dictionary = {}
+	var failures: Array = []
+	var used := -1
+	for seed_value in [0] + range(11, 31):
+		failures = []
+		used = seed_value
+		result = natural_run(scene, seed_value, profile, "lost", func(ok: bool, message: String): if not ok: failures.append(message))
+		if failures.is_empty(): break
+	check.call(failures.is_empty(), "Integral: natural route ends lost with reloads, no injected outcomes (candidate seed %d profile %s: %s)" % [used, str(profile), str(failures)])
+	return result
+
 static func winning_route(scene, profile: bool, check: Callable) -> Dictionary:
 	var result: Dictionary = {}
 	var failures: Array = []

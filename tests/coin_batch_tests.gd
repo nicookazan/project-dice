@@ -340,8 +340,15 @@ static func _test_shop_and_save(check: Callable) -> void:
 			else:
 				passive_offers += 1
 				if def.rarity == "common": commons += 1
-	var share := consumable / float(consumable + passive_offers)
-	check.call(share > 0.20 and share < 0.30, "shop: about 25%% single-use offers (got %.3f)" % share)
+	# Desde D20 (opción B) las sueltas de «coins» son pasivas y la de un uso tiene su sección; en el paquete puede haber de las dos.
+	var single_ok := true
+	for i in range(200):
+		var once := Shop.generate("single_use", tables, {}, [], rng_state, sequence)
+		rng_state = once.rng_state
+		sequence = once.sequence
+		if once.section.slots.size() != 1 or once.section.slots[0].get("kind") != "coin" or Coins.definition(once.section.slots[0].effect.coin_id).type != "consumable": single_ok = false
+	check.call(consumable == 0 and passive_offers > 0, "shop: loose coins in the coin section are all passive (got %d single-use)" % consumable)
+	check.call(single_ok, "shop: the single-use section always offers exactly one single-use coin")
 	check.call(commons / float(passive_offers) > 0.52 and commons / float(passive_offers) < 0.68, "shop: about 60%% common passives (got %.3f)" % (commons / float(passive_offers)))
 	var owned: Array = Coins.PASSIVES.filter(func(id): return id != "full")
 	var only := Shop.generate("coins", tables, {}, owned, 5, 0)

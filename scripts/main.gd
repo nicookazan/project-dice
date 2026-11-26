@@ -26,12 +26,15 @@ const ItemTooltip = preload("res://scripts/item_tooltip.gd")
 const CoinPackPanel = preload("res://scripts/coin_pack_panel.gd")
 const HoverButton = preload("res://scripts/hover_button.gd")
 const HoverPanel = preload("res://scripts/hover_panel.gd")
+const StartMenu = preload("res://scripts/start_menu.gd")
+const EncounterLobby = preload("res://scripts/encounter_lobby.gd")
 const Materials = preload("res://scripts/materials.gd")
 const Elements = preload("res://scripts/elements.gd")
 const Gems = preload("res://scripts/gems.gd")
 const Stickers = preload("res://scripts/stickers.gd")
 const Coins = preload("res://scripts/coins.gd")
 const CoinEffects = preload("res://scripts/coin_effects.gd")
+const Shop = preload("res://scripts/shop.gd")
 const Purchases = preload("res://scripts/purchases.gd")
 const ProfileStore = preload("res://scripts/profile_store.gd")
 const SaveStore = preload("res://scripts/save_store.gd")
@@ -82,6 +85,12 @@ var session_started := false
 var tutorial_seen: Array = []
 var tutorial_current: Dictionary = {}
 var pending_tutorial_choice := false
+## Ranura del progreso recién creado que todavía no vio la pregunta del tutorial (D20: solo se pregunta la primera vez);
+## 0 si no hay ninguno.
+var tutorial_offer_slot := 0
+## Qué muestra el paño del medio en el menú inicial (D20): "" nada, "modes" elegir modo, "tutorial" la pregunta del
+## tutorial, "collections" Colecciones. "tutorial" va siempre junto con `pending_tutorial_choice`.
+var menu_panel := ""
 var game = Game.new()
 var selected: Array = []
 ## Ranura de la moneda "Voltear dado" mientras se elige el dado; solo de pantalla, nunca se guarda (-1 = sin elegir).
@@ -106,7 +115,6 @@ var hover_description_body: Label
 var detail: AcceptDialog
 var detail_body: RichTextLabel
 var detail_text := ""
-var thermos_panel: Control
 var confirmation: ConfirmationDialog
 var pending_navigation := ""
 var windowed_mode := DisplayServer.WINDOW_MODE_WINDOWED
@@ -128,6 +136,8 @@ var thief_next := -1
 var thief_pending := -1
 var thief_node: Control
 var throw_blocker: Control
+## Tema con la letra pixel para toda la interfaz de la partida (menos la libreta).
+var pixel_theme: Theme
 
 func _ready() -> void:
 	if preferences_enabled:
@@ -152,12 +162,16 @@ func _ready() -> void:
 	theme_value.set_color("font_hover_color", "Button", Color("fff0c7"))
 	theme_value.set_color("font_disabled_color", "Button", Color("85867b"))
 	theme = theme_value
+	# Todo el texto de la partida va en letra pixel (D20); la libreta conserva la letra de siempre (se retoca después).
+	pixel_theme = theme_value.duplicate()
+	pixel_theme.default_font = ItemTooltip.pixel_font()
 	background = Backdrop.new()
 	background.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(background)
 	background.copa_stars_complete.connect(_celebrate_copa)
 	background.finale_finished.connect(_on_finale_finished)
 	detail = AcceptDialog.new()
+	detail.theme = pixel_theme
 	detail.exclusive = true
 	detail.title = "Libreta · detalle de cálculo"
 	detail.min_size = Vector2i(520, 260)
@@ -170,6 +184,7 @@ func _ready() -> void:
 	detail_body.focus_mode = Control.FOCUS_ALL
 	detail.add_child(detail_body)
 	confirmation = ConfirmationDialog.new()
+	confirmation.theme = pixel_theme
 	confirmation.title = "Abandonar partida"
 	confirmation.exclusive = true
 	confirmation.ok_button_text = "Abandonar"
@@ -203,7 +218,6 @@ func skin_dialog(window: Window) -> void:
 	window.add_theme_font_override("title_font", ItemTooltip.pixel_font())
 
 func present_detail(title: String, text: String, compact := false) -> void:
-	if is_instance_valid(thermos_panel): thermos_panel.hide()
 	detail.add_theme_stylebox_override("panel", UiSkin.panel(Vector4(20, 20, 20, 20)))
 	if is_instance_valid(settings_panel): settings_panel.hide()
 	if is_instance_valid(dice_gallery): dice_gallery.hide()
@@ -247,7 +261,7 @@ func _unhandled_key_input(event: InputEvent) -> void:
 	if tutorial_notes_open(): return
 	if event.keycode == KEY_F1:
 		show_help()
-	elif event.keycode == KEY_M and game.phase not in ["menu", "level_intro"]:
+	elif event.keycode == KEY_M and game.phase != "menu":
 		show_route()
 	elif game.phase == "purchase_target" and event.keycode == KEY_ESCAPE:
 		act(game.cancel_purchase)
@@ -358,38 +372,15 @@ func open_sticker_book(sticker_id: String) -> void:
 	if is_instance_valid(sticker_tip): sticker_tip.hide()
 
 func inspect_thermos() -> void:
-	# En la mesa el termo ceba el mate (los stickers se leen al pasar el mouse); robado y en la tienda abre su detalle.
-	if not game.thermos_stolen() and not background.shop_mode:
-		background.props.play("thermos")
-		return
-	show_thermos_detail()
+	# En la mesa el termo ceba el mate (los stickers se leen al pasar el mouse); robado explica el robo. En la tienda no
+	# abre nada: los stickers se ven en el termo y en Colecciones.
+	if game.thermos_stolen(): show_thermos_detail()
+	elif not background.shop_mode: background.props.play("thermos")
 
-## Detalle del termo: robado (explica el robo) y en la tienda (niveles y efectos). En la mesa, los stickers se leen al pasar el mouse.
+## Detalle del termo cambiado: explica el cambio y que los stickers no aportan mientras dure el jefe.
 func show_thermos_detail() -> void:
-	if game.thermos_stolen():
-		present_detail("Termo robado", "Don Cebador te robó el termo: flota junto a su mano y los %d stickers pegados no aportan nada mientras dure el jefe.
-Te lo devuelve flotando cuando lo venzas." % game.cup.stickers.size(), true)
-		return
-	var lines: Array[String] = ["Termo del mate", "Stickers pegados al termo:"]
-	if game.cup.stickers.is_empty(): lines.append("Sin stickers.")
-	for id in game.cup.stickers:
-		var level: int = game.cup.stickers[id]
-		lines.append("%s · nivel %d" % [Stickers.NAMES.get(id, id), level])
-		if Stickers.defined(id, game.sticker_catalog):
-			var data: Dictionary = game.sticker_catalog[id]
-			lines.append("+%s puntos de grupo y +%s al multiplicador de su categoría." % [number(data.points_per_level * level), number(data.multiplier_per_level * level)])
-		else: lines.append("Efectos pendientes de definición.")
-	present_detail("Termo y stickers", "\n".join(lines), true)
-	detail_body.hide()
-	if is_instance_valid(thermos_panel):
-		detail.remove_child(thermos_panel)
-		thermos_panel.queue_free()
-	thermos_panel = preload("res://scripts/thermos_inspector.gd").new()
-	thermos_panel.levels = game.cup.stickers.duplicate(true)
-	thermos_panel.catalog = game.sticker_catalog.duplicate(true)
-	detail.add_child(thermos_panel)
-	detail.add_theme_stylebox_override("panel", box(Color("091923"), gold, 2))
-	detail.popup_centered(Vector2i(680, 510))
+	present_detail("Termo cambiado", "Don Cebador te cambió el termo: el tuyo flota junto a su mano y en la mesa quedó el suyo, sin stickers. Tus %d stickers no aportan nada mientras dure el jefe.
+Cuando lo venzas, te lo devuelve." % game.cup.stickers.size(), true)
 
 func box(bg: Color, border := Color.TRANSPARENT, width := 0) -> StyleBoxFlat:
 	var s := StyleBoxFlat.new()
@@ -617,6 +608,7 @@ func start_new_run(seed_value: int = -1, debug_run := false, tutorial_run := fal
 	purchase_error = ""
 	pack_panel_open = true
 	pending_tutorial_choice = false
+	menu_panel = ""
 	tutorial_seen.clear()
 	game.forced_boss_ids = forced_boss_arguments()
 	if tutorial_run: game.begin_tutorial(seed_value)
@@ -691,13 +683,13 @@ func run_save_allowed() -> bool:
 	return profiles_enabled and session_started and not game.tutorial and not game.debug_mode and validation_profile == false
 
 func save_shop_checkpoint() -> void:
-	if not run_save_allowed() or game.phase != "shop": return
+	if not run_save_allowed() or game.phase not in ["shop", "lobby"]: return
 	var data := checkpoint_data()
 	if run_store.write_text(run_store.path + ".tmp", run_store.encode(data)) and run_store.read_file(run_store.path + ".tmp").ok:
 		DirAccess.rename_absolute(run_store.path + ".tmp", run_store.path)
 
 func resume_hint() -> String:
-	return "\nPodés volver a la última tienda con «Continuar partida»." if profiles_enabled and FileAccess.file_exists(run_store.path) else ""
+	return "\nPodés volver a la mesa con «Continuar partida»." if profiles_enabled and FileAccess.file_exists(run_store.path) else ""
 
 func clear_run_save() -> void:
 	if not profiles_enabled: return
@@ -713,7 +705,7 @@ func continue_run() -> void:
 	var found: Dictionary = run_store.read_file(run_store.path)
 	var restored = run_store.restore_game(found.data) if found.ok and found.active else null
 	if restored == null:
-		profile_message = "No se pudo continuar: la partida guardada está dañada. Se conserva sin cambios."
+		profile_message = "No se pudo continuar: el guardado de la partida está dañado. Se conserva sin cambios."
 		render()
 		return
 	if is_instance_valid(background): background.thermos_configured = false
@@ -765,7 +757,7 @@ func show_game_menu() -> void:
 		["Seguir jugando", close_game_menu, true],
 		["Recorrido · M", func(): close_game_menu(); show_route(), false],
 		["Opciones", func(): close_game_menu(); show_options(), false],
-		["Abandonar jugada", func(): close_game_menu(); request_navigation("menu"), false]]
+		["Abandonar partida", func(): close_game_menu(); request_navigation("menu"), false]]
 	# Saltar niveles: solo en la campaña (el nivel de prueba tiene uno solo) y fuera de una compra a medio resolver.
 	if not game.campaign.is_empty():
 		var jump := ["Ir a otro nivel", func(): close_game_menu(); show_level_picker(), false]
@@ -811,17 +803,17 @@ func show_level_picker() -> void:
 		go.name = "Level_%d" % (index + 1)
 	button(card, "Volver", Rect2(60, 430, 480, 48), func(): show_game_menu()).name = "Back"
 
-## Destinos: "menu" (abandonar la jugada), "new" (nueva jugada: pregunta por el tutorial), "new_debug" (solo desarrollo),
+## Destinos: "menu" (abandonar la jugada), "new" (nueva partida: elegir modo), "tutorial" (jugar el tutorial, desde Opciones), "new_debug" (solo desarrollo),
 ## "quit" (salir del juego). Las jugadas no se guardan: abandonar o salir las pierde y no suma estadísticas.
 func request_navigation(destination: String) -> void:
-	if destination not in ["menu", "new", "new_debug", "quit"]: return
+	if destination not in ["menu", "new", "new_debug", "quit", "tutorial"]: return
 	var in_progress: bool = session_started and game.phase not in ["menu", "won", "lost"]
 	pending_navigation = destination
 	if destination == "quit" or in_progress:
-		confirmation.title = {"quit": "Salir del juego", "menu": "Abandonar jugada", "new": "Nueva jugada", "new_debug": "Nueva jugada debug"}[destination]
-		confirmation.ok_button_text = {"quit": "Salir", "menu": "Abandonar", "new": "Empezar de nuevo", "new_debug": "Empezar de nuevo"}[destination]
+		confirmation.title = {"quit": "Salir del juego", "menu": "Abandonar partida", "new": "Nueva partida", "new_debug": "Nueva partida debug", "tutorial": "Jugar el tutorial"}[destination]
+		confirmation.ok_button_text = {"quit": "Salir", "menu": "Abandonar", "new": "Empezar de nuevo", "new_debug": "Empezar de nuevo", "tutorial": "Empezar el tutorial"}[destination]
 		confirmation.cancel_button_text = "Seguir jugando" if in_progress else "Cancelar"
-		confirmation.dialog_text = "¿Salir del juego?" + ("\nLa jugada en curso no cuenta para tus estadísticas." + resume_hint() if in_progress else "") if destination == "quit" else ("Abandonar la jugada no cuenta para tus estadísticas." + resume_hint() if destination == "menu" else "Hay una jugada en curso: empezar otra la pierde y no cuenta para tus estadísticas.")
+		confirmation.dialog_text = "¿Salir del juego?" + ("\nLa partida en curso no cuenta para tus estadísticas." + resume_hint() if in_progress else "") if destination == "quit" else ("Abandonar la partida no cuenta para tus estadísticas." + resume_hint() if destination == "menu" else "Hay una partida en curso: empezar otra la pierde y no cuenta para tus estadísticas.")
 		confirmation.popup_centered(Vector2i(620, 220))
 		return
 	confirm_navigation()
@@ -833,14 +825,15 @@ func confirm_navigation() -> void:
 	if destination == "quit": get_tree().quit()
 	elif destination == "new": new_run_from_result()
 	elif destination == "new_debug": start_new_run(-1, true)
+	elif destination == "tutorial": start_new_run(-1, false, true)
 	elif destination.begins_with("load_"): load_profile(int(destination.trim_prefix("load_")))
 	elif destination.begins_with("delete1_"):
 		var slot := int(destination.trim_prefix("delete1_"))
 		pending_navigation = "delete2_%d" % slot
-		confirmation.title = "Borrar partida guardada"
+		confirmation.title = "Borrar progreso"
 		confirmation.ok_button_text = "Sí, borrar"
 		confirmation.cancel_button_text = "No, conservarla"
-		confirmation.dialog_text = "¿Estás muy, muy seguro?\nSe pierden las estadísticas, los logros y las monedas desbloqueadas de la Partida guardada %d." % slot
+		confirmation.dialog_text = "¿Estás muy, muy seguro?\nSe pierden las estadísticas, los logros y las monedas desbloqueadas del Progreso %d." % slot
 		confirmation.popup_centered(Vector2i(620, 220))
 	elif destination.begins_with("delete2_"): delete_profile(int(destination.trim_prefix("delete2_")))
 	elif destination == "menu":
@@ -848,6 +841,7 @@ func confirm_navigation() -> void:
 		repair_selection.clear()
 		purchase_error = ""
 		pending_tutorial_choice = false
+		menu_panel = ""
 		game.return_to_menu()
 		session_started = false
 		render()
@@ -862,10 +856,10 @@ func request_load_profile(slot: int) -> void:
 		return
 	detail.hide()
 	pending_navigation = "load_%d" % slot
-	confirmation.title = "Cargar partida guardada"
+	confirmation.title = "Cargar progreso"
 	confirmation.ok_button_text = "Cargar"
 	confirmation.cancel_button_text = "Seguir jugando"
-	confirmation.dialog_text = "Hay una jugada en curso: cargar otra partida la pierde y no cuenta para tus estadísticas."
+	confirmation.dialog_text = "Hay una partida en curso: cargar otro progreso la pierde y no cuenta para tus estadísticas."
 	confirmation.popup_centered(Vector2i(620, 220))
 
 func load_profile(slot: int) -> void:
@@ -873,6 +867,8 @@ func load_profile(slot: int) -> void:
 	var found: Dictionary = profile_store.read(slot)
 	if found.ok and not found.exists:
 		found = profile_store.create(slot)
+		# Progreso recién creado: la primera Campaña pregunta por el tutorial.
+		if found.ok: tutorial_offer_slot = slot
 	if not found.ok:
 		profile_message = found.message
 		if is_instance_valid(profiles_panel): show_profiles()
@@ -884,15 +880,15 @@ func load_profile(slot: int) -> void:
 	repair_selection.clear()
 	game.return_to_menu()
 	session_started = false
-	ask_tutorial()
+	open_menu_panel("modes")
 
 func request_delete_profile(slot: int) -> void:
 	detail.hide()
 	pending_navigation = "delete1_%d" % slot
-	confirmation.title = "Borrar partida guardada"
+	confirmation.title = "Borrar progreso"
 	confirmation.ok_button_text = "Borrar"
 	confirmation.cancel_button_text = "Conservarla"
-	confirmation.dialog_text = "¿Seguro que querés borrar esta partida?\nPartida guardada %d." % slot
+	confirmation.dialog_text = "¿Seguro que querés borrar este progreso?\nProgreso %d." % slot
 	confirmation.popup_centered(Vector2i(620, 220))
 
 func delete_profile(slot: int) -> void:
@@ -914,7 +910,7 @@ func dialog_button(parent: Node, text_value: String, rect: Rect2, action: Callab
 
 ## Las tres ranuras con sus datos, «Cargar» y «Borrar».
 func show_profiles() -> void:
-	present_detail("Partidas guardadas", "")
+	present_detail("Progreso guardado", "")
 	detail_body.hide()
 	if is_instance_valid(profiles_panel):
 		detail.remove_child(profiles_panel)
@@ -930,7 +926,7 @@ func show_profiles() -> void:
 		var top := 4.0 + (slot - 1) * 140.0
 		var card := panel(profiles_panel, Rect2(0, top, 760, 128), Color("0d1728"), gold)
 		card.name = "Slot_%d" % slot
-		label(card, "Partida guardada %d%s" % [slot, "  ·  en uso" if slot == current else ""], Vector2(16, 10), 21, gold, 460)
+		label(card, "Progreso %d%s" % [slot, "  ·  en uso" if slot == current else ""], Vector2(16, 10), 21, gold, 460)
 		var text: String = "Vacía: se crea al cargarla." if entry.ok and not entry.exists else (ProfileStore.summary(entry.data) if entry.ok else entry.message)
 		label(card, text, Vector2(16, 42), 15, cream, 470)
 		var load_caption := "Cargar" if entry.ok and entry.exists else "Crear y cargar"
@@ -938,14 +934,32 @@ func show_profiles() -> void:
 		load_button.name = "Load_%d" % slot
 		var delete_button := dialog_button(card, "Borrar", Rect2(520, 70, 220, 40), func(): request_delete_profile(slot), not FileAccess.file_exists(profile_store.path_of(slot)))
 		delete_button.name = "Delete_%d" % slot
-	label(profiles_panel, profile_message if profile_message != "" else "Las partidas guardan estadísticas, logros y monedas desbloqueadas, no jugadas en curso.", Vector2(0, 424), 15, gold, 480)
+	label(profiles_panel, profile_message if profile_message != "" else "Tu progreso guarda estadísticas, logros y monedas desbloqueadas, no partidas en curso.", Vector2(0, 424), 15, gold, 480)
 	dialog_button(profiles_panel, "Volver a las opciones", Rect2(500, 428, 260, 38), show_options).name = "BackToOptions"
 	detail.popup_centered(Vector2i(820, 620))
 
-## Cada jugada nueva pregunta si se quiere jugar el tutorial. No: sigue la campaña; sí: jugada guiada.
+## La pregunta del tutorial (solo la primera vez, ver `choose_campaign`). No: sigue la campaña; sí: jugada guiada.
 func ask_tutorial() -> void:
-	pending_tutorial_choice = true
+	open_menu_panel("tutorial")
+
+## Cambia lo que muestra el paño del medio del menú inicial ("" lo deja vacío).
+func open_menu_panel(panel_name: String) -> void:
+	menu_panel = panel_name
+	pending_tutorial_choice = panel_name == "tutorial"
 	render()
+
+## «Campaña» en la elección de modo: arranca directo. Solo la primera vez (sin progreso todavía, o con uno recién
+## creado) pregunta por el tutorial; después el tutorial se juega desde Opciones.
+func choose_campaign() -> void:
+	if should_offer_tutorial():
+		tutorial_offer_slot = 0
+		ask_tutorial()
+	else: start_new_run()
+
+func should_offer_tutorial() -> bool:
+	if not profiles_enabled: return false
+	var slot := active_profile(false)
+	return slot == 0 or slot == tutorial_offer_slot
 
 func cancel_navigation() -> void:
 	var cancelled := pending_navigation
@@ -1048,11 +1062,21 @@ func show_options() -> void:
 	settings_panel.add_child(faces_button)
 	var profiles_button := Button.new()
 	profiles_button.name = "Profiles"
-	profiles_button.text = "Partidas guardadas"
+	profiles_button.text = "Progreso guardado"
 	profiles_button.position = Vector2(440, 415)
 	profiles_button.size = Vector2(230, 40)
 	profiles_button.pressed.connect(show_profiles)
 	settings_panel.add_child(profiles_button)
+	# El tutorial se juega desde acá (D20); solo la primera vez, al estrenar un progreso, se pregunta al elegir Campaña.
+	var tutorial_button := Button.new()
+	tutorial_button.name = "PlayTutorial"
+	tutorial_button.text = "Jugar el tutorial"
+	tutorial_button.position = Vector2(440, 457)
+	tutorial_button.size = Vector2(230, 36)
+	tutorial_button.pressed.connect(func():
+		detail.hide()
+		request_navigation("tutorial"))
+	settings_panel.add_child(tutorial_button)
 	label(settings_panel, "Las señales siempre incluyen texto. Ninguna opción cambia la partida.\n" + detail_text, Vector2(12, 498), 17, cream, 725)
 	var status := label(settings_panel, preference_store.last_error if preference_store.last_error != "" else "Opciones guardadas aparte de la partida.", Vector2(12, 585), 16, gold, 725)
 	status.name = "PreferenceStatus"
@@ -1209,6 +1233,41 @@ func update_hover_description() -> void:
 		hover_description_body.text = text
 		hover_description_body.add_theme_font_size_override("font_size", 16 if text.length() > 650 else 18)
 		hover_description.reset_size()
+	place_hover_description(hovered)
+
+## La ayuda de la mano del jefe sale centrada debajo de la mano (D20, PS6), dentro de la pantalla; si no entra abajo,
+## va arriba. El resto de las ayudas sigue en su lugar de siempre, sobre la libreta.
+func place_hover_description(hovered: Control) -> void:
+	var offer := offer_card_of(hovered)
+	# En la tienda todo sale arriba de lo señalado: la tarjeta del objeto a la venta, o la moneda o el dado propio.
+	if offer == null and is_instance_valid(background) and background.shop_mode and hovered != null: offer = hovered
+	if offer != null:
+		# Arriba de la tarjeta o del objeto (abajo si no entra).
+		var card_rect := offer.get_global_rect()
+		var box := hover_description.size
+		var above := Vector2(card_rect.get_center().x - box.x / 2.0, card_rect.position.y - box.y - 6.0)
+		if above.y < 12.0: above.y = card_rect.end.y + 6.0
+		hover_description.position = Vector2(clampf(above.x, 12.0, 1440.0 - box.x - 12.0), clampf(above.y, 12.0, 888.0 - box.y))
+		return
+	if hovered == null or hovered.name != "InspectBoss":
+		hover_description.position = HOVER_DEFAULT
+		return
+	var rect := hovered.get_global_rect()
+	var box_size := hover_description.size
+	var at := Vector2(rect.get_center().x - box_size.x / 2.0, rect.end.y + 8.0)
+	if at.y + box_size.y > 888.0: at.y = rect.position.y - box_size.y - 8.0
+	at.x = clampf(at.x, 12.0, 1440.0 - box_size.x - 12.0)
+	at.y = clampf(at.y, 12.0, 888.0 - box_size.y)
+	hover_description.position = at
+
+## La tarjeta de la tienda (`Offer_N`) que contiene al control, o null si no está en una.
+func offer_card_of(hovered: Control) -> Control:
+	if not background.shop_mode: return null
+	var node: Node = hovered
+	while node != null and node != ui:
+		if node is Control and String(node.name).begins_with("Offer_"): return node
+		node = node.get_parent()
+	return null
 
 func _input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_F11 and not confirmation.visible:
@@ -1225,72 +1284,14 @@ func render_entry() -> void:
 	if game.phase == "menu":
 		render_menu()
 		return
-	if game.tutorial:
-		render_tutorial_intro()
-		return
-	var card := panel(ui, Rect2(300, 125, 840, 650), Color("0d1728"), gold)
-	label(card, "DIOS NO JUEGA A LOS DADOS", Vector2(40, 30), 34, gold, 760)
-	if campaign_mode: label(card, "CAMPAÑA PROVISIONAL v1 · objetivos, jefes y balance de prueba", Vector2(40, 77), 17, gold, 760)
-	elif validation_profile: label(card, "DATOS DE PRUEBA v1 · balance provisional", Vector2(40, 77), 17, gold, 760)
-	if game.debug_mode: label(card, "DEBUG · DAÑO ∞ · PLATA ∞", Vector2(40, 143), 17, gold, 760)
-	label(card, "NIVEL %d / 7 · %s" % [game.level_index + 1, "DIOS" if game.level_index == 6 else game.environment_id().to_upper()] if not game.campaign.is_empty() else "NIVEL 1 · CLUB DE BARRIO", Vector2(40, 105), 27, cream, 760)
-	var stops: Array = game.route().map(func(stop): return "%s: %d puntos" % [stop.name, stop.target])
-	label(card, "  →  ".join(stops) + "\n\n" + game.boss_name() + " · " + game.boss_rule.name.to_upper() + "\n" + BossRules.description(game.boss_rule) + "\n\nDos manos por encuentro y tres tiradas por mano.\nTras ganar: cobro, reparación opcional y tienda.", Vector2(40, 175), 22, cream, 760)
-	button(card, "Empezar primer encuentro", Rect2(150, 490, 540, 55), func(): act(game.begin_level), false, true)
-	button(card, "Abandonar jugada", Rect2(150, 565, 540, 45), func(): request_navigation("menu"))
+	render_tutorial_intro()
 
-## Pantalla inicial: el bar a la derecha (con sus interacciones de siempre) y el menú a la izquierda.
+## Pantalla inicial (D20): el menú va sobre el paño izquierdo de la mesa; ver `start_menu.gd`.
 func render_menu() -> void:
-	var column := panel(ui, Rect2(36, 120, 440, 640), Color("0d1728"), gold)
-	column.name = "MainMenu"
-	label(column, "DIOS NO JUEGA\nA LOS DADOS", Vector2(28, 24), 34, gold, 390)
-	var subtitle := "Siete niveles · 22 encuentros · hasta La Semilla" if campaign_mode else "Un nivel de prueba · dos rivales y un jefe"
-	label(column, subtitle, Vector2(28, 118), 17, cream, 390)
-	if pending_tutorial_choice:
-		label(column, "¿QUERÉS JUGAR\nEL TUTORIAL?", Vector2(28, 168), 28, gold, 390)
-		label(column, "Te muestra cómo se tira, se agrupa, se anota y se compra. Aparece en cada jugada nueva.", Vector2(28, 250), 18, cream, 390)
-		var yes := button(column, "Sí, jugar el tutorial", Rect2(40, 350, 360, 58), func(): start_new_run(-1, false, true), false, true)
-		yes.name = "TutorialYes"
-		var no := button(column, "No, ir a la campaña", Rect2(40, 424, 360, 52), func(): start_new_run())
-		no.name = "TutorialNo"
-		button(column, "Volver", Rect2(40, 496, 360, 46), func():
-			pending_tutorial_choice = false
-			render()).name = "TutorialBack"
-		yes.grab_focus()
-	else:
-		var can_continue := has_run_save()
-		var first_y := 190.0
-		if can_continue:
-			var resume := button(column, "Continuar partida", Rect2(40, 190, 360, 58), continue_run, false, true)
-			resume.name = "ContinueRun"
-			first_y = 262.0
-		var first := button(column, "Nueva jugada", Rect2(40, first_y, 360, 58), func(): request_navigation("new"), false, not can_continue)
-		first.name = "NewRun"
-		var next_y := first_y + 72.0
-		if OS.has_feature("debug"):
-			var debug_button := button(column, "Nueva jugada debug", Rect2(40, next_y, 360, 48), func(): request_navigation("new_debug"))
-			debug_button.name = "NewRunDebug"
-			next_y += 62
-		button(column, "Opciones", Rect2(40, next_y, 360, 48), show_options).name = "Options"
-		button(column, "Salir del juego", Rect2(40, next_y + 62, 360, 48), func(): request_navigation("quit")).name = "Quit"
-		first.grab_focus()
-	if profile_message != "": label(column, profile_message, Vector2(28, 560), 15, gold, 390)
-	var mate := button(ui, "", Backdrop.THERMOS_RECT, func(): background.props.play("thermos"))
-	mate.name = "MenuMate"
-	mate.focus_mode = Control.FOCUS_NONE
-	for state in ["normal", "hover", "pressed"]: mate.add_theme_stylebox_override(state, StyleBoxEmpty.new())
-	BarProps.attach_ring(mate, "thermos", background.props)
-	for prop in ["flag", "soda_left", "soda_right"]:
-		var zone := BarProps.make_zone(prop, background.props)
-		zone.clicked.connect(func(): background.props.play(prop))
-		ui.add_child(zone)
-		ui.move_child(zone, mate.get_index())
-	var hand := button(ui, "", Backdrop.HAND_RECT, func(): background.props.play_hand(background.hand_boss))
-	hand.name = "MenuHand"
-	hand.focus_mode = Control.FOCUS_NONE
-	for state in ["normal", "pressed"]: hand.add_theme_stylebox_override(state, StyleBoxEmpty.new())
-	hand.add_theme_stylebox_override("hover", box(Color(1, 1, 1, 0.07)))
-	BarProps.attach_ring(hand, "hand", background.props)
+	StartMenu.build(self)
+
+## Lugar de siempre de la ayuda al pasar el mouse (sobre la libreta).
+const HOVER_DEFAULT := Vector2(30, 400)
 
 const SELLER_LINE := "Veo que querés desafiar a Dios. Él no juega a los dados, pero quizás puedas vencerlo."
 
@@ -1315,7 +1316,7 @@ func render_tutorial_intro() -> void:
 	var start := button(bubble, "Empezar el tutorial", Rect2(120, 250, 360, 56), func(): act(game.begin_level), false, true)
 	start.name = "TutorialStart"
 	start.grab_focus()
-	button(ui, "Abandonar jugada", Rect2(1220, 23, 185, 38), func(): request_navigation("menu"))
+	button(ui, "Abandonar partida", Rect2(1220, 23, 185, 38), func(): request_navigation("menu"))
 
 func render() -> void:
 	sticker_animation = null
@@ -1328,6 +1329,8 @@ func render() -> void:
 	if game.phase in ["won", "lost"] and session_started and not run_recorded: record_finished_run()
 	save_shop_checkpoint()
 	background.stickers = game.cup.stickers.duplicate()
+	background.menu_mode = game.phase == "menu"
+	background.quiet = game.phase == "menu" or game.in_lobby()
 	if is_instance_valid(background): background.configure(profile, preferences)
 	_update_finale(profile)
 	if is_instance_valid(audio): audio.configure(preferences, profile.environment)
@@ -1338,12 +1341,13 @@ func render() -> void:
 		ui.queue_free()
 	ui = Control.new()
 	ui.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	ui.theme = pixel_theme
 	# La capa ocupa toda la pantalla: sin esto se comía los clics que van al fondo (estrellas de la copa).
 	ui.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(ui)
 	hover_description = PanelContainer.new()
 	hover_description.name = "HoverDescription"
-	hover_description.position = Vector2(30, 400)
+	hover_description.position = HOVER_DEFAULT
 	hover_description.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	hover_description.add_theme_stylebox_override("panel", ItemTooltip.skin())
 	hover_description_body = ItemTooltip.content("")
@@ -1360,9 +1364,23 @@ func render() -> void:
 	if showing_credits:
 		render_credits()
 		return
-	if game.phase in ["menu", "level_intro"]:
+	if game.phase == "menu" or (game.phase == "level_intro" and game.tutorial):
 		render_entry()
 		render_tutorial_layer()
+		return
+	# Selección de encuentro (D20): la mesa sin libreta ni botonera, con la bandeja de abajo.
+	if game.in_lobby():
+		EncounterLobby.build(self)
+		render_inventory()
+		render_seed()
+		finish_render()
+		return
+	# Cobro (D20): la libreta en blanco, sin dados ni botonera; «+$total» y Continuar salen en `render_result`.
+	if game.phase in ["reward", "bonus"]:
+		render_notebook(true)
+		render_inventory()
+		render_seed()
+		finish_render()
 		return
 	if game.phase not in ["sticker_choice", "coin_choice"]: pack_panel_open = true
 	if game.phase != "coin_choice": coin_pack_replacing = ""
@@ -1370,7 +1388,7 @@ func render() -> void:
 		render_shop()
 		finish_render()
 		return
-	button(ui, "Menú", Rect2(1220, 23, 185, 38), show_game_menu)
+	# El menú de la partida está en la esquina de la libreta (render_inventory), no arriba.
 	if game.phase not in ["shop", "purchase_target", "sticker_choice", "coin_choice"]: shop_section = "coins"
 	if game.phase not in ["sticker_choice", "coin_choice"]: pack_panel_open = true
 	render_notebook()
@@ -1385,8 +1403,10 @@ func finish_render() -> void:
 	var thermos_rect: Rect2 = Backdrop.SHOP_THERMOS_RECT if background.shop_mode else (Backdrop.STOLEN_THERMOS_RECT if game.thermos_stolen() else Backdrop.THERMOS_RECT)
 	var thermos_button := button(ui, "", thermos_rect, inspect_thermos)
 	thermos_button.name = "InspectThermos"
+	if background.shop_mode and not game.thermos_stolen(): thermos_button.mouse_default_cursor_shape = Control.CURSOR_ARROW
 	if not background.shop_mode and background.finale_stage != "matrix":
-		for prop in ["flag", "soda_left", "soda_right"]:
+		# En la selección de encuentro y el cobro, bandera y sifones no responden (D20).
+		for prop in ([] if game.in_lobby() or game.phase == "reward" else ["flag", "soda_left", "soda_right"]):
 			var zone := BarProps.make_zone(prop, background.props)
 			zone.clicked.connect(func(): background.props.play(prop))
 			ui.add_child(zone)
@@ -1405,11 +1425,13 @@ func finish_render() -> void:
 			for child in thermos_button.get_children():
 				if child.has_meta("sticker_id"): cup_zone.accept_through(child)
 	if not background.shop_mode: render_boss_hand()
-	if background.shop_mode: label(ui, purchase_error if not purchase_error.is_empty() else game.message, Vector2(38, 864), 17, cream, 1360)
+	# En la tienda no queda texto de estado abajo: solo se avisa si una compra no se pudo hacer.
+	if background.shop_mode and not purchase_error.is_empty(): label(ui, purchase_error, Vector2(38, 864), 17, cream, 1360).name = "ShopError"
 	if game.phase != "repair": repair_selection.clear()
 	# Ganarle a La Semilla no muestra cartel: la mesa se cae y vienen los créditos.
 	if game.phase in ["reward", "won", "lost", "repair"] and not (game.phase == "won" and background.finale_stage == "ending"): render_result()
 	elif game.phase == "purchase_target": render_purchase_target()
+	elif game.phase == "bonus": render_reward_choice()
 	elif game.phase == "sticker_choice":
 		if pack_panel_open: render_pack_choice()
 		else: button(ui, "Elegir sticker pendiente", Rect2(1045, 748, 355, 40), func():
@@ -1430,7 +1452,8 @@ func tutorial_context() -> Dictionary:
 	for die in game.dice:
 		if die.zone == "cup": cup.append(die.id)
 	return {"phase": game.phase, "rival": game.rival, "hand": game.hand, "rolls_made": game.rolls_made, "grouped": game.groups.size(),
-		"cup": cup, "selected": selected.duplicate(), "points": game.points, "target": game.target() if not game.level_encounters.is_empty() else 0}
+		"cup": cup, "selected": selected.duplicate(), "points": game.points, "target": game.target() if not game.level_encounters.is_empty() else 0,
+		"shop_visited": not game.shop_state.is_empty()}
 
 ## Paso del tutorial según el estado; {} fuera del tutorial.
 func tutorial_step() -> Dictionary:
@@ -1471,9 +1494,11 @@ func render_tutorial_layer() -> void:
 func tutorial_notes_open() -> bool:
 	return game.tutorial and not tutorial_current.is_empty() and tutorial_current.get("blocking", false) and tutorial_current.id not in tutorial_seen
 
-func render_notebook() -> void:
+## `blank`: la hoja vacía del cobro (D20), solo con el título.
+func render_notebook(blank := false) -> void:
 	var note := panel(ui, Rect2(22, 25, 310, 630), Color("f3e6c7"), Color("856a47"))
 	note.name = "PlayerNotebook"
+	note.theme = theme
 	# Flat paper belongs to the player's interface, with no table perspective.
 	for line_y in range(44, 621, 24):
 		var rule := ColorRect.new()
@@ -1489,6 +1514,7 @@ func render_notebook() -> void:
 	margin.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	note.add_child(margin)
 	label(note, "LIBRETA", Vector2(28, 14), 22, ink)
+	if blank: return
 	label(note, "PUNTOS / OBJETIVO", Vector2(28, 49), 14, ink)
 	label(note, "%d / %d" % [game.points, game.target()], Vector2(28, 69), 32, ink)
 	label(note, "Mano %d / %d" % [game.hand, game.hand_limit()], Vector2(28, 115), 18, ink)
@@ -1756,7 +1782,8 @@ func render_table() -> void:
 			add_die(content, index, Vector2(x, y + 27), true)
 			x += 60
 		if not group.locked and game.phase == "play" and not game.tutorial:
-			button(content, "Desarmar", Rect2(211, y - 4, 112, 29), func(): act(func(): game.ungroup(current_index)))
+			# Arriba de la fila de dados, a la altura del nombre del grupo, para no taparlos.
+			button(content, "Desarmar", Rect2(211, y - 13, 112, 26), func(): act(func(): game.ungroup(current_index))).name = "Ungroup_%d" % current_index
 		y += 103
 	plays_panel = null
 	if not plays.is_empty():
@@ -1846,7 +1873,7 @@ func render_inventory() -> void:
 		b.name = "EquippedCoin_" + str(i)
 		for state in ["normal", "hover", "pressed", "disabled", "focus"]: b.add_theme_stylebox_override(state, StyleBoxEmpty.new())
 		add_coin(b, coin, Rect2(1, 1, 58, 58))
-		b.tooltip_text = Rules.COINS[coin].name + "\n" + coin_state_text(game.coin_inventory.equipped[i]) + Rules.COINS[coin].description
+		b.tooltip_text = Rules.COINS[coin].name + "\n" + Rules.COINS[coin].description + coin_total_line(game.coin_inventory.equipped[i].instance_id)
 		if BossRules.suspended(game.boss_context(), "coin", coin):
 			label(b, "SUSP", Vector2(1, 43), 11, gold)
 			b.tooltip_text += " Suspendida por el jefe; conserva su espacio."
@@ -1862,7 +1889,36 @@ func render_inventory() -> void:
 		if BossRules.suspended(game.boss_context(), "coin", stored):
 			label(use, "SUSP", Vector2(1, 43), 11, gold)
 			use.tooltip_text = "Suspendida por el jefe. No se consume y conserva su espacio."
-	button(ui, "Ayuda", Rect2(1273, 748, 120, 60), show_help)
+	# El menú de la partida (Recorrido, Opciones, Abandonar…) en la esquina de la libreta (25/11, pedido del autor).
+	# En la selección de encuentro ya están Opciones y Abandonar sobre la libreta: no se repite.
+	if not game.in_lobby(): button(ui, "Menú", Rect2(1273, 748, 120, 60), show_game_menu).name = "TableMenu"
+
+## Línea «Total: …» para la ayuda de una moneda propia que suma algo que cambia; vacía para las demás.
+## `instance`: id de la instancia equipada o de un uso.
+func coin_total_line(instance: int) -> String:
+	for owned in game.coin_inventory.equipped + game.coin_inventory.consumables:
+		if owned.get("instance_id", -1) == instance: return coin_total_for(owned.coin_id, owned, true)
+	return ""
+
+## «Total: …» de una moneda que suma algo que cambia: lo acumulado (Acumulada, Veterana, Racha, Gastada, Cazajefes) o lo
+## que da ahora según el saldo, los stickers, las monedas equipadas o el nivel. A la venta (`owned` falso) se calcula
+## como si ya la tuvieras. Las que dependen de la mano (tiradas, sobrantes) no muestran total.
+func coin_total_for(coin_id: String, instance: Dictionary, owned: bool) -> String:
+	var state := coin_state_text(instance if not instance.is_empty() else Coins.instance(coin_id, 0)).strip_edges()
+	if state != "": return "\nTotal: " + state
+	for effect in Coins.DATA.get(coin_id, {}).get("effects", []):
+		var amount := float(effect.get("amount", 0))
+		match effect.get("per", ""):
+			"cash_fifth": return "\nTotal: +%d puntos de mano (con %s)" % [int(maxi(game.cash, 0) / 5) * int(amount), money_text(game.cash)]
+			"sticker_levels":
+				var levels := 0
+				for level in game.cup.stickers.values(): levels += int(level)
+				return "\nTotal: +%s mult (%d niveles de stickers)" % [number(levels * amount), levels]
+			"equipped":
+				var count: int = game.coin_inventory.equipped.size() + (0 if owned else 1)
+				return "\nTotal: +%s mult (%d monedas equipadas)" % [number(count * amount), count]
+			"campaign_level": return "\nTotal: +%s mult (nivel %d)" % [number((game.level_index + 1) * amount), game.level_index + 1]
+	return ""
 
 ## Progress of coins that keep state (C18, C48-C51), one line for tooltips and the inspector.
 func coin_state_text(instance: Dictionary) -> String:
@@ -1893,7 +1949,7 @@ func inspect_coin(coin: String) -> void:
 	var data := Coins.definition(coin)
 	if data.is_empty(): return
 	var duration: String = {"equipped": "Mientras está equipada", "hand": "Mano actual", "encounter": "Encuentro actual", "instant": "Inmediata", "visit": "Visita actual a la tienda"}[data.duration]
-	var windows := {"play": "durante la jugada", "shop": "en la tienda", "repair": "en la fase de reparación"}
+	var windows := {"play": "durante la partida", "shop": "en la tienda", "repair": "en la fase de reparación"}
 	var use_windows: Array = data.use_contexts.map(func(window): return windows.get(window, window))
 	var context := "Pasiva al puntuar; no se consume." if data.type == "passive" else "Se usa " + ", ".join(use_windows) + "."
 	if data.type == "consumable" and "shop" not in data.use_contexts: context += " No se usa en tienda."
@@ -2021,7 +2077,7 @@ func shop_card(parent: Node, section: String, index: int, rect: Rect2) -> void:
 		return
 	shop_hook(card, false)
 	var text: Array = shop_offer_text(offer)
-	var compact := section == "coins"
+	var compact := section in ["coins", "single_use"]
 	shop_icon(card, offer, Rect2((rect.size.x - 100) / 2, 10, 100, 91))
 	var object_hover := HoverPanel.new()
 	object_hover.name = "ObjectHover"
@@ -2029,7 +2085,7 @@ func shop_card(parent: Node, section: String, index: int, rect: Rect2) -> void:
 	object_hover.size = Vector2(100, 91)
 	object_hover.mouse_filter = Control.MOUSE_FILTER_STOP
 	object_hover.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
-	object_hover.tooltip_text = text[0] + "\n" + text[1]
+	object_hover.tooltip_text = text[0] + "\n" + text[1] + (coin_total_for(offer.effect.coin_id, {}, false) if offer.kind == "coin" else "")
 	card.add_child(object_hover)
 	var unavailable: bool = game.phase != "shop" or not game.can_afford(game.charged_price(offer)) or not Purchases.valid_offer(section, offer, game.sticker_catalog)
 	if offer.kind == "coin": unavailable = unavailable or not Coins.can_store(game.coin_inventory, offer.effect.coin_id)
@@ -2068,10 +2124,11 @@ func shop_card(parent: Node, section: String, index: int, rect: Rect2) -> void:
 	purchase.add_theme_color_override("font_hover_color", ShopFixtures.TAG_INK_SOLD)
 	purchase.add_theme_color_override("font_disabled_color", Color("8a7a60"))
 
+## Secciones del maletín en pantalla (coinciden con las divisiones de `tienda-secciones-v4.png`).
+const SHOP_ZONES := {"components": Rect2(538, 252, 367, 179), "stickers": Rect2(929, 252, 388, 179),
+	"coins": Rect2(534, 442, 560, 179), "single_use": Rect2(1122, 442, 208, 179)}
+
 func render_shop() -> void:
-	var shop_theme := theme.duplicate()
-	shop_theme.default_font = ItemTooltip.pixel_font()
-	ui.theme = shop_theme
 	shop_frame(Rect2(30, 14, 400, 75), true)
 	shop_caption(ui, "TIENDA", Rect2(55, 34, 350, 38), 34)
 	var inventory := panel(ui, Rect2(770, 777, 635, 80), Color.TRANSPARENT)
@@ -2087,9 +2144,12 @@ func render_shop() -> void:
 	shop_frame(Rect2(518, 30, 193, 80))
 	shop_caption(ui, "PLATA", Rect2(530, 38, 169, 22), 18)
 	shop_caption(ui, money_text(game.cash), Rect2(530, 60, 169, 42), 34, gold)
-	shop_frame(Rect2(730, 30, 200, 80))
-	shop_caption(ui, "CAPACIDAD", Rect2(742, 38, 176, 22), 18)
-	shop_caption(ui, str(game.coin_inventory.shared_capacity), Rect2(742, 60, 176, 42), 34, gold)
+	# Sin cartel de capacidad (25/11): un contador «monedas equipadas / lugares» abajo a la derecha de su bandeja.
+	var capacity: int = game.coin_inventory.shared_capacity
+	var tray_right: float = 785.0 + (capacity - 1) * minf(78.0, 400.0 / maxf(capacity, 1)) + 31.0 + 50.0
+	var counter := shop_caption(ui, "%d/%d" % [game.passives.size(), capacity], Rect2(tray_right - 74, 856, 62, 18), 14, gold)
+	counter.name = "CoinCounter"
+	counter.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	for id in range(5):
 		var die := Die.new()
 		die.configure_appearance(game.dice[id], game.boss_context())
@@ -2119,9 +2179,9 @@ func render_shop() -> void:
 			var use_button := button(ui, "Usar", Rect2(offset, 880, 62, 18), func(): act(func(): game.use_consumable(slot_index)), game.phase != "shop")
 			use_button.name = "UseShopCoin_" + str(slot)
 			use_button.add_theme_font_size_override("font_size", 13)
-	var zones := {"numbers": Rect2(538, 252, 367, 179), "components": Rect2(929, 252, 388, 179), "coins": Rect2(525, 442, 380, 179), "stickers": Rect2(929, 442, 401, 179)}
-	var titles := {"numbers": "Números y caras", "components": "Componentes", "coins": "Monedas", "stickers": "Stickers"}
-	var renew_names := {"coins": "monedas", "components": "componentes", "numbers": "números", "stickers": "stickers"}
+	# Arriba componentes y stickers (los números son recompensa de los rivales); abajo las monedas y la de un uso.
+	var zones := SHOP_ZONES
+	var renew_names := {"coins": "monedas", "single_use": "moneda de un uso", "components": "componentes", "numbers": "números", "stickers": "stickers"}
 	for section in zones:
 		var section_id: String = section
 		var zone := panel(ui, zones[section], Color.TRANSPARENT)
@@ -2133,7 +2193,7 @@ func render_shop() -> void:
 		title.name = "Title"
 		for state in ["normal", "hover", "pressed"]: title.add_theme_stylebox_override(state, StyleBoxEmpty.new())
 		title.add_theme_font_size_override("font_size", 18)
-		var count := 4 if section == "coins" else 2
+		var count: int = Shop.SIZES[section]
 		var width: float = (zones[section].size.x - 24) / count
 		for index in range(count): shop_card(zone, section, index, Rect2(12 + index * width, 28, width, 145))
 		var stock: Dictionary = game.shop_state.get(section, {"slots": [], "configured": false})
@@ -2146,16 +2206,16 @@ func render_shop() -> void:
 		retry_icon.position = Vector2(2, 0)
 		retry_icon.size = Vector2(28, 30)
 		renew.add_child(retry_icon)
-	var next_label := "Entrar al nivel %d →" % (game.level_index + 2) if game.rival + 1 == game.level_encounters.size() and game.has_next_encounter() else "Ir al %s →" % ("jefe" if game.rival + 1 < game.level_encounters.size() and game.is_boss(game.rival + 1) else "siguiente rival")
+	# Salir de la tienda vuelve a la selección de encuentro (D20): ahí se elige jugar o volver a entrar.
+	var next_label := "Volver a la mesa →"
 	if game.is_seed_shop_visit():
-		next_label = "Enfrentar a La Semilla →"
 		# La mano con el maletín: un regalo por sección; la tanda nueva cuesta siempre lo mismo y ya se paga.
 		var restock := button(ui, "Otra tanda · $%d" % Campaign.SEED_SHOP_RESTOCK_PRICE, Rect2(1025, 170, 380, 40), func(): act(game.restock_seed_shop), game.phase != "shop" or not game.can_afford(Campaign.SEED_SHOP_RESTOCK_PRICE))
 		restock.name = "SeedRestock"
 		restock.tooltip_text = "La mano trae otra tanda de un ítem por sección.\nCuesta siempre $%d y lo nuevo ya no es gratis." % Campaign.SEED_SHOP_RESTOCK_PRICE
 		restock.add_theme_font_size_override("font_size", 16)
 		shop_caption(ui, "UN REGALO POR SECCIÓN" if not game.shop_gifts.is_empty() else "LA MANO YA NO REGALA", Rect2(1025, 214, 380, 22), 13, gold)
-	var next_button := button(ui, next_label, Rect2(1025, 25, 380, 93), func(): act(game.leave_shop), game.phase != "shop", true)
+	var next_button := button(ui, next_label, Rect2(1025, 25, 380, 93), func(): act(game.exit_shop), game.phase != "shop", true)
 	next_button.name = "ShopAdvance"
 	next_button.add_theme_font_size_override("font_size", 18)
 	var game_menu_button := button(ui, "Menú", Rect2(1025, 126, 380, 36), show_game_menu)
@@ -2221,7 +2281,7 @@ func owned_shop_coin(coin: String, instance: int, rect: Rect2) -> Button:
 	node.drag_allowed = func(): return can_sell_dragged_coin({"shop_coin": coin, "instance_id": instance})
 	node.drag_started.connect(show_coin_sale_overlay)
 	node.drag_finished.connect(hide_coin_sale_overlay)
-	node.tooltip_text = Coins.definition(coin).name + "\n" + Coins.definition(coin).description
+	node.tooltip_text = Coins.definition(coin).name + "\n" + Coins.definition(coin).description + coin_total_line(instance)
 	node.mouse_default_cursor_shape = Control.CURSOR_DRAG
 	for state in ["normal", "hover", "pressed", "disabled", "focus"]: node.add_theme_stylebox_override(state, StyleBoxEmpty.new())
 	node.pressed.connect(func():
@@ -2290,14 +2350,16 @@ func render_purchase_target() -> void:
 					render())
 	shop_caption(modal, description, Rect2(32, 282, 796, 32), 17)
 	if offer.kind != "face":
-		var summary := label(modal, text[1], Vector2(64, 347), 18, cream, 732)
+		# Con el dado elegido se ven sus seis caras; para Fuego y Agua se marcan las que cumplen.
+		if target.has("die_id"): die_face_row(modal, game.dice[target.die_id], offer, 318)
+		var summary := label(modal, text[1], Vector2(64, 454 if target.has("die_id") else 347), 18, cream, 732)
 		summary.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	elif not target.has("die_id"):
 		shop_caption(modal, "Después elegí qué cara cambiar por un %d." % offer.effect.number, Rect2(32, 378, 796, 40), 19)
 	var preview: Dictionary = game.purchase_preview()
 	var hint := "Reemplaza solo esta familia. Las otras mejoras se conservan."
 	if offer.kind == "face": hint = "La cara elegida pasará a tener un %d." % offer.effect.number
-	shop_caption(modal, hint, Rect2(32, 500, 796, 32), 17)
+	shop_caption(modal, hint, Rect2(32, 512, 796, 32), 17)
 	button(modal, "Confirmar · $%d" % game.charged_price(offer), Rect2(64, 554, 732, 46), func():
 		var result: Dictionary = game.confirm_purchase()
 		purchase_error = "" if result.ok else result.message
@@ -2307,10 +2369,100 @@ func render_purchase_target() -> void:
 		purchase_error = ""
 		render())
 
+## Recompensa del encuentro (fase «bonus»): la misma elección de dado (y cara) que en la tienda, pero gratis. Un rival
+## da una mejora de número o un cambio de cara; un jefe, una gema. «Dejarla» sigue sin tomarla.
+func render_reward_choice() -> void:
+	panel(ui, Rect2(0, 0, 1440, 900), Color(0.04, 0.06, 0.07, 0.84))
+	# Sin dado que elegir (mejora de número) la ventana es más baja.
+	var compact: bool = game.pending_reward.offer.kind not in Purchases.TARGETED
+	var modal := panel(ui, Rect2(290, 225, 860, 420) if compact else Rect2(290, 105, 860, 690), Color.TRANSPARENT)
+	modal.name = "RewardChoice"
+	modal.add_theme_stylebox_override("panel", ItemTooltip.skin())
+	modal.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	var reward: Dictionary = game.pending_reward
+	var offer: Dictionary = reward.offer
+	var text: Array = shop_offer_text(offer)
+	shop_caption(modal, "RECOMPENSA", Rect2(32, 20, 796, 34), 28, gold)
+	shop_caption(modal, "%s · gratis por vencer %s" % [text[0], "al jefe" if reward.source == "boss" else "al rival"], Rect2(32, 58, 796, 28), 18)
+	var icon_holder := Control.new()
+	icon_holder.position = Vector2(380, 92)
+	icon_holder.size = Vector2(100, 91)
+	modal.add_child(icon_holder)
+	shop_icon(icon_holder, offer, Rect2(0, 0, 100, 91))
+	var target: Dictionary = reward.target
+	var targeted: bool = offer.kind in Purchases.TARGETED
+	if targeted:
+		shop_caption(modal, "1. ELEGÍ UN DADO", Rect2(32, 190, 796, 26), 18, gold)
+		for id in range(5):
+			var die_id := id
+			var state: Dictionary = game.dice[id].duplicate(true)
+			if state.value == 0: state.value = state.faces[0]
+			purchase_die_choice(modal, "RewardDie_%d" % id, state, Rect2(72 + id * 146, 222, 132, 116), "DADO %d" % [id + 1], target.get("die_id", -1) == id, func():
+				game.set_reward_target({"die_id": die_id})
+				render())
+		if offer.kind == "face" and target.has("die_id"):
+			var die: Dictionary = game.dice[target.die_id]
+			shop_caption(modal, "2. ELEGÍ LA CARA A REEMPLAZAR", Rect2(32, 350, 796, 26), 18, gold)
+			for index in range(6):
+				var face_index := index
+				var face_state: Dictionary = die.duplicate(true)
+				face_state.value = die.faces[index]
+				purchase_die_choice(modal, "RewardFace_%d" % index, face_state, Rect2(72 + index * 120, 382, 116, 116), "CARA %d" % [index + 1], target.get("face_index", -1) == index, func():
+					game.set_reward_target({"die_id": die.id, "face_index": face_index})
+					render())
+	if targeted and offer.kind != "face" and target.has("die_id"): die_face_row(modal, game.dice[target.die_id], offer, 350)
+	var summary := label(modal, text[1], Vector2(64, 200 if compact else (512 if offer.kind == "face" or target.has("die_id") else 360)), 18, cream, 732)
+	summary.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	var preview: Dictionary = game.reward_preview()
+	var take := button(modal, "Tomar recompensa", Rect2(64, 304 if compact else 574, 732, 46), func():
+		var result: Dictionary = game.take_reward()
+		purchase_error = "" if result.ok else result.message
+		act(func(): pass), not preview.ok, true)
+	take.name = "TakeReward"
+	var skip := button(modal, "Dejarla", Rect2(64, 362 if compact else 632, 732, 38), func(): act(game.skip_reward))
+	skip.name = "SkipReward"
+	if preview.ok: take.grab_focus()
+
+## Las seis caras del dado elegido, para mirar (no se tocan). Con Fuego (4, 5, 6) o Agua (1, 2, 3) las caras que cumplen
+## llevan borde dorado y abajo se cuenta cuántas sirven, para saber si conviene ponerlo en ese dado.
+func die_face_row(parent: Control, die: Dictionary, offer: Dictionary, y: float) -> void:
+	var wanted: Array = []
+	var element_id: String = offer.get("effect", {}).get("id", "") if offer.get("kind") == "element" else ""
+	if element_id == "fire": wanted = [4, 5, 6]
+	elif element_id == "water": wanted = [1, 2, 3]
+	var row := Control.new()
+	row.name = "DieFaces"
+	row.position = Vector2(100, y)
+	row.size = Vector2(660, 96)
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	parent.add_child(row)
+	var matching := 0
+	for index in range(6):
+		var good: bool = die.faces[index] in wanted
+		if good: matching += 1
+		var cell := panel(row, Rect2(index * 112, 0, 100, 96), Color("153c50") if good else Color("091923"), gold if good else Color("785335"))
+		cell.name = "Face_%d" % index
+		cell.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		var face_state: Dictionary = die.duplicate(true)
+		face_state.value = die.faces[index]
+		var icon := Die.new()
+		icon.configure_appearance(face_state)
+		icon.position = Vector2(19, 6)
+		icon.locked = true
+		icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		for mode in ["normal", "hover", "pressed", "disabled"]: icon.add_theme_stylebox_override(mode, StyleBoxEmpty.new())
+		cell.add_child(icon)
+		shop_caption(cell, "CARA %d" % (index + 1), Rect2(0, 72, 100, 20), 13, gold if good else cream)
+	var caption := "Las seis caras del dado %d." % (die.id + 1)
+	if not wanted.is_empty():
+		var name: String = Elements.definition(element_id).get("name", "")
+		caption = "%s: %s de 6 caras sirven (%s)." % [name, "ninguna" if matching == 0 else str(matching), "4, 5 o 6" if element_id == "fire" else "1, 2 o 3"]
+	var note := shop_caption(parent, caption, Rect2(32, y + 100, 796, 24), 16, gold if matching > 0 or wanted.is_empty() else Color("f0a080"))
+	note.name = "DieFacesNote"
+
 func purchase_die_choice(parent: Control, node_name: String, state: Dictionary, rect: Rect2, caption: String, picked: bool, action: Callable) -> Button:
 	var choice := button(parent, "", rect, action)
 	choice.name = node_name
-	choice.tooltip_text = caption.capitalize()
 	for mode in ["normal", "hover", "pressed"]:
 		choice.add_theme_stylebox_override(mode, box(Color("153c50") if picked else Color("091923"), Color("68d8ef") if picked else gold if mode != "normal" else Color("785335"), 2))
 	var icon := Die.new()
@@ -2383,13 +2535,13 @@ func show_sticker_reveal(items: Array, previous: Dictionary) -> void:
 	hover_description.hide()
 
 func render_result() -> void:
+	if game.phase == "reward":
+		EncounterLobby.build_payout(self)
+		return
 	panel(ui, Rect2(0, 0, 1440, 900), Color(0.04, 0.06, 0.07, 0.84))
 	button(ui, "Menú", Rect2(1220, 23, 185, 38), show_game_menu)
 	if game.phase == "repair":
 		render_repairs()
-		return
-	if game.phase == "reward":
-		render_encounter_choice()
 		return
 	if game.tutorial:
 		render_tutorial_end()
@@ -2397,9 +2549,9 @@ func render_result() -> void:
 	var modal := panel(ui, Rect2(400, 240, 640, 480), Color("263c3d"), gold)
 	if game.phase == "lost":
 		label(modal, "ESTA VEZ, GANÓ EL AZAR", Vector2(36, 33), 29, gold)
-		label(modal, "%d / %d puntos\n\n%s: se agotaron las manos sin llegar al objetivo.\nPodés volver a intentar con la misma semilla\no empezar una nueva jugada." % [game.points, game.target(), "Nivel %d, encuentro %d" % [game.level_index + 1, game.rival + 1] if not game.campaign.is_empty() else "Rival %d" % (game.rival + 1)], Vector2(36, 103), 21, cream, 560)
-		button(modal, "Reintentar misma semilla", Rect2(36, 306, 566, 49), func(): start_new_run(game.run_seed, false, false, true), false, true).tooltip_text = "Con la misma semilla la jugada no suma nada a tu partida guardada."
-		button(modal, "Nueva jugada", Rect2(36, 371, 566, 45), new_run_from_result)
+		label(modal, "%d / %d puntos\n\n%s: se agotaron las manos sin llegar al objetivo.\nPodés volver a intentar con la misma semilla\no empezar una nueva partida." % [game.points, game.target(), "Nivel %d, encuentro %d" % [game.level_index + 1, game.rival + 1] if not game.campaign.is_empty() else "Rival %d" % (game.rival + 1)], Vector2(36, 103), 21, cream, 560)
+		button(modal, "Reintentar misma semilla", Rect2(36, 306, 566, 49), func(): start_new_run(game.run_seed, false, false, true), false, true).tooltip_text = "Con la misma semilla la partida no suma nada a tu progreso."
+		button(modal, "Nueva partida", Rect2(36, 371, 566, 45), new_run_from_result)
 	else:
 		label(modal, "LA SEMILLA DERROTADA" if game.phase == "won" and not game.campaign.is_empty() else "JEFE SUPERADO" if game.phase == "won" else "ENCUENTRO GANADO", Vector2(36, 30), 32, gold)
 		if game.phase == "won": label(modal, ("VICTORIA · %d ENCUENTROS COMPLETADOS" % game.campaign_route().size()) if not game.campaign.is_empty() else "VICTORIA · NIVEL DE PRUEBA COMPLETADO", Vector2(36, 69), 16, cream)
@@ -2420,7 +2572,7 @@ func new_run_from_result() -> void:
 	purchase_error = ""
 	game.return_to_menu()
 	session_started = false
-	ask_tutorial()
+	open_menu_panel("modes")
 
 ## Cierre del tutorial (ganado o perdido): anuncia el logro y la moneda desbloqueada. Abandonar no llega acá.
 func render_tutorial_end() -> void:
@@ -2431,49 +2583,11 @@ func render_tutorial_end() -> void:
 	label(modal, intro, Vector2(36, 84), 19, cream, 566)
 	label(modal, "LOGRO · " + Achievements.name_of("tutorial_completed"), Vector2(36, 160), 22, gold, 566)
 	var gift := Coins.definition("vendor_gift")
-	label(modal, "Desbloqueaste la moneda «%s»:\n%s\nEn las próximas jugadas de esta partida guardada puede aparecer en la tienda." % [gift.name, gift.description], Vector2(36, 205), 19, cream, 566)
+	label(modal, "Desbloqueaste la moneda «%s»:\n%s\nEn las próximas partidas de este progreso puede aparecer en la tienda." % [gift.name, gift.description], Vector2(36, 205), 19, cream, 566)
 	if profile_message != "": label(modal, profile_message, Vector2(36, 345), 16, gold, 566)
-	elif not profiles_enabled or profile_slot == 0: label(modal, "Sin partida guardada activa: el logro no se guardó.", Vector2(36, 345), 16, gold, 566)
-	button(modal, "Nueva jugada", Rect2(36, 395, 566, 49), new_run_from_result, false, true).name = "TutorialEndNew"
+	elif not profiles_enabled or profile_slot == 0: label(modal, "Sin progreso activo: el logro no se guardó.", Vector2(36, 345), 16, gold, 566)
+	button(modal, "Nueva partida", Rect2(36, 395, 566, 49), new_run_from_result, false, true).name = "TutorialEndNew"
 	button(modal, "Volver al menú", Rect2(36, 457, 566, 40), func(): request_navigation("menu"))
-
-func render_encounter_choice() -> void:
-	var modal := panel(ui, Rect2(290, 130, 860, 640), Color.TRANSPARENT)
-	modal.name = "EncounterChoice"
-	modal.add_theme_stylebox_override("panel", ItemTooltip.skin())
-	modal.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	modal.theme = theme.duplicate()
-	modal.theme.default_font = ItemTooltip.pixel_font()
-	shop_caption(modal, "GUARDIÁN VENCIDO" if game.is_seed_shop_visit() else "ENCUENTRO GANADO", Rect2(32, 25, 796, 42), 30, gold)
-	shop_caption(modal, "%d / %d puntos" % [game.points, game.target()], Rect2(32, 75, 796, 30), 20)
-	var p: Dictionary = game.payout
-	var names := ["Victoria", "Manos sobrantes", "Exceso de puntos", "Intereses"]
-	var values: Array = [p.base, p.hands, p.excess, p.interest]
-	for i in range(names.size()):
-		label(modal, names[i], Vector2(200, 133 + i * 32), 18, cream, 360)
-		var amount := label(modal, "$%d" % values[i], Vector2(580, 133 + i * 32), 18, cream, 80)
-		amount.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	var total_y := 272.0
-	if p.get("coins", 0) > 0:
-		label(modal, "Cobrador", Vector2(200, 261), 18, cream, 360)
-		var coin_amount := label(modal, "$%d" % p.coins, Vector2(580, 261), 18, cream, 80)
-		coin_amount.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-		total_y = 298.0
-	shop_caption(modal, "TOTAL COBRADO: $%d   ·   SALDO: %s" % [p.total, money_text(game.cash)], Rect2(32, total_y, 796, 34), 20, gold)
-	shop_caption(modal, "¿CÓMO QUERÉS SEGUIR?", Rect2(32, 335, 796, 32), 22, gold)
-	var next_text := "Próximo: %s" % ("jefe" if game.is_boss(game.rival + 1) else "rival %d" % [game.rival + 2]) if game.rival + 1 < game.level_encounters.size() else "Entrar al nivel %d" % [game.level_index + 2]
-	if game.is_seed_shop_visit(): next_text = "Próximo: La Semilla"
-	shop_caption(modal, "La mano con el maletín regala uno de cada sección." if game.is_seed_shop_visit() else "Comprá mejoras para tus dados.", Rect2(42, 390, 374, 28), 16)
-	shop_caption(modal, next_text, Rect2(444, 390, 374, 28), 16)
-	var visit := button(modal, "Ir a la tienda →", Rect2(48, 435, 366, 56), func(): act(game.open_shop), not tutorial_allows("open_shop"), true)
-	var advance := button(modal, "Seguir sin tienda →", Rect2(446, 435, 366, 56), func(): act(game.skip_shop), game.tutorial)
-
-	for node in [visit, advance]:
-		skin_shop_button(node)
-		node.add_theme_font_size_override("font_size", 19)
-	shop_caption(modal, "La recompensa ya está acreditada. Elegí tu próximo destino.", Rect2(32, 516, 796, 26), 16)
-	var menu := button(modal, "Volver al menú", Rect2(250, 571, 360, 38), func(): request_navigation("menu"))
-	skin_shop_button(menu)
 
 func render_repairs() -> void:
 	var modal := panel(ui, Rect2(350, 160, 740, 580), Color("263c3d"), gold)

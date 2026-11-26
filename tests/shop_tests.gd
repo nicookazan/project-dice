@@ -9,7 +9,10 @@ static func tables() -> Dictionary:
 	return {
 		"coins": [
 			{"kind": "coin", "effect": {"coin_id": "full"}, "price": 4, "weight": 1},
-			{"kind": "coin", "effect": {"coin_id": "roll"}, "price": 2, "weight": 1}],
+			{"kind": "coin", "effect": {"coin_id": "roll"}, "price": 2, "weight": 1},
+			{"kind": "coin", "effect": {"coin_id": "generala"}, "price": 4, "weight": 1},
+			{"kind": "coin", "effect": {"coin_id": "straight"}, "price": 4, "weight": 1},
+			{"kind": "coin", "effect": {"coin_id": "even"}, "price": 4, "weight": 1}],
 		"components": [
 			{"kind": "element", "effect": {"id": "fire"}, "price": 3, "weight": 1},
 			{"kind": "material", "effect": {"id": "steel"}, "price": 4, "weight": 1},
@@ -43,6 +46,8 @@ static func _test_generation(check: Callable) -> void:
 	var ids: Dictionary = {}
 	for section in Shop.SIZES:
 		check.call(game.shop_state[section].slots.size() == Shop.SIZES[section], "shop: exact slot count " + section)
+	check.call(not game.shop_state.numbers.configured, "shop: numbers are not sold (they are the rival reward)")
+	for section in Shop.SECTIONS:
 		for offer in game.shop_state[section].slots:
 			check.call(offer.has("kind") and offer.has("effect") and offer.has("price") and not ids.has(offer.offer_id), "shop: offers have distinct identities and concrete payloads")
 			ids[offer.offer_id] = true
@@ -66,11 +71,11 @@ static func _test_generation(check: Callable) -> void:
 	one_type.coins = [one_type.coins[1]]
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 121
-	var generated := Shop.generate("coins", one_type, StickerTests.definitions(), [], rng.state, 0)
-	check.call(generated.section.slots.all(func(item): return item.effect.coin_id == "roll"), "shop: all four coin slots may be consumables without guaranteed passive slots")
+	var generated := Shop.generate("single_use", one_type, StickerTests.definitions(), [], rng.state, 0)
+	check.call(generated.section.slots.size() == 1 and generated.section.slots[0].effect.coin_id == "roll" and Shop.generate("coins", one_type, StickerTests.definitions(), [], rng.state, 0).section.slots.all(func(item): return item.is_empty()), "shop: single-use coins go to their own section, never to the passive coin slots")
 	one_type.coins = [tables().coins[0]]
 	generated = Shop.generate("coins", one_type, StickerTests.definitions(), [], rng.state, 0)
-	check.call(generated.section.slots[0].effect.coin_id == "full" and generated.section.slots.filter(func(item): return item.is_empty()).size() == 3, "shop: a single eligible passive fills one slot without repeating it in the other three")
+	check.call(generated.section.slots[0].effect.coin_id == "full" and generated.section.slots.filter(func(item): return item.is_empty()).size() == Shop.SIZES.coins - 1, "shop: a single eligible passive fills one slot without repeating it in the others")
 	var owned := Shop.generate("coins", one_type, StickerTests.definitions(), ["full"], rng.state, 0)
 	check.call(owned.section.slots.all(func(item): return item.is_empty()) and owned.rng_state == rng.state, "shop: already-owned passive cannot be offered and empty pool consumes no RNG")
 	var unique_passives := true
@@ -89,8 +94,8 @@ static func _test_generation(check: Callable) -> void:
 	var legacy = Game.new(125)
 	legacy.phase = "shop"
 	legacy.cash = 100
-	legacy.offers = ["full", "full", "roll", "roll"]
-	check.call(legacy.buy(0) and legacy.cash == 96 and legacy.passives == ["full"] and legacy.shop_state.coins.slots[1].is_empty() and legacy.shop_state.coins.slots[2].effect.coin_id == "roll" and legacy.shop_state.coins.slots[3].effect.coin_id == "roll", "shop: buying from legacy duplicated stock removes other copies of that passive while preserving repeat consumables")
+	legacy.offers = ["full", "full", "roll"]
+	check.call(legacy.buy(0) and legacy.cash == 96 and legacy.passives == ["full"] and legacy.shop_state.coins.slots[1].is_empty() and legacy.shop_state.coins.slots[2].effect.coin_id == "roll", "shop: buying from legacy duplicated stock removes other copies of that passive while preserving repeat consumables")
 	var numeric := tables()
 	numeric.numbers = [numeric.numbers[0]]
 	numeric.numeric_rarity_weights = {"common": 1}
@@ -106,10 +111,10 @@ static func _test_generation(check: Callable) -> void:
 	check.call(early.generate_offers() and later.generate_offers() and early.shop_state.numbers == later.shop_state.numbers, "shop: numeric rarity weights do not depend on level or rival")
 	var no_balance = Game.new(122)
 	no_balance.phase = "reward"
-	check.call(no_balance.open_shop() and no_balance.shop_state.coins.slots.size() == 4 and not no_balance.shop_state.components.configured and not no_balance.shop_state.numbers.configured and not no_balance.shop_state.stickers.configured, "shop: normal game exposes four provisional coin offers without inventing missing commercial tables")
+	check.call(no_balance.open_shop() and no_balance.shop_state.coins.slots.size() == Shop.SIZES.coins and not no_balance.shop_state.components.configured and not no_balance.shop_state.numbers.configured and not no_balance.shop_state.stickers.configured, "shop: normal game exposes its provisional coin offers without inventing missing commercial tables")
 	before = no_balance.snapshot()
 	check.call(not no_balance.generate_offers() and not no_balance.open_shop() and no_balance.snapshot() == before, "shop: reopening or calling initial generation cannot reroll existing stock for free")
-	for broken in ["negative_weight", "missing_price", "unknown_effect", "missing_rarity", "bad_pack"]:
+	for broken in ["negative_weight", "missing_price", "unknown_effect", "bad_pack"]:
 		var invalid = Game.new(123)
 		invalid.phase = "reward"
 		invalid.shop_tables = tables()
@@ -179,5 +184,5 @@ static func _test_stock(check: Callable) -> Dictionary:
 	game.points = game.target()
 	game.score_hand()
 	game.close_encounter()
-	check.call(game.open_shop() and game.reroll_prices == {"coins": 1, "components": 1, "numbers": 1, "stickers": 1} and game.shop_offer_sequence > evidence.shop_offer_sequence, "shop: next visit resets every section price and creates fresh unique offer IDs")
+	check.call(game.open_shop() and game.reroll_prices == {"coins": 1, "single_use": 1, "components": 1, "numbers": 1, "stickers": 1} and game.shop_offer_sequence > evidence.shop_offer_sequence, "shop: next visit resets every section price and creates fresh unique offer IDs")
 	return evidence

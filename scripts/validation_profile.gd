@@ -25,7 +25,9 @@ static func tables() -> Dictionary:
 	for id in Coins.catalog(): result.coins.append({"kind": "coin", "price": Coins.definition(id).price, "weight": 1.0, "effect": {"coin_id": id}})
 	for id in Materials.METALS: result.components.append({"kind": "material", "price": 3, "weight": 1.0, "effect": {"id": id}})
 	for id in ["fire", "water", "electricity", "earth", "wind"]: result.components.append({"kind": "element", "price": 3, "weight": 1.0, "effect": {"id": id}})
-	for id in ["emerald", "sapphire", "ruby", "diamond"]: result.components.append({"kind": "shell", "price": 4, "weight": 1.0, "effect": {"id": id, "intact": true}})
+	# Las gemas ya no se venden (25/11/2026): son la recompensa de cada jefe (una por jefe, ver Game.pending_reward).
+	result["gems"] = []
+	for id in ["emerald", "sapphire", "ruby", "diamond"]: result.gems.append({"kind": "shell", "price": 0, "weight": 1.0, "effect": {"id": id, "intact": true}})
 	var rarities := ["common", "rare", "epic", "legendary"]
 	var globals := [1, 4, 6, 9]
 	for n in range(1, 7):

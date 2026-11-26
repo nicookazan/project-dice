@@ -30,7 +30,7 @@ static func run(scene, check: Callable) -> void:
 	scene.game.return_to_menu()
 	scene.session_started = false
 	scene.render()
-	check.call(scene.ui.get_node_or_null("MainMenu/ContinueRun") != null and scene.ui.get_node_or_null("MainMenu/NewRun") != null, "Continuar: el menú muestra «Continuar partida» junto a «Nueva jugada»")
+	check.call(scene.ui.get_node_or_null("MainMenu/ContinueRun") != null and scene.ui.get_node_or_null("MainMenu/NewRun") != null, "Continuar: el menú muestra «Continuar partida» junto a «Nueva partida»")
 	# Continuar vuelve a esa tienda con el mismo estado.
 	scene.continue_run()
 	check.call(scene.game.phase == "shop" and scene.game.cash == cash and scene.game.run_seed == seed_value and scene.session_started, "Continuar: vuelve a la tienda con la plata y la semilla de antes")

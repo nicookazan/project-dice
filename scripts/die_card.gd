@@ -29,8 +29,8 @@ const HINTS := {
 	"sapphire": "Suma +2 al multiplicador del grupo.",
 	"ruby": "Multiplica ×1,5 el multiplicador, después de las sumas.",
 	"diamond": "Añade una copia del resultado final del grupo.",
-	"fire": "Cara 4, 5 o 6 en una combinación desde par: +5 puntos.",
-	"water": "Cara 1, 2 o 3 en una combinación desde par: +5 puntos.",
+	"fire": "+5 puntos si muestra 4, 5 o 6 y está en un grupo armado (par o más).",
+	"water": "+5 puntos si muestra 1, 2 o 3 y está en un grupo armado (par o más).",
 	"electric": "+3 puntos por cada otro dado de su grupo con igual número.",
 	"earth": "+2 puntos por cada otro dado conservado al relanzar otros dados.",
 	"wind": "+0,5 al multiplicador por relanzamiento propio; pide combinación desde par."}

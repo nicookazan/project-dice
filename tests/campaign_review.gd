@@ -29,10 +29,10 @@ func _initialize() -> void:
 	scene.game = Tests.advance_model(Campaign.prototype(), 2)
 	Profile.apply(scene.game)
 	win(scene.game)
-	scene.game.open_shop()
 	scene.render()
-	await capture("tienda-tras-jefe")
-	Flow.click(scene, "Entrar al nivel 2 →")
+	await capture("cobro-tras-jefe")
+	# D20: después del jefe no hay tienda; Continuar entra al nivel siguiente.
+	Flow.click(scene, "Continuar")
 	await capture("anuncio-siguiente")
 	scene.profiles_enabled = false
 	scene.show_route()

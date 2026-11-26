@@ -28,7 +28,8 @@ static func _shop_game(seed_value: int, passives: Array = [], consumables: Array
 		game.coin_instance_sequence += 1
 		game.coin_inventory.consumables.append(Coins.instance(id, game.coin_instance_sequence))
 	Coins.refresh_capacity(game.coin_inventory)
-	if not tables.is_empty(): game.shop_tables = tables
+	# Desde el 25/11/2026 la tienda no trae paquete: estas pruebas lo ponen a mano para seguir cubriendo su lógica.
+	game.shop_tables = tables if not tables.is_empty() else pack_tables()
 	game.cash = 1000
 	game.phase = "hand_result"
 	game.points = 999
@@ -38,10 +39,16 @@ static func _shop_game(seed_value: int, passives: Array = [], consumables: Array
 	return game
 
 static func _pack(game) -> Dictionary:
-	return game.shop_state.coins.slots[3]
+	return game.shop_state.coins.slots[Shop.SIZES.coins - 1]
 
 static func _singles(game) -> Array:
-	return game.shop_state.coins.slots.slice(0, 3)
+	return game.shop_state.coins.slots.slice(0, Shop.SIZES.coins - 1)
+
+## Tablas de siempre con el paquete de monedas (la tienda del juego ya no lo trae).
+static func pack_tables() -> Dictionary:
+	var tables := Shop.default_tables()
+	tables.coin_packs = Shop.coin_pack_table()
+	return tables
 
 static func run(check: Callable) -> void:
 	_test_generation(check)
@@ -52,7 +59,8 @@ static func run(check: Callable) -> void:
 	_test_save(check)
 
 static func _test_generation(check: Callable) -> void:
-	var tables := Shop.default_tables()
+	check.call(Shop.default_tables().coin_packs.is_empty(), "MON7: la tienda del juego ya no trae paquete de monedas (25/11)")
+	var tables := pack_tables()
 	check.call(tables.coin_packs.size() == 2 and tables.coin_packs.all(func(entry): return Shop.valid_coin_pack_entry(entry)), "MON7: la tabla coin_packs trae dos tamaños válidos")
 	check.call(tables.coin_packs[0].price == 7 and tables.coin_packs[0].weight == 65.0 and tables.coin_packs[0].effect.shown == 2 and tables.coin_packs[0].effect.picks == 1, "MON7: el paquete chico muestra 2, se elige 1, $7, 65 %")
 	check.call(tables.coin_packs[1].price == 14 and tables.coin_packs[1].weight == 35.0 and tables.coin_packs[1].effect.shown == 5 and tables.coin_packs[1].effect.picks == 2, "MON7: el paquete grande muestra 5, se eligen 2, $14, 35 %")
@@ -61,13 +69,13 @@ static func _test_generation(check: Callable) -> void:
 	for seed_value in range(1, 61):
 		var game = _shop_game(seed_value, ["full", "straight"])
 		var slots: Array = game.shop_state.coins.slots
-		var pack: Dictionary = slots[3]
-		if slots.slice(0, 3).any(func(slot): return slot.get("kind") != "coin") or pack.get("kind") != "coin_pack" or not Shop.valid_coin_pack_offer(pack):
+		var pack: Dictionary = slots[Shop.SIZES.coins - 1]
+		if slots.slice(0, Shop.SIZES.coins - 1).any(func(slot): return slot.get("kind") != "coin") or pack.get("kind") != "coin_pack" or not Shop.valid_coin_pack_offer(pack):
 			bad += 1
 			continue
 		sizes[pack.effect.size] += 1
 		var items: Array = pack.effect.items
-		var single_passives: Array = slots.slice(0, 3).map(func(slot): return slot.effect.coin_id).filter(func(id): return id in Coins.PASSIVES)
+		var single_passives: Array = slots.slice(0, Shop.SIZES.coins - 1).map(func(slot): return slot.effect.coin_id).filter(func(id): return id in Coins.PASSIVES)
 		if items.any(func(id): return id in ["full", "straight"] or id in single_passives) or Coins.definition(pack.effect.items[0]).is_empty(): bad += 1
 		if pack.effect.size == "large" and items.filter(func(id): return id in Coins.PASSIVES).size() < 2: bad += 1
 	check.call(bad == 0, "MON7: en 60 semillas el paquete es válido, sin repetidos, sin pasivas propias ni iguales a las sueltas y el grande con 2 pasivas (%d fallas)" % bad)
@@ -76,7 +84,7 @@ static func _test_generation(check: Callable) -> void:
 	var plain := Shop.default_tables()
 	plain.erase("coin_packs")
 	var four = _shop_game(7, [], [], plain)
-	check.call(four.shop_state.coins.slots.all(func(slot): return slot.get("kind") == "coin"), "MON7: sin tabla coin_packs son cuatro monedas sueltas")
+	check.call(four.shop_state.coins.slots.all(func(slot): return slot.get("kind") == "coin"), "MON7: sin tabla coin_packs son todas monedas sueltas")
 	# Mismo contenido con la misma semilla; mirar no cambia nada.
 	var first = _shop_game(19)
 	var second = _shop_game(19)
@@ -115,6 +123,8 @@ static func _test_purchase(check: Callable) -> void:
 	check.call(not poor.purchase_offer("coins", _pack(poor).offer_id).ok and poor.phase == "shop", "MON7: sin plata no se compra el paquete")
 	var gold = _shop_game(19, ["gold"])
 	gold.cash = 0
+	# El crédito de la Moneda de oro es $10: se fija el paquete chico ($7) para no depender de qué tamaño salió.
+	gold.shop_state.coins.slots[Shop.SIZES.coins - 1].price = 7
 	var gold_offer: Dictionary = _pack(gold)
 	var bought: Dictionary = gold.purchase_offer("coins", gold_offer.offer_id)
 	check.call(bought.ok and gold.cash < 0 and gold.phase == "coin_choice", "MON7: Moneda de oro permite comprar el paquete con deuda")
@@ -289,12 +299,12 @@ static func run_ui(scene, check: Callable) -> void:
 		if _pack(game).effect.size == "large" and _pack(game).effect.items.filter(func(id): return id in Coins.PASSIVES).size() >= 2: break
 	scene.game = game
 	scene.render()
-	var card = scene.ui.get_node_or_null("Shop_coins/Offer_3")
+	var card = scene.ui.get_node_or_null("Shop_coins/Offer_%d" % (Shop.SIZES.coins - 1))
 	var offer: Dictionary = _pack(game)
-	check.call(card != null and card.get_node("ObjectHover").tooltip_text.contains("Elegí 2 entre 5") and scene.ui.get_node_or_null("Shop_coins/Offer_3/Price") != null, "MON8: la carta cerrada explica Elegí 2 entre 5 en su tooltip y trae precio")
+	check.call(card != null and card.get_node("ObjectHover").tooltip_text.contains("Elegí 2 entre 5") and scene.ui.get_node_or_null("Shop_coins/Offer_%d/Price" % (Shop.SIZES.coins - 1)) != null, "MON8: la carta cerrada explica Elegí 2 entre 5 en su tooltip y trae precio")
 	check.call(offer.effect.items.all(func(id): return not UI.text_in(card, Coins.definition(id).name)), "MON8: la carta cerrada no muestra el contenido")
 	var cash: int = game.cash
-	scene.ui.get_node("Shop_coins/Offer_3/Price").pressed.emit()
+	scene.ui.get_node("Shop_coins/Offer_%d/Price" % (Shop.SIZES.coins - 1)).pressed.emit()
 	check.call(game.phase == "coin_choice" and game.cash == cash - offer.price, "MON8: comprar desde la carta abre la elección y cobra")
 	var panel = scene.ui.get_node_or_null("CoinChoice")
 	check.call(panel != null and UI.text_in(panel, "ELEGÍ DOS MONEDAS") and UI.text_in(panel, "faltan 2 elecciones"), "MON8: el panel grande muestra el título y cuántas elecciones faltan")
@@ -326,7 +336,7 @@ static func run_ui(scene, check: Callable) -> void:
 	scene.game = pocket
 	scene.pack_panel_open = true
 	scene.render()
-	scene.ui.get_node("Shop_coins/Offer_3/Price").pressed.emit()
+	scene.ui.get_node("Shop_coins/Offer_%d/Price" % (Shop.SIZES.coins - 1)).pressed.emit()
 	var wanted: String = pocket.pending_coin_pack.items.filter(func(id): return id in Coins.PASSIVES)[0]
 	scene.ui.get_node("CoinChoice/PackCoin_" + wanted).pressed.emit()
 	var pocket_instance: int = pocket.coin_inventory.equipped[0].instance_id
@@ -341,8 +351,8 @@ static func run_ui(scene, check: Callable) -> void:
 	scene.pack_panel_open = true
 	scene.coin_pack_replacing = ""
 	scene.render()
-	check.call(scene.ui.get_node("Shop_coins/Offer_3/ObjectHover").tooltip_text.contains("Elegí 1 entre 2"), "MON8: el paquete chico explica Elegí 1 entre 2 en su tooltip")
-	scene.ui.get_node("Shop_coins/Offer_3/Price").pressed.emit()
+	check.call(scene.ui.get_node("Shop_coins/Offer_%d/ObjectHover" % (Shop.SIZES.coins - 1)).tooltip_text.contains("Elegí 1 entre 2"), "MON8: el paquete chico explica Elegí 1 entre 2 en su tooltip")
+	scene.ui.get_node("Shop_coins/Offer_%d/Price" % (Shop.SIZES.coins - 1)).pressed.emit()
 	check.call(UI.text_in(scene.ui.get_node("CoinChoice"), "ELEGÍ UNA MONEDA") and scene.ui.get_node("CoinChoice").get_children().filter(func(node): return node.name.begins_with("PackCoin_")).size() == 2, "MON8: el paquete chico muestra dos cartas")
 	scene.ui.get_node("CoinChoice/PackCoin_" + small.pending_coin_pack.items[0]).pressed.emit()
 	check.call(small.phase == "shop" and scene.ui.get_node_or_null("CoinChoice") == null, "MON8: elegir en el chico lo cierra y vuelve a la tienda")

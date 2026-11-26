@@ -29,9 +29,9 @@ func _initialize() -> void:
 	await capture("renovar")
 	scene.game.cash = -3
 	scene.render()
-	await hover(scene.ui.get_node("Shop_numbers/Offer_0/Price"), Vector2(40, 15), false)
+	await hover(scene.ui.get_node("Shop_components/Offer_0/Price"), Vector2(40, 15), false)
 	await capture("precio-deuda")
-	await hover(scene.ui.get_node("Shop_numbers/Offer_0"), Vector2(3, 50), false)
+	await hover(scene.ui.get_node("Shop_components/Offer_0"), Vector2(3, 50), false)
 	scene.game.dice[4].shell = "diamond"
 	scene.render()
 	await hover(scene.ui.get_node("Shop_components/Offer_0"), Vector2(90, 48))

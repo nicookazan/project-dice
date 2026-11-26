@@ -20,9 +20,9 @@ static func run(scene, check: Callable) -> void:
 	game.close_encounter()
 	game.open_shop()
 	game.cash = 0
-	for section in ["coins", "components", "numbers", "stickers"]:
+	for section in ["coins", "single_use", "components", "numbers", "stickers"]:
 		for count in range(5): game.refresh_shop(section)
-	check.call(game.cash == 0 and game.reroll_prices == {"coins": 6, "components": 6, "numbers": 6, "stickers": 6}, "Debug: repeated renewals do not require or spend money; section prices still advance")
+	check.call(game.cash == 0 and game.reroll_prices == {"coins": 6, "single_use": 6, "components": 6, "numbers": 6, "stickers": 6}, "Debug: repeated renewals do not require or spend money; section prices still advance")
 	var restored = Saves.roundtrip(game, check)
 	check.call(restored.debug_mode and restored.can_afford(1000000000000) and restored.snapshot() == game.snapshot(), "Debug: real save/reload preserves unlimited funds, damage, stock and RNG")
 	var targeted = Purchase.fixture("material", {"id": "steel"}, 1000000000000)
@@ -63,7 +63,7 @@ static func run(scene, check: Callable) -> void:
 	scene.request_navigation("menu")
 	check.call(scene.confirmation.visible and not scene.game.debug_mode, "Debug UI: abandoning a run in progress asks first")
 	scene.confirm_navigation()
-	var debug_button = UI.find_button(scene.ui, "Nueva jugada debug")
+	var debug_button = UI.find_button(scene.ui, "Nueva partida debug")
 	check.call(scene.game.phase == "menu" and debug_button != null, "Debug UI: the menu offers a debug run in development builds")
 	debug_button.pressed.emit()
 	check.call(scene.game.debug_mode and scene.game.phase == "level_intro" and UI.text_in(scene.ui, "DEBUG"), "Debug UI: the debug run is marked and shows its indicator before the first encounter")

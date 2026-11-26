@@ -6,8 +6,8 @@ Implementado y probado el 26 de octubre de 2026. Los tres elementos son pasivos,
 
 | Elemento | Condición | Aporte propio |
 |---|---|---|
-| fire / Fuego | Cara 4, 5 o 6 en una combinación desde par | +5 |
-| water / Agua | Cara 1, 2 o 3 en una combinación desde par | +5 |
+| fire / Fuego | El dado muestra 4, 5 o 6 y está en un grupo armado (par o más); suelto no suma | +5 |
+| water / Agua | El dado muestra 1, 2 o 3 y está en un grupo armado (par o más); suelto no suma | +5 |
 | electricity / Electricidad | Cada otro dado con el mismo número dentro del grupo | +3 por coincidencia |
 
 Las condiciones leen el número de la cara, sin mejoras de puntos. Electricidad excluye al propio dado y los otros grupos; los sobrantes constituyen un único grupo donde sí funciona. Fuego y agua quedan inactivos en sobrantes. No se forman combinaciones automáticamente.

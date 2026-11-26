@@ -2,9 +2,11 @@
 
 Fecha: 25 de octubre de 2026. Este documento guía la implementación; no afirma que todos los sistemas estén programados. El estado comprobado está en [DESARROLLO.md](DESARROLLO.md).
 
+**Actualización del 25/11/2026 (D20):** la interfaz dice «partida» (antes «jugada») y el metaprogreso se llama «progreso». Flujo entre encuentros: al ganar se ve solo el total cobrado («+$total») y «Continuar» (la reparación, si hace falta, va antes, como siempre); después viene la **selección de encuentro**: «Jugar contra el siguiente rival» o «Ir a la tienda». A la tienda se entra y se sale las veces que se quiera antes de jugar; el stock, lo vendido, los precios de renovación y los descuentos se conservan entre entradas y se descartan al jugar. La tienda está cerrada antes del primer encuentro de cada nivel, así que **después de vencer al jefe ya no hay tienda**: «Continuar» lleva al nivel siguiente (`Game.SHOP_AFTER_BOSS`, hoy falso, por si se cambia). «Continuar partida» guarda también en la selección de encuentro. Detalle en `docs/pasos/PS-pantallas.md`.
+
 **Actualización del 22/11/2026:** vuelve «Continuar partida», pero acotada: al visitar una tienda se guarda la jugada (`user://saves/ultima-tienda-v1.json`) y el menú ofrece volver a la última tienda; se borra al terminar la jugada o empezar otra, y no guarda tutorial ni debug. Revierte la parte de D18 que decía que las jugadas no se continúan. Los metales son tres: hierro, cobre y oro (se quitaron hierro oxidado y cobre oxidado).
 
-**Actualización del 17/11/2026 (D18):** las jugadas ya no se guardan ni se continúan; lo único que se guarda son tres partidas con estadísticas, logros y monedas desbloqueadas ([PARTIDAS-GUARDADAS](PARTIDAS-GUARDADAS.md)). Cada jugada nueva pregunta por el tutorial ([TUTORIAL](TUTORIAL.md)). Existe una moneda bloqueada, «El regalo del vendedor» (C58), acumulable. Donde este documento hable de guardar o continuar una jugada, manda lo nuevo.
+**Actualización del 17/11/2026 (D18):** las jugadas ya no se guardan ni se continúan; lo único que se guarda son tres partidas con estadísticas, logros y monedas desbloqueadas ([PARTIDAS-GUARDADAS](PARTIDAS-GUARDADAS.md)). El tutorial se pregunta solo la primera vez y después se juega desde Opciones ([TUTORIAL](TUTORIAL.md), cambio del 25/11 en D20). Existe una moneda bloqueada, «El regalo del vendedor» (C58), acumulable. Donde este documento hable de guardar o continuar una jugada, manda lo nuevo.
 
 ## Fuentes y precedencia
 
@@ -137,3 +139,12 @@ Renovar actúa solo sobre la sección elegida, repone vacíos y vuelve a sortear
 El jefe disponible prohíbe generala; cinco iguales se pueden dividir en trío y par. Doble par sigue permitido si la selección cumple su regla.
 
 Etapa de monedas (noviembre de 2026): el cuarto espacio de monedas de la tienda es un paquete de 2 (se elige 1) o de 5 (se eligen 2) y se compra aun con el inventario lleno, reemplazando monedas propias si no hay lugar. U09 Relanzo total, U12 Voltear dado y U14 Escudo de jefe (una vez por partida) están en juego. Detalle y valores provisionales en [monedas nuevas](MONEDAS-NUEVAS.md).
+
+## Recompensas por encuentro (25/11/2026, a prueba)
+
+Después del cobro, cada encuentro ganado (menos el último de la versión) da una recompensa gratis, en una ventana propia (fase `bonus`, entre el cobro y la selección o la tienda del jefe):
+
+- **Rival:** una mejora de número o un cambio de cara, sorteada con los mismos pesos que la tienda. El cambio de cara pide elegir dado y cara.
+- **Jefe (también el guardián):** una gema (esmeralda, zafiro, rubí o diamante, al azar), que va al dado que se elija.
+
+Se puede **tomar** o **dejar**. El sorteo usa un azar propio (semilla de la partida, nivel y encuentro): no cambia los dados ni la tienda y es el mismo al recargar. Ni las gemas ni las mejoras de número ni los cambios de cara se venden en la tienda: solo salen como recompensa. No hay recompensas en el tutorial ni en partidas sin tablas de balance. Código: `Game.pending_reward`, `_draw_reward`, `take_reward`, `skip_reward`; ventana: `main.gd: render_reward_choice`.

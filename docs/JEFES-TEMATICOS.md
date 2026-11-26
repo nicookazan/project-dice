@@ -39,7 +39,7 @@ Tipo de poder: **E** = ya existe en `boss_rules.gd`; **E+** = existe pero hay qu
 ### Nivel 2 — Tarde (P = 160)
 | | Jefe (mano) | Textura y objeto | Poder | Tipo | Sev. | Obj. | $ |
 |---|---|---|---|---|---|---|---|
-| A | **Don Cebador** | Yerba mate pegada a la piel; sostiene tu termo flotando entre los dedos | *Robo del termo*: te roba el termo, que flota hacia el cielo y queda suspendido mientras dura el jefe; sin termo, los stickers no aportan | N | ●●● | 160 | 8 |
+| A | **Don Cebador** (desde el 25/11/2026 *cambia* el termo: el suyo, liso, baja a la mesa y el tuyo queda junto a su mano; animación de ida y vuelta en `backdrop.gd`) | Yerba mate pegada a la piel; sostiene tu termo flotando entre los dedos | *Robo del termo*: te roba el termo, que flota hacia el cielo y queda suspendido mientras dura el jefe; sin termo, los stickers no aportan | N | ●●● | 160 | 8 |
 | B | **El Vendedor Ambulante** (antes El Chamuyero) | Anillos y cadenas doradas de bijouterie, un cartel de «oferta» | *No te vendo dos veces lo mismo*: repetir en la mano 2 la categoría de la mano 1 vale 50 % | N | ●● | 175 | 10 |
 | C | **El Referí del Domingo** | Césped en los nudillos, silbato y tarjeta roja | *Tarjeta roja*: una moneda al azar (sorteada al entrar al jefe) queda expulsada | E | ●● | 170 | 9 |
 

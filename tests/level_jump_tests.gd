@@ -44,7 +44,7 @@ static func run(scene, check: Callable) -> void:
 	var level7: Button = picker.find_child("Level_7", true, false) if picker != null else null
 	check.call(level7 != null and not level7.disabled and picker.find_child("Level_1", true, false) != null, "Level jump: the picker lists the seven levels")
 	level7.pressed.emit()
-	check.call(scene.game.level_index == 6 and scene.game.phase == "level_intro" and scene.ui.get_node_or_null("LevelPicker") == null and UI.find_button(scene.ui, "Empezar primer encuentro") != null, "Level jump: picking level 7 shows its presentation")
+	check.call(scene.game.level_index == 6 and scene.game.phase == "level_intro" and scene.ui.get_node_or_null("LevelPicker") == null and UI.find_button(scene.ui, "Jugar contra el siguiente rival") != null, "Level jump: picking level 7 shows its encounter selection")
 	scene.show_game_menu()
 	scene.ui.get_node("GameMenu").find_child("JumpLevel", true, false).pressed.emit()
 	check.call(scene.ui.get_node("LevelPicker").find_child("Level_7", true, false).disabled, "Level jump: the level you are about to start cannot be picked again")

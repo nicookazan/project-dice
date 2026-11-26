@@ -118,10 +118,10 @@ static func run_ui(scene, check: Callable, text_in: Callable) -> void:
 	scene.confirmation.hide()
 	scene.game = _closed(["collector"])
 	scene.render()
-	check.call(scene.game.phase == "reward" and text_in.call(scene.ui, "Cobrador") and text_in.call(scene.ui, "TOTAL COBRADO: $%d" % scene.game.payout.total), "C54 la pantalla del cobro muestra la fila de Cobrador y el total")
+	check.call(scene.game.phase == "reward" and text_in.call(scene.ui, "+$%d" % scene.game.payout.total), "C54 la pantalla del cobro muestra el total, con Cobrador incluido (D20: sin desglose)")
 	scene.game = _closed([])
 	scene.render()
-	check.call(scene.game.phase == "reward" and not text_in.call(scene.ui, "Cobrador") and text_in.call(scene.ui, "TOTAL COBRADO: $%d" % scene.game.payout.total), "C54 sin la moneda la pantalla del cobro no cambia")
+	check.call(scene.game.phase == "reward" and text_in.call(scene.ui, "+$%d" % scene.game.payout.total), "C54 sin la moneda la pantalla del cobro muestra su total")
 	scene.game = previous
 	scene.render()
 

@@ -6,8 +6,9 @@ const UI = preload("res://tests/interface_tests.gd")
 
 static func click(scene, caption: String) -> bool:
 	var control = UI.find_button(scene.ui, caption)
+	if control == null and legacy_caption(caption): return legacy(scene, caption)
 	# Secondary options live inside the in-game menu panel: open it first when the button is not on screen.
-	if control == null and caption in ["Recorrido · M", "Opciones", "Abandonar jugada", "Seguir jugando"]:
+	if control == null and caption in ["Recorrido · M", "Opciones", "Abandonar partida", "Seguir jugando"]:
 		var menu = UI.find_button(scene.ui, "Menú")
 		if menu != null and not menu.disabled:
 			menu.pressed.emit()
@@ -102,30 +103,30 @@ static func run(scene, check: Callable) -> Dictionary:
 	scene.detail.hide()
 	scene.game.return_to_menu()
 	scene.render()
-	check.call(UI.find_button(scene.ui, "Nueva jugada") != null and UI.find_button(scene.ui, "Continuar") == null, "Flow: real menu has new run and no continue")
+	check.call(UI.find_button(scene.ui, "Nueva partida") != null and UI.find_button(scene.ui, "Continuar") == null, "Flow: real menu has new run and no continue")
 	var before: Dictionary = scene.game.snapshot()
 	click(scene, "Opciones")
 	check.call(scene.detail.visible and "F11" in scene.detail_text and scene.game.snapshot() == before, "Flow: options expose working display control and preserve game")
 	scene.detail.hide()
-	click(scene, "Nueva jugada")
-	check.call(scene.pending_tutorial_choice and UI.find_button(scene.ui, "No, ir a la campaña") != null and UI.find_button(scene.ui, "Sí, jugar el tutorial") != null, "Flow: a new run asks whether to play the tutorial")
-	click(scene, "No, ir a la campaña")
-	check.call(scene.game.phase == "level_intro" and UI.text_in(scene.ui, "GENERALA PROHIBIDA"), "Flow: level intro announces boss rule before first encounter")
+	click(scene, "Nueva partida")
+	click(scene, "Campaña")
+	check.call(not scene.pending_tutorial_choice and UI.find_button(scene.ui, "Sí, jugar el tutorial") == null and scene.session_started, "Flow: Campaña starts directly (the tutorial lives in Opciones)")
+	check.call(scene.game.phase == "level_intro" and UI.text_in(scene.ui, "Rival 1/3") and scene.ui.find_child("InspectBoss", true, false) != null, "Flow: the encounter selection announces the first encounter; the boss rule is read on the hand")
 	check.call(scene.game.cash == 0 and scene.game.passives.is_empty() and scene.game.consumable == "" and scene.game.cup.material == "leather", "Flow: new run starts leather, zero money and zero coins")
 	check.call(scene.game.dice == preload("res://scripts/dice_state.gd").create_dice() and scene.game.shop_state.is_empty(), "Flow: five base dice and no initial shop")
 	check.call(not scene.game.roll() and not scene.game.leave_shop() and not scene.game.open_shop(), "Flow: announcement cannot roll or skip to shop/encounter")
 	click(scene, "Empezar primer encuentro")
 	check.call(scene.game.phase == "play" and scene.game.rival == 0 and not scene.game.begin_level(), "Flow: only first encounter starts, intro continuation is idempotent")
 	before = scene.game.snapshot()
-	check.call(UI.find_button(scene.ui, "Recorrido · M") == null and UI.find_button(scene.ui, "Abandonar jugada") == null and UI.find_button(scene.ui, "Opciones") == null and UI.find_button(scene.ui, "Menú") != null, "Flow: table keeps only the Menú button; secondary options are not loose on screen")
+	check.call(UI.find_button(scene.ui, "Recorrido · M") == null and UI.find_button(scene.ui, "Abandonar partida") == null and scene.ui.find_child("TableMenu", true, false) != null, "Flow: the table keeps only the Menú button (notebook corner); route and abandon are not loose on screen")
 	UI.find_button(scene.ui, "Menú").pressed.emit()
-	check.call(scene.ui.has_node("GameMenu") and UI.find_button(scene.ui, "Seguir jugando") != null and UI.find_button(scene.ui, "Recorrido · M") != null and UI.find_button(scene.ui, "Opciones") != null and UI.find_button(scene.ui, "Abandonar jugada") != null and UI.find_button(scene.ui, "Guardar y volver al menú") == null and scene.game.snapshot() == before, "Flow: Menú opens a panel with route, options and abandon (no save-and-exit) without changing state")
+	check.call(scene.ui.has_node("GameMenu") and UI.find_button(scene.ui, "Seguir jugando") != null and UI.find_button(scene.ui, "Recorrido · M") != null and UI.find_button(scene.ui, "Opciones") != null and UI.find_button(scene.ui, "Abandonar partida") != null and UI.find_button(scene.ui, "Guardar y volver al menú") == null and scene.game.snapshot() == before, "Flow: Menú opens a panel with route, options and abandon (no save-and-exit) without changing state")
 	UI.find_button(scene.ui, "Seguir jugando").pressed.emit()
 	check.call(not scene.ui.has_node("GameMenu") and scene.game.snapshot() == before, "Flow: closing the menu panel keeps the game untouched")
 	click(scene, "Recorrido · M")
 	check.call("40 → 70 → 110" in scene.detail_text and "trío + par" in scene.detail_text and scene.game.snapshot() == before, "Flow: route consultable during play without changing RNG or state")
 	scene.detail.hide()
-	click(scene, "Abandonar jugada")
+	click(scene, "Abandonar partida")
 	check.call(scene.confirmation.visible and scene.game.snapshot() == before, "Flow: active abandonment asks before changing state")
 	UI.key(scene, KEY_SPACE)
 	click(scene, "TIRAR (3)")
@@ -135,7 +136,8 @@ static func run(scene, check: Callable) -> Dictionary:
 	scene.request_navigation("new")
 	check.call(scene.confirmation.visible, "Flow: active new run also needs confirmation")
 	scene.confirmation.get_ok_button().pressed.emit()
-	check.call(scene.game.phase == "menu" and scene.pending_tutorial_choice and scene.pending_navigation == "", "Flow: confirm new run goes back to the menu and asks about the tutorial")
+	check.call(scene.game.phase == "menu" and scene.menu_panel == "modes" and scene.pending_navigation == "", "Flow: confirm new run goes back to the menu and asks for the mode")
+	click(scene, "Campaña")
 	click(scene, "No, ir a la campaña")
 	check.call(scene.game.phase == "level_intro", "Flow: declining the tutorial opens a fresh intro")
 	scene.request_navigation("menu")
@@ -185,7 +187,7 @@ static func run(scene, check: Callable) -> Dictionary:
 	scene.game = loss
 	scene.render()
 	check.call(loss.phase == "lost" and loss.cash == 0 and loss.payout.is_empty() and not loss.open_shop(), "Flow: two insufficient hands show defeat without shop or reward")
-	check.call(UI.find_button(scene.ui, "Nueva jugada") != null and UI.find_button(scene.ui, "Volver al menú") != null, "Flow: defeat provides actual restart/menu actions")
+	check.call(UI.find_button(scene.ui, "Nueva partida") != null and UI.find_button(scene.ui, "Volver al menú") != null, "Flow: defeat provides actual restart/menu actions")
 	click(scene, "Volver al menú")
 	check.call(scene.game.phase == "menu" and not scene.confirmation.visible, "Flow: ended run returns to menu directly")
 
@@ -231,7 +233,8 @@ static func run(scene, check: Callable) -> Dictionary:
 	check.call(boss.route()[0].target == 40 and boss.route()[2].status == "Superado", "Flow: route is detached, fixed and marks all stops won")
 
 	# Fixed regression seed, generated dice and stock; repeat exclusively via UI controls.
-	var seed_value := 9
+	# Semilla 18 desde el 25/11/2026: la tienda cambió de forma (de un uso aparte, tres monedas, sin paquete) y con ella el sorteo.
+	var seed_value := 18
 	var natural = Game.new(seed_value)
 	var expected: Array = play_run(natural)
 	check.call(natural.phase == "won", "Flow: ordinary generated dice and shop permit completing the level")
@@ -244,7 +247,39 @@ static func run(scene, check: Callable) -> Dictionary:
 	before = scene.game.snapshot()
 	check.call(not scene.game.open_shop() and not scene.game.close_encounter() and not scene.game.leave_shop() and scene.game.snapshot() == before, "Flow: boss victory is terminal and cannot pay or advance again")
 	click(scene, "Prototipo completado · volver a jugar")
-	check.call(scene.game.phase == "menu" and scene.pending_tutorial_choice, "Flow: after a victory a new run asks about the tutorial")
+	check.call(scene.game.phase == "menu" and scene.menu_panel == "modes", "Flow: after a victory a new run asks for the mode")
+	click(scene, "Campaña")
 	click(scene, "No, ir a la campaña")
 	check.call(scene.game.phase == "level_intro" and scene.game.rival == 0 and scene.game.cash == 0, "Flow: victory restart starts fresh level announcement")
 	return {"natural_seed": seed_value, "hands": trace, "natural_ui_victory": true, "save_available": false}
+
+## Botones de antes de D20 que siguen usando los recorridos largos. Se traducen al flujo nuevo con los botones reales:
+## el cobro tiene «Continuar», la selección de encuentro «Jugar contra…» e «Ir a la tienda», y la tienda «Volver a la mesa».
+static func legacy_caption(caption: String) -> bool:
+	return caption in ["No, ir a la campaña", "Empezar primer encuentro", "Ir a la tienda →", "Seguir sin tienda →"] or caption.begins_with("Ir al ") or caption.begins_with("Entrar al nivel") or caption == "Enfrentar a La Semilla →"
+
+static func legacy(scene, caption: String) -> bool:
+	# Campaña ya arranca la partida sin preguntar por el tutorial (salvo la primera vez de un progreso).
+	if caption == "No, ir a la campaña": return scene.session_started
+	if caption == "Empezar primer encuentro": return click_named(scene, "PlayNext")
+	if caption == "Ir a la tienda →":
+		if scene.game.phase == "reward" and not click_named(scene, "ContinueReward"): return false
+		skip_bonus(scene)
+		return scene.game.phase == "shop" or click_named(scene, "OpenShop")
+	if caption == "Seguir sin tienda →":
+		if not click_named(scene, "ContinueReward"): return false
+		skip_bonus(scene)
+		return scene.game.phase != "lobby" or click_named(scene, "PlayNext")
+	# Salir de la tienda hacia el próximo encuentro: «Volver a la mesa» y después «Jugar contra…».
+	if not click_named(scene, "ShopAdvance"): return false
+	return click_named(scene, "PlayNext")
+
+## Los recorridos viejos no toman la recompensa del encuentro (25/11): la dejan, como hace `open_shop` desde el cobro.
+static func skip_bonus(scene) -> void:
+	if scene.game.phase == "bonus": click_named(scene, "SkipReward")
+
+static func click_named(scene, node_name: String) -> bool:
+	var control = scene.ui.find_child(node_name, true, false)
+	if control == null or not control is BaseButton or control.disabled: return false
+	control.pressed.emit()
+	return true

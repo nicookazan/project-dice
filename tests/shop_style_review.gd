@@ -43,7 +43,7 @@ func _initialize() -> void:
 	scene.render()
 	await capture("paquete")
 	scene.game = ShopTests.game_at_shop(162)
-	for section in ["coins", "components", "numbers", "stickers"]:
+	for section in ["coins", "single_use", "components", "stickers"]:
 		for offer in scene.game.shop_state[section].slots.duplicate(true): scene.game.commit_shop_offer(section, offer.offer_id)
 	scene.render()
 	await capture("vendido")

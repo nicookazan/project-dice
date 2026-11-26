@@ -222,10 +222,10 @@ static func _test_once_per_run(check: Callable) -> void:
 	# Con una tabla que solo ofrece el Escudo: sale una vez y no vuelve.
 	var tables := Shop.default_tables()
 	tables.coins = [{"kind": "coin", "price": 3, "weight": 1.0, "effect": {"coin_id": "boss_shield"}}]
-	var first := Shop.generate("coins", tables, {}, [], 1, 0, [])
+	var first := Shop.generate("single_use", tables, {}, [], 1, 0, [])
 	var offers: Array = first.section.slots.filter(func(slot): return not slot.is_empty())
 	check.call(first.valid and offers.size() == 1 and first.once_seen == ["boss_shield"], "U14 el Escudo sale una sola vez dentro de una misma tanda")
-	var second := Shop.generate("coins", tables, {}, [], 2, 10, first.once_seen)
+	var second := Shop.generate("single_use", tables, {}, [], 2, 10, first.once_seen)
 	check.call(second.valid and second.section.slots.all(func(slot): return slot.is_empty()) and second.once_seen == ["boss_shield"], "U14 con el Escudo ya visto no se vuelve a ofrecer")
 	# En una partida real: muchas aperturas y renovaciones, nunca dos veces.
 	var game = Game.new(5)
@@ -244,6 +244,7 @@ static func _test_once_per_run(check: Callable) -> void:
 		_shield_seen(game, counter)
 		for renewal in range(5):
 			game.refresh_shop("coins")
+			game.refresh_shop("single_use")
 			_shield_seen(game, counter)
 	check.call(counter.count == 1, "U14 en 80 visitas con renovaciones aparece exactamente una vez (apareció %d)" % counter.count)
 	check.call((counter.count == 1) == ("boss_shield" in game.once_coins_seen), "U14 la partida recuerda haberla generado, se haya comprado o no")

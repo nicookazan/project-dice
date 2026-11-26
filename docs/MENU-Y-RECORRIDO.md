@@ -4,6 +4,10 @@ Paso 14 completado el 26 de octubre de 2026. Conserva los objetivos y reglas vig
 
 Actualización del paso 15: [guardado y Continuar](GUARDADO-Y-CONTINUAR.md) implementados. La evidencia de 978 comprobaciones al final de este documento corresponde al cierre histórico de 14; la suite actual tiene 1083 sin fallos.
 
+## Menú en la mesa y selección de encuentro (25/11/2026, D20)
+
+El menú inicial ya no es un recuadro: los botones (Continuar partida, Nueva partida, Colecciones, Opciones, Salir y, en desarrollo, Nueva partida debug) van sobre el paño izquierdo (`scripts/start_menu.gd`). Nueva partida elige el modo en el paño del medio (Campaña; los otros en gris) y Campaña arranca directo (25/11, a pedido del autor: el tutorial se pregunta solo la primera vez, sin progreso o con uno recién creado, y después se juega desde Opciones → «Jugar el tutorial»). En el menú no hay mano en la ventana y del fondo solo responde el mate. El anuncio de nivel se reemplazó por la selección de encuentro (`scripts/encounter_lobby.gd`, fases `level_intro` y `lobby`): objetivo, «Jugar contra…», nivel · rival · jefe en chico, «Saltear» en gris, «Ir a la tienda», y Opciones y Abandonar partida donde va la libreta. El poder del jefe se lee al pasar el mouse por la mano (el recuadro sale debajo de la mano) y en Recorrido (M). «Ir a otro nivel» sigue en el menú de la partida y lleva a la selección del primer encuentro de ese nivel.
+
 ## Ir a otro nivel (08/11/2026)
 
 En la campaña, el menú de la partida (botón «Menú») ofrece «Ir a otro nivel». El selector lista los siete niveles con su ambiente. Al elegir uno se va a su presentación (`level_intro`) desde el primer rival, hacia adelante o hacia atrás. Se conservan plata, dados (con sus mejoras), monedas y stickers, y se pierde el encuentro en curso. Si ya estás en la presentación de un nivel, ese nivel no se puede volver a elegir. `Game.jump_to_level(index)`:

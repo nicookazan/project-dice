@@ -70,7 +70,7 @@ static func run(scene, check: Callable) -> Dictionary:
 		scene.preferences.speed = mode
 		scene.preferences.reduced_motion = mode == 0
 		scene.preferences.high_contrast = mode == 0
-		scene.game = Game.new(9)
+		scene.game = Game.new(18) # misma semilla que el recorrido de Flow (cambia cuando cambia el sorteo de la tienda)
 		scene.selected.clear()
 		scene.render()
 		var trace := Flow.play_run(scene.game, scene)

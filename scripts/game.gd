@@ -109,11 +109,11 @@ var offers: Array:
 	set(value):
 		shop_state = Shop.empty_state()
 		shop_state.coins.configured = true
-		for i in range(mini(value.size(), 4)):
+		for i in range(mini(value.size(), Shop.SIZES.coins)):
 			if value[i] == "": continue
 			shop_offer_sequence += 1
 			shop_state.coins.slots[i] = {"offer_id": str(shop_offer_sequence), "kind": "coin", "price": Coins.definition(value[i]).get("price", 0), "effect": {"coin_id": value[i]}}
-var reroll_prices: Dictionary = {"coins": 1, "components": 1, "numbers": 1, "stickers": 1}
+var reroll_prices: Dictionary = {"coins": 1, "single_use": 1, "components": 1, "numbers": 1, "stickers": 1}
 var last_score: Dictionary = {}
 var payout: Dictionary = {}
 var history: Array = []
@@ -127,6 +127,10 @@ var sticker_offers: Dictionary = {}
 var sticker_offer_sequence := 0
 var pending_sticker_pack: Dictionary = {}
 var pending_purchase: Dictionary = {}
+## Recompensa del encuentro ganado (25/11/2026, a prueba): un rival da una mejora de número o un cambio de cara; un jefe,
+## una gema. Es gratis y se toma (o se deja) en la fase «bonus», entre el cobro y lo que sigue. {} si no hay.
+## {"section", "offer", "target", "source": "rival" | "boss"}.
+var pending_reward: Dictionary = {}
 var purchase_receipts: Dictionary = {}
 var last_purchase_result: Dictionary = {}
 
@@ -179,12 +183,13 @@ func _start_encounter() -> void:
 	last_score = {}
 	shop_state = {}
 	shop_gifts = []
-	reroll_prices = {"coins": 1, "components": 1, "numbers": 1, "stickers": 1}
+	reroll_prices = {"coins": 1, "single_use": 1, "components": 1, "numbers": 1, "stickers": 1}
 	events = []
 	breakage_by_hand = {}
 	repair_resolution = {}
 	sticker_offers = {}
 	pending_purchase = {}
+	pending_reward = {}
 	purchase_receipts = {}
 	last_purchase_result = {}
 	for die in dice:
@@ -238,7 +243,8 @@ func snapshot() -> Dictionary:
 		"coin_inventory": coin_inventory, "coin_instance_sequence": coin_instance_sequence,
 		"shop_tables": shop_tables, "shop_state": shop_state, "shop_offer_sequence": shop_offer_sequence,
 		"shop_gifts": shop_gifts, "seeded": seeded,
-		"pending_purchase": pending_purchase, "purchase_receipts": purchase_receipts, "last_purchase_result": last_purchase_result
+		"pending_purchase": pending_purchase, "purchase_receipts": purchase_receipts, "last_purchase_result": last_purchase_result,
+		"pending_reward": pending_reward
 	}.duplicate(true)
 
 func _record_event(type: String, payload: Dictionary) -> Dictionary:
@@ -354,9 +360,10 @@ func is_seed(index: int = -1) -> bool:
 func is_seed_shop_visit() -> bool:
 	return not campaign.is_empty() and rival + 1 < level_encounters.size() and level_encounters[rival + 1].kind == "seed"
 
-## Don Cebador se lleva el termo mientras se juega su encuentro (presentación y botón del termo).
+## Don Cebador te cambia el termo mientras se juega su encuentro (presentación y botón del termo). La Semilla, si sorteó
+## ese poder, solo anula los stickers: el termo no se mueve de la mesa (25/11/2026).
 func thermos_stolen() -> bool:
-	return boss_power_on() and BossRules.is_power(boss_rule, "thermos_theft") and phase in ["play", "hand_result", "lost"]
+	return boss_power_on() and BossRules.is_power(boss_rule, "thermos_theft") and phase in ["play", "hand_result", "lost"] and not is_seed()
 
 ## El poder del jefe está en juego: hay jefe y el Escudo (U14) no lo apaga en esta mano.
 ## Toda consulta al poder (`boss_rule`) pasa por acá; la memoria del jefe entre manos no.
@@ -451,7 +458,7 @@ func campaign_route() -> Array:
 			if id in completed_encounters: status = "Superado"
 			elif level == level_index and stop == rival: status = "Derrota" if phase == "lost" else "Actual"
 			if stop == 3:
-				result.append({"level": level + 1, "position": 4, "status": status, "name": Campaign.SEED_NAME, "target": Campaign.seed_target(chosen.target) if not chosen.is_empty() else 0, "rule": "Uno de los poderes de los jefes de la jugada"})
+				result.append({"level": level + 1, "position": 4, "status": status, "name": Campaign.SEED_NAME, "target": Campaign.seed_target(chosen.target) if not chosen.is_empty() else 0, "rule": "Uno de los poderes de los jefes de la partida"})
 				continue
 			result.append({"level": level + 1, "position": stop + 1, "status": status, "name": "Rival %d" % (stop + 1) if stop < 2 else (chosen.get("name", "Dios" if level == 6 else "Jefe sin sortear")), "target": campaign[level].targets[stop] if stop < 2 else chosen.get("target", 0), "rule": chosen.get("rule", {}).get("name", "Se anuncia al entrar al nivel") if stop == 2 else "Sin regla especial"})
 	return result
@@ -498,7 +505,7 @@ func route() -> Array:
 		if i < rival or phase == "won": status = "Superado"
 		elif i == rival:
 			status = "Derrota" if phase == "lost" else "Actual"
-			if phase in ["reward", "repair", "shop", "purchase_target", "sticker_choice", "coin_choice"]: status = "Superado"
+			if phase in ["reward", "repair", "bonus", "lobby", "shop", "purchase_target", "sticker_choice", "coin_choice"]: status = "Superado"
 		result.append({"index": i, "name": "Jefe" if is_boss(i) else "Rival %d" % (i + 1), "target": level_encounters[i].target, "status": status, "rule": boss_rule.name if is_boss(i) else "Sin regla especial"})
 	return result
 
@@ -800,10 +807,15 @@ func close_encounter() -> bool:
 		"available_ids": broken_ids, "selected_ids": [], "cost": 0,
 		"cash_after_reward": cash, "next_phase": phase}
 	if not broken_ids.is_empty(): phase = "repair"
+	pending_reward = _draw_reward()
 	message = ("La Semilla quedó atrás." if is_seed() else "Nivel completado.") if phase == "won" else "Encuentro ganado. Cobro acreditado una sola vez."
 	_record_event(ENCOUNTER_CLOSED, {"points": points, "target": target(),
 		"reward": payout, "cash_before": cash_before, "cash_after": cash})
 	return true
+
+## Lo que quedó de este cobro después de pagar la reparación de gemas (puede ser negativo). Es lo que muestra «+$total».
+func net_payout() -> int:
+	return int(payout.get("total", 0)) - int(repair_resolution.get("cost", 0))
 
 func repair_quote(ids: Array) -> Dictionary:
 	return Gems.repair_quote(dice, ids, {"half": CoinEffects.gem_rule(passives, "repair_half"), "free_one": repair_resolution.get("free_one", false)})
@@ -834,7 +846,7 @@ func _generated_shop() -> Dictionary:
 		staged_rng = fixed.state
 	var serial: int = shop_offer_sequence
 	var seen: Array = once_coins_seen.duplicate()
-	for section in ["coins", "components", "numbers", "stickers"]:
+	for section in Shop.SECTIONS:
 		var generated := Shop.generate(section, shop_tables, sticker_catalog, passives, staged_rng, serial, seen, [] if tutorial else unlocked_coins)
 		if not generated.valid: return {"valid": false}
 		state[section] = generated.section
@@ -847,7 +859,7 @@ func _generated_shop() -> Dictionary:
 ## gratis cuestan 0; las tandas nuevas que trae el restock tienen su precio normal.
 static func seed_shop_cut(state: Dictionary) -> Dictionary:
 	var result := state.duplicate(true)
-	for section in ["coins", "components", "numbers", "stickers"]:
+	for section in Shop.SECTIONS:
 		var slots: Array = result[section].slots
 		for index in range(1, slots.size()): slots[index] = {}
 	return result
@@ -855,7 +867,7 @@ static func seed_shop_cut(state: Dictionary) -> Dictionary:
 ## Ids de las ofertas en pie de la tienda (para marcar el regalo de la mano).
 static func offer_ids(state: Dictionary) -> Array:
 	var result: Array = []
-	for section in ["coins", "components", "numbers", "stickers"]:
+	for section in Shop.SECTIONS:
 		for offer in state.get(section, {}).get("slots", []):
 			if not offer.is_empty(): result.append(offer.offer_id)
 	return result
@@ -865,8 +877,124 @@ func charged_price(offer: Dictionary) -> int:
 	if offer.get("offer_id", "") in shop_gifts: return 0
 	return offer_price(offer.get("price", 0), offer.get("kind") == "coin")
 
+## Pantalla de selección de encuentro (D20). «level_intro»: al empezar un nivel, con el primer encuentro preparado y la
+## tienda cerrada. «lobby»: entre dos encuentros del mismo nivel, después del cobro; `rival` sigue siendo el encuentro
+## ganado y la tienda se puede abrir las veces que se quiera.
+## Después de vencer al jefe la próxima parada es sí o sí la tienda (pedido del autor, 25/11/2026): el cobro del jefe
+## entra directo a la tienda; al salir queda la selección con el primer encuentro del nivel siguiente.
+const SHOP_AFTER_BOSS := true
+
+func in_lobby() -> bool:
+	return phase in ["level_intro", "lobby"]
+
+## Índice (en el nivel actual) del encuentro que se juega desde la selección; -1 si es el primero del nivel siguiente.
+func lobby_next_index() -> int:
+	if phase == "level_intro": return rival
+	return rival + 1 if rival + 1 < level_encounters.size() else -1
+
+## La tienda solo se abre desde la selección entre encuentros, nunca antes del primer encuentro de un nivel.
+func shop_available() -> bool:
+	return phase == "lobby"
+
+## Del cobro (+$total) a la selección de encuentro. La reparación, si hacía falta, ya pasó antes del cobro.
+func continue_after_reward() -> bool:
+	if phase != "reward" or not has_next_encounter(): return false
+	var after_boss: bool = is_boss(rival)
+	# Primero la recompensa del encuentro (si hay): se toma o se deja y después sigue el camino de siempre.
+	if not pending_reward.is_empty():
+		phase = "bonus"
+		message = "Recompensa: tomala gratis o dejala."
+		return true
+	return _leave_reward(after_boss)
+
+## Después del cobro (y de la recompensa): selección de encuentro, o la tienda sí o sí tras un jefe.
+func _leave_reward(after_boss: bool) -> bool:
+	if rival + 1 >= level_encounters.size() and not SHOP_AFTER_BOSS: return _advance_encounter()
+	phase = "lobby"
+	message = "Elegí: jugar contra el siguiente rival o pasar por la tienda."
+	# Tras el jefe no se elige: se entra a la tienda (si no se pudiera abrir, queda la selección con la tienda a mano).
+	if after_boss: open_shop()
+	return true
+
+## Sortea la recompensa del encuentro recién ganado con un azar propio (semilla de la partida, nivel y encuentro): no
+## toca el azar de los dados ni de la tienda, y es la misma al recargar. Sin tablas (partida sin balance) no hay.
+func _draw_reward() -> Dictionary:
+	if tutorial or not has_next_encounter(): return {}
+	var draw := RandomNumberGenerator.new()
+	draw.seed = hash([run_seed, level_index, rival, "recompensa"])
+	var boss: bool = is_boss()
+	var offer: Dictionary = {}
+	if boss:
+		var gems: Array = shop_tables.get("gems", [])
+		if gems.is_empty(): return {}
+		offer = Shop.pick(gems, draw)
+		offer.erase("weight")
+	else:
+		var generated := Shop.generate("numbers", shop_tables, sticker_catalog, passives, draw.state, 0)
+		if not generated.get("valid", false) or generated.section.slots.is_empty() or generated.section.slots[0].is_empty(): return {}
+		offer = generated.section.slots[0]
+	offer["offer_id"] = "recompensa_%d_%d" % [level_index, rival]
+	return {"section": "components" if boss else "numbers", "offer": offer, "target": {}, "source": "boss" if boss else "rival"}
+
+func set_reward_target(target: Dictionary) -> bool:
+	if phase != "bonus" or pending_reward.is_empty(): return false
+	var id = target.get("die_id")
+	if not id is int or id < 0 or id >= dice.size(): return false
+	if target.has("face_index") and (not target.face_index is int or target.face_index < 0 or target.face_index >= 6): return false
+	pending_reward.target = target.duplicate(true)
+	return true
+
+## Lo que haría tomar la recompensa con el dado (y la cara) elegidos; gratis.
+func reward_preview() -> Dictionary:
+	if phase != "bonus" or pending_reward.is_empty(): return Purchases.error("invalid_context", "No hay una recompensa pendiente.")
+	return Purchases.prepare(pending_reward.section, pending_reward.offer, pending_reward.target, dice, global_points, cup.stickers, sticker_catalog, coin_inventory, coin_instance_sequence, cash, debug_mode, credit_limit(), 0)
+
+func take_reward() -> Dictionary:
+	var plan := reward_preview()
+	if not plan.ok: return plan
+	_apply_changes(plan.changes)
+	var after_boss: bool = pending_reward.source == "boss"
+	pending_reward = {}
+	_leave_reward(after_boss)
+	message = "Recompensa tomada."
+	return plan.duplicate(true)
+
+func skip_reward() -> bool:
+	if phase != "bonus" or pending_reward.is_empty(): return false
+	var after_boss: bool = pending_reward.source == "boss"
+	pending_reward = {}
+	_leave_reward(after_boss)
+	message = "Dejaste la recompensa."
+	return true
+
+## Jugar el encuentro que muestra la selección. Si el siguiente es de otro nivel, se entra al nivel y se juega enseguida.
+func play_next() -> bool:
+	if phase == "level_intro": return begin_level()
+	if phase != "lobby": return false
+	var new_level := rival + 1 >= level_encounters.size()
+	if not _advance_encounter(): return false
+	if new_level and phase == "level_intro": begin_level()
+	return true
+
+## Salir de la tienda a la selección de encuentro, sin avanzar. El stock queda para volver a entrar.
+func exit_shop() -> bool:
+	if phase != "shop" or not has_next_encounter(): return false
+	phase = "lobby"
+	message = "Podés volver a la tienda o jugar contra el siguiente rival."
+	return true
+
+## Se abre desde la selección (`lobby`) o, como antes, desde el cobro (`reward`, lo usan las pruebas). La primera vez
+## entre dos encuentros genera el stock; al volver a entrar se reutiliza, con lo vendido, los precios de renovación y
+## los descuentos de esa visita: entrar y salir no consume azar.
 func open_shop() -> bool:
-	if phase != "reward": return false
+	if phase not in ["reward", "lobby"]: return false
+	# Abrir desde el cobro (camino viejo, lo usan las pruebas) deja la recompensa sin tomar.
+	if phase == "reward": pending_reward = {}
+	var from_lobby := phase == "lobby"
+	if from_lobby and not shop_state.is_empty():
+		phase = "shop"
+		message = "Volviste a la tienda."
+		return true
 	var generated := _generated_shop()
 	if not generated.valid: return false
 	shop_state = generated.state if not is_seed_shop_visit() else seed_shop_cut(generated.state)
@@ -878,8 +1006,9 @@ func open_shop() -> bool:
 	phase = "shop"
 	impulses = []
 	visit_discount = 0.0
-	reroll_prices = {"coins": 1, "components": 1, "numbers": 1, "stickers": 1}
+	reroll_prices = {"coins": 1, "single_use": 1, "components": 1, "numbers": 1, "stickers": 1}
 	free_renewals = int(CoinEffects.sum_of(passives, "free_renewals"))
+	if from_lobby: message = "Comprá mejoras. Podés salir a la mesa y volver a entrar."
 	return true
 
 func generate_offers() -> bool:
@@ -991,15 +1120,19 @@ func purchase_offer(section: String, id: String) -> Dictionary:
 	if not plan.ok: return plan
 	return _commit_purchase(section, offer, plan)
 
-func _commit_purchase(section: String, offer: Dictionary, plan: Dictionary) -> Dictionary:
-	# No awaits: validation, effect, payment and stock consumption form one commit.
-	var updates: Dictionary = plan.changes
+## Aplica los cambios de un plan de compra o de recompensa (dado, mejoras, monedas, stickers). No cobra ni toca stock.
+func _apply_changes(updates: Dictionary) -> void:
 	if updates.has("die_fields"): dice[updates.die_id].merge(updates.die_fields.duplicate(true), true)
 	if updates.has("global_points"): global_points = updates.global_points
 	if updates.has("coin_inventory"):
 		coin_inventory = updates.coin_inventory
 		coin_instance_sequence = updates.coin_sequence
 	if updates.has("stickers"): cup.stickers = updates.stickers
+
+func _commit_purchase(section: String, offer: Dictionary, plan: Dictionary) -> Dictionary:
+	# No awaits: validation, effect, payment and stock consumption form one commit.
+	var updates: Dictionary = plan.changes
+	_apply_changes(updates)
 	if not debug_mode: cash -= plan.cost
 	phase = "shop"
 	commit_shop_offer(section, offer.offer_id)
@@ -1098,8 +1231,9 @@ func sell(coin: String) -> bool:
 	message = "Moneda vendida."
 	return true
 
+## Salir de la tienda y pasar directo al siguiente encuentro (el camino de antes de D20; lo usan las pruebas).
 func leave_shop() -> bool:
-	if phase != "shop" or not has_next_encounter(): return false
+	if not exit_shop(): return false
 	return _advance_encounter()
 
 func skip_shop() -> bool:
@@ -1107,6 +1241,7 @@ func skip_shop() -> bool:
 	return _advance_encounter()
 
 func _advance_encounter() -> bool:
+	pending_reward = {}
 	if rival == level_encounters.size() - 1:
 		level_index += 1
 		_enter_campaign_level()

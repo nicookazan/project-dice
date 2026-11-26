@@ -23,7 +23,7 @@ La Semilla es el **encuentro 22**, el último de la campaña: va después del gu
 Vencido el guardián, la tienda de esa visita es la mano con el maletín (`Game.is_seed_shop_visit()`):
 
 - Muestra **un solo ítem por sección** (el primero de cada una) y los cuatro son **regalo**: se cobran $0 (`shop_gifts`, ids de oferta). El precio guardado en la oferta no cambia.
-- No hay renovación por sección. Hay un **restock** completo (`restock_seed_shop()`): cuesta siempre **$5** (`Campaign.SEED_SHOP_RESTOCK_PRICE`, sin descuentos ni renovaciones gratis de monedas), trae otra tanda de un ítem por sección y **lo nuevo ya no es gratis**.
+- No hay renovación por sección. Hay un **restock** completo (`restock_seed_shop()`): cuesta siempre **$5** (`Campaign.SEED_SHOP_RESTOCK_PRICE`, sin descuentos ni renovaciones gratis de monedas), trae otra tanda de un ítem por sección y **lo nuevo ya no es gratis**. Desde el 25/11/2026 son cinco secciones (se sumó la moneda de un uso), así que la mano regala cinco ítems.
 - «Seguir sin tienda» también lleva a La Semilla (sin regalos).
 
 ## Semilla elegida
@@ -65,3 +65,5 @@ Generado por código (`py -3.13 tools/art/make_semilla.py`) en `assets/art/pixel
 ## Pendiente
 
 Premio al ganar, contenido de los créditos, música y efectos (D10), objetivo final (D07/D11), campo para ingresar semilla a mano (sin confirmar) y sesión humana de juego.
+
+**25/11/2026:** si La Semilla sorteó el poder de Don Cebador (`thermos_theft`), solo anula los stickers: el termo no se mueve de la mesa (`Game.thermos_stolen()` es falso en La Semilla). Tras vencer al guardián se entra directo a la mano con el maletín (tienda obligatoria después de cada jefe).

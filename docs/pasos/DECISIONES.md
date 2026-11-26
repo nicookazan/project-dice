@@ -296,3 +296,24 @@ Versión 1 · 25 de octubre de 2026. Este registro evita bloquear todo el proyec
 9. Rayos de los guardianes: blancos y semitransparentes. Música y efectos, más adelante (D10).
 
 **Fuente:** [diseño en Notion](https://app.notion.com/p/422c28142b55807f8c72f79c1a366033) y [plan](https://app.notion.com/p/422c28142b558089aaeccc27942b4245).
+
+## D20 — Pantallas y diseños
+
+**Estado:** plan aprobado por el autor el 24/11/2026 («lo veo muy bien»); las decisiones por defecto del plan se aplican sin cambios hasta que el autor diga otra cosa.
+
+**Pasos afectados:** PS0–PS7 ([ficha](PS-pantallas.md)); toca 14 (menú y flujo), 15 (continuar), 11 (tienda) y el tutorial (D18).
+
+**Decisiones:**
+
+1. En la interfaz, «partida» reemplaza a «jugada» (Nueva partida, Abandonar partida…). Lo que D18 llamaba «partida guardada» (las tres ranuras de metaprogreso) pasa a llamarse «progreso». «Jugada» sigue significando una combinación de dados («jugadas posibles»).
+2. Menú inicial sobre el paño izquierdo, sin recuadro: Continuar partida (si hay), Nueva partida, Colecciones, Opciones, Salir y «Nueva partida debug» solo en desarrollo. Nueva partida elige el modo en el paño del medio (Campaña y modos en gris) y Campaña arranca directo; el tutorial se pregunta solo la primera vez (progreso nuevo) y después está en Opciones (cambio del 25/11). El debug arranca directo.
+3. En el menú no hay mano en la ventana y solo responden los botones y el mate (termo que ceba el mate y el mate mismo). Durante el encuentro y en la tienda el fondo no cambia.
+4. Después de ganar: «+$total» sin desglose y Continuar, que lleva a la selección de encuentro. **Desvío al implementar (25/11):** la reparación sigue yendo antes del cobro, como antes (su pantalla ya muestra lo cobrado); invertir el orden rompía unas 40 pruebas sin cambio visible para el jugador.
+5. Selección de encuentro (fase `lobby`): reemplaza al anuncio de nivel y al cartel de destino. «Jugar contra el siguiente rival», objetivo, nivel/rival/jefe en chico, «Saltear» en gris (sin acción), «Ir a la tienda», y en lugar de la libreta, Opciones y Abandonar partida. Desde el 25/11 (pedido del autor): después de vencer a un jefe (también el guardián) la próxima parada es sí o sí la tienda; al salir queda la selección con el primer encuentro del nivel siguiente (o La Semilla). El número del cobro es neto: lo cobrado menos lo pagado por reparar gemas. Recompensas (25/11, a prueba): rival → número o cara; jefe → gema; tienda de tres monedas sin paquete y componentes sin gemas; el botón de la esquina de la libreta es el Menú.
+6. La tienda está en gris en el primer encuentro de cada nivel (lectura literal de la ficha; queda en `shop_available()` por si se cambia). Entre dos encuentros se puede entrar las veces que se quiera: el stock se genera la primera vez y se conserva, igual que precios de renovación y descuentos.
+7. La ayuda de la mano del jefe sale centrada debajo de la mano.
+8. **Implementación (25/11, a pedido del autor: «hacé todo junto»):** PS2–PS7 en una sola rama, `feature/pantallas`. Colecciones (PS7) es una versión básica sin boceto: Dados y gemas y Materiales y elementos abren las galerías de Opciones; Stickers abre el álbum del termo en modo colección (todos encendidos, con lo que da cada nivel) y Monedas, estantes de madera con todas las monedas en páginas de 18, con flechas a los costados (`scripts/coin_shelf.gd`), a pedido del autor el 25/11. El poder del jefe ya no se anuncia en un cartel: se lee en la mano y en Recorrido (M). «Ir a otro nivel» sigue solo en el menú de la partida. La tienda sale a la mesa con «Volver a la mesa →». Tienda (25/11, opción B del boceto): cinco secciones; arriba componentes, números y stickers, abajo monedas (pasivas y paquete) y la moneda de un uso aparte (`single_use`).
+
+**Preguntas abiertas (no frenan el trabajo):** si la tienda en gris es en cada nivel o solo al empezar; si la libreta del cobro queda en blanco o desaparece; cuántos modos en gris; si se ve todo el catálogo en Colecciones.
+
+**Fuente:** [ficha en Notion](https://app.notion.com/p/422c28142b55801781bdfeb9107c8e15), [plan](https://app.notion.com/p/423c28142b558008bee4c30a69584556) y [bocetos](https://claude.ai/artifact/88nJDsVTnGX6u2urfwMGd1).

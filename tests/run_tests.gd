@@ -43,6 +43,7 @@ const MetalesArteTests = preload("res://tests/metales_arte_tests.gd")
 const MetalesJuegoTests = preload("res://tests/metales_juego_tests.gd")
 const ContinuarPartidaTests = preload("res://tests/continuar_partida_tests.gd")
 const MaderaTests = preload("res://tests/madera_tests.gd")
+const PartidaTextoTests = preload("res://tests/partida_texto_tests.gd")
 const CoinDragTests = preload("res://tests/coin_drag_tests.gd")
 const GlobalNumbersTests = preload("res://tests/global_numbers_tests.gd")
 const EncounterChoiceTests = preload("res://tests/encounter_choice_tests.gd")
@@ -247,11 +248,11 @@ func _initialize() -> void:
 	await process_frame
 	check(scene.get_child_count() > 2, "scene instantiates")
 	check(scene.game.phase == "menu" and find_button(scene, "Continuar") == null, "boot opens menu without fake continue")
-	find_button(scene, "Nueva jugada").pressed.emit()
-	check(scene.pending_tutorial_choice and find_button(scene, "Sí, jugar el tutorial") != null, "new run asks about the tutorial")
-	find_button(scene, "No, ir a la campaña").pressed.emit()
-	check(scene.game.phase == "level_intro" and not scene.game.tutorial, "declining the tutorial opens the level announcement")
-	find_button(scene, "Empezar primer encuentro").pressed.emit()
+	find_button(scene, "Nueva partida").pressed.emit()
+	check(scene.menu_panel == "modes" and find_button(scene, "Campaña") != null and find_button(scene, "Próximamente").disabled, "new run first chooses the mode")
+	find_button(scene, "Campaña").pressed.emit()
+	check(scene.game.phase == "level_intro" and not scene.game.tutorial and find_button(scene, "Sí, jugar el tutorial") == null, "Campaña starts the run directly, without the tutorial question")
+	find_button(scene, "Jugar contra el siguiente rival").pressed.emit()
 	var throw_button = find_button(scene, "TIRAR (3)")
 	check(throw_button != null and not throw_button.disabled, "initial throw button enabled")
 	throw_button.pressed.emit()
@@ -422,7 +423,7 @@ func _initialize() -> void:
 	var balance: int = scene.game.cash
 	find_button(scene, "Reparar selección · $7").pressed.emit()
 	check(scene.game.cash == balance - 7 and scene.game.cash < 0 and scene.game.phase == "reward" and not scene.game.dice[0].shell_broken and scene.game.dice[1].shell_broken, "UI confirms selected repairs with debt and preserves unselected damage")
-	check(scene.repair_selection.is_empty() and find_button(scene, "Ir a la tienda →") != null, "UI confirmed repair clears selection and unlocks continuation")
+	check(scene.repair_selection.is_empty() and find_button(scene, "Continuar") != null, "UI confirmed repair clears selection and unlocks continuation")
 	scene.game.restart(87)
 	scene.game.rival = 2
 	scene.game.dice[0].shell = "ruby"
@@ -497,8 +498,9 @@ func _initialize() -> void:
 	scene.game = PurchaseTests.fixture("face", {"number": 4}, 4)
 	scene.shop_section = "numbers"
 	scene.purchase_error = ""
+	# Los cambios de cara ya no están a la venta (son recompensa): la compra se empieza directo y se revisa su ventana.
+	scene.game.begin_purchase("numbers", scene.game.shop_state.numbers.slots[0].offer_id)
 	scene.render()
-	find_button(scene, "$4").pressed.emit()
 	scene.ui.get_node("PurchaseTarget/Die_0").pressed.emit()
 	check(find_button(scene, "Confirmar · $4").disabled, "UI face purchase requires selecting source position after die")
 	scene.ui.get_node("PurchaseTarget/Face_1").pressed.emit()
@@ -563,6 +565,7 @@ func _initialize() -> void:
 	MetalesJuegoTests.run(check)
 	ContinuarPartidaTests.run(scene, check)
 	MaderaTests.run(check)
+	PartidaTextoTests.run(check)
 	CoinDragTests.run(scene, check)
 	GlobalNumbersTests.run(scene, check)
 	EncounterChoiceTests.run(scene, check)

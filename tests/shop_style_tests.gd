@@ -10,13 +10,16 @@ static func run(scene, check: Callable) -> Dictionary:
 	scene.game = Shop.game_at_shop(162)
 	scene.game.passives = ["even", "odd"]
 	scene.game.cash = 24
+	# La oferta que se revisa queda fija. Desde el 25/11 los números no se venden: se revisa un elemento.
+	scene.game.shop_state.components.slots[0] = {"kind": "element", "effect": {"id": "fire"}, "price": 3, "offer_id": "style_0"}
+	scene.game.shop_state.components.configured = true
 	scene.render()
 	var before: Dictionary = scene.game.snapshot()
-	var numbers = scene.ui.get_node("Shop_numbers")
+	var numbers = scene.ui.get_node("Shop_components")
 	var card = numbers.get_node("Offer_0")
 	var object = card.get_node("ObjectHover")
 	var tooltip = object._make_custom_tooltip(object.tooltip_text)
-	check.call(not scene.detail.visible and "+2 puntos para el número 4" in tooltip.text and scene.game.snapshot() == before, "Shop hover: description exposes stored effect without a modal, charge or RNG change")
+	check.call(not scene.detail.visible and "+5 puntos" in tooltip.text and scene.game.snapshot() == before, "Shop hover: description exposes stored effect without a modal, charge or RNG change")
 	check.call(tooltip.autowrap_mode == TextServer.AUTOWRAP_WORD_SMART and tooltip.get_theme_font("font").antialiasing == TextServer.FONT_ANTIALIASING_NONE and UI.find_button(numbers, "?") == null, "Shop hover: wrapped pixel font replaces question buttons")
 	tooltip.free()
 	check.call(card.get_node("Price").text == "$3" and card.get_node("Price").tooltip_text.is_empty() and card.tooltip_text.is_empty(), "Shop hover: descriptions belong only to artwork, not price or empty card space")
@@ -31,9 +34,15 @@ static func run(scene, check: Callable) -> Dictionary:
 	scene.render()
 	check.call(scene.game.snapshot() == before and scene.background.shop_mode, "Shop style: table/atlas render leaves all stock and gameplay RNG unchanged")
 	scene.game = Purchase.fixture("face", {"number": 4}, 4)
+	# El cambio de cara se ve en la ventana de recompensa (ya no está a la venta).
+	var shown = Purchase.fixture("face", {"number": 4}, 4)
+	shown.pending_reward = {"section": "numbers", "offer": shown.shop_state.numbers.slots[0].duplicate(true), "target": {}, "source": "rival"}
+	shown.phase = "bonus"
+	scene.game = shown
 	scene.render()
-	var dice := UI.dice_in(scene.ui.get_node("Shop_numbers"))
-	check.call(dice.size() == 1 and dice[0].value == 4 and dice[0].mouse_filter == Control.MOUSE_FILTER_IGNORE, "Shop style: face artwork shows offered number instead of a static decorative six")
+	var dice := UI.dice_in(scene.ui.get_node("RewardChoice")).filter(func(d): return d.mouse_filter == Control.MOUSE_FILTER_IGNORE and d.get_parent().name != "DieArtwork" and not d.get_parent() is Button)
+	check.call(dice.size() == 1 and dice[0].value == 4, "Shop style: face artwork shows offered number instead of a static decorative six")
+	scene.game = Purchase.fixture("face", {"number": 4}, 4)
 	scene.game.begin_purchase("numbers", "fixture:1")
 	scene.game.set_purchase_target({"die_id": 0, "face_index": 1})
 	scene.render()
@@ -42,8 +51,11 @@ static func run(scene, check: Callable) -> Dictionary:
 	scene.game = Shop.game_at_shop(162)
 	scene.game.cash = -3
 	scene.render()
-	check.call(UI.find_button(scene.ui.get_node("Shop_numbers"), "$3").disabled and scene.ui.get_node("Shop_numbers/Refresh").disabled, "Shop style: debt disables purchase and renewal while keeping continuation available")
-	check.call(not UI.find_button(scene.ui, "Ir al siguiente rival →").disabled, "Shop style: debt does not trap player in shop")
+	scene.game.shop_state.components.slots[0] = {"kind": "element", "effect": {"id": "fire"}, "price": 3, "offer_id": "style_1"}
+	scene.game.shop_state.components.configured = true
+	scene.render()
+	check.call(UI.find_button(scene.ui.get_node("Shop_components"), "$3").disabled and scene.ui.get_node("Shop_components/Refresh").disabled, "Shop style: debt disables purchase and renewal while keeping continuation available")
+	check.call(not UI.find_button(scene.ui, "Volver a la mesa →").disabled, "Shop style: debt does not trap player in shop")
 	check.call(scene.ui.get_node("ShopInventory").position.y >= 777 and scene.ui.get_node("ShopAdvance").position.y == 25 and scene.ui.get_node("ShopAdvance").position.x >= 1025, "Shop layout: owned coins occupy footer and continuation occupies old upper-right inventory area")
 	scene.game = Purchase.fixture("sticker", {"id": "trio"}, 4)
 	scene.render()

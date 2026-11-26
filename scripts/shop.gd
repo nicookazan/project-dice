@@ -6,7 +6,16 @@ const Gems = preload("res://scripts/gems.gd")
 const Elements = preload("res://scripts/elements.gd")
 const Numbers = preload("res://scripts/number_upgrades.gd")
 const Materials = preload("res://scripts/materials.gd")
-const SIZES = {"coins": 4, "components": 2, "numbers": 2, "stickers": 2, "cup": 0}
+const SIZES = {"coins": 3, "single_use": 1, "components": 2, "numbers": 2, "stickers": 2, "cup": 0}
+## Secciones del maletín, en el orden en que se sortean (el orden fija el azar). Desde el 25/11/2026 (D20, opción B del
+## boceto): «coins» trae tres monedas pasivas sueltas (sin paquete desde el 25/11); «single_use», una de un uso.
+## Desde el 25/11 (más tarde) las mejoras de número y los cambios de cara no se venden: son la recompensa de los rivales.
+## «numbers» sigue en SIZES (se sortea para la recompensa y las partidas viejas la guardan vacía), pero no en la tienda.
+const SECTIONS = ["coins", "single_use", "components", "stickers"]
+## Secciones con contador de renovación (las de la tienda más «numbers», que queda de partidas anteriores).
+const RENEWABLE = ["coins", "single_use", "components", "numbers", "stickers"]
+## Secciones que venden monedas sueltas y de qué tipo son las sueltas de cada una.
+const COIN_TYPES = {"coins": "passive", "single_use": "consumable"}
 ## Tamaños del paquete de monedas (D15): se muestran `shown`, se eligen `picks` y el grande trae al menos 2 pasivas.
 const COIN_PACK_SIZES = {"small": {"shown": 2, "picks": 1, "min_passives": 0}, "large": {"shown": 5, "picks": 2, "min_passives": 2}}
 
@@ -14,9 +23,10 @@ static func default_tables() -> Dictionary:
 	var coins: Array = []
 	for id in Coins.catalog():
 		coins.append({"kind": "coin", "price": Coins.definition(id).price, "weight": 1.0, "effect": {"coin_id": id}})
-	return {"coins": coins, "components": [], "numbers": [], "stickers": [], "numeric_rarity_weights": {},
+	return {"coins": coins, "components": [], "numbers": [], "stickers": [], "gems": [], "numeric_rarity_weights": {},
 		"coin_type_weights": {"passive": 75.0, "consumable": 25.0},
-		"coin_packs": coin_pack_table(),
+		# Sin paquete de monedas en la tienda (25/11/2026, pedido del autor). `coin_pack_table()` queda para las pruebas.
+		"coin_packs": [],
 		"coin_rarity_weights": {"passive": {"common": 60.0, "rare": 28.0, "epic": 9.0, "legendary": 3.0}, "consumable": {"common": 70.0, "rare": 25.0, "epic": 5.0}}}
 
 static func empty_state() -> Dictionary:
@@ -34,7 +44,7 @@ static func valid_candidate(section: String, data: Variant, stickers: Dictionary
 	if not data is Dictionary or not positive(data.get("weight")) or not data.get("price") is int or data.price < 0 or not data.get("effect") is Dictionary: return false
 	var effect: Dictionary = data.effect
 	match section:
-		"coins": return data.get("kind") == "coin" and not Coins.definition(effect.get("coin_id", "")).is_empty()
+		"coins", "single_use": return data.get("kind") == "coin" and not Coins.definition(effect.get("coin_id", "")).is_empty()
 		"components":
 			match data.get("kind"):
 				"material": return effect.get("id") in Materials.METALS
@@ -95,20 +105,22 @@ static func staged_coin_pool(pool: Array, tables: Dictionary, rng: RandomNumberG
 static func generate(section: String, tables: Dictionary, stickers: Dictionary, owned: Array,
 		rng_state: int, sequence: int, once_seen: Array = [], unlocked: Array = []) -> Dictionary:
 	if section not in SIZES or section == "cup": return {"valid": false}
-	var source = tables.get(section, [])
+	# La moneda de un uso sale de la misma tabla de monedas.
+	var source = tables.get("coins" if section == "single_use" else section, [])
+	var coin_section: bool = COIN_TYPES.has(section)
 	if not source is Array: return {"valid": false}
 	# Monedas de una vez por partida: las ya generadas antes no vuelven; las de esta tanda se suman a `once_seen`.
 	var seen: Array = once_seen.duplicate()
 	var pool: Array = []
 	for data in source:
 		if not valid_candidate(section, data, stickers): return {"valid": false}
-		if section == "coins" and Coins.locked(data.effect.coin_id) and data.effect.coin_id not in unlocked: continue
-		if section == "coins" and data.effect.coin_id in Coins.PASSIVES and data.effect.coin_id in owned and not Coins.stackable(data.effect.coin_id): continue
-		if section == "coins" and Coins.once_per_run(data.effect.coin_id) and data.effect.coin_id in seen: continue
+		if coin_section and Coins.locked(data.effect.coin_id) and data.effect.coin_id not in unlocked: continue
+		if coin_section and data.effect.coin_id in Coins.PASSIVES and data.effect.coin_id in owned and not Coins.stackable(data.effect.coin_id): continue
+		if coin_section and Coins.once_per_run(data.effect.coin_id) and data.effect.coin_id in seen: continue
 		pool.append(data)
 	var result: Dictionary = empty_state()[section]
 	if pool.is_empty(): return {"valid": true, "section": result, "rng_state": rng_state, "sequence": sequence, "once_seen": seen}
-	var staged: bool = section == "coins" and tables.get("coin_type_weights") is Dictionary and not tables.coin_type_weights.is_empty()
+	var staged: bool = coin_section and tables.get("coin_type_weights") is Dictionary and not tables.coin_type_weights.is_empty()
 	if staged and (not valid_weights(tables.coin_type_weights) or not tables.get("coin_rarity_weights") is Dictionary): return {"valid": false}
 	var rarities: Array = []
 	if section == "numbers":
@@ -128,21 +140,25 @@ static func generate(section: String, tables: Dictionary, stickers: Dictionary, 
 	var with_pack: bool = section == "coins" and not pack_table.is_empty()
 	var rng := RandomNumberGenerator.new()
 	rng.state = rng_state
+	# Las sueltas son de un solo tipo por sección (pasivas en «coins», de un uso en «single_use»); el paquete sigue
+	# sorteando entre todas. Con un solo tipo, la etapa de tipo no gasta azar.
+	var loose: Array = pool.filter(func(item): return Coins.definition(item.effect.coin_id).type == COIN_TYPES[section]) if coin_section else pool
 	for index in range(SIZES[section] - (1 if with_pack else 0)):
-		if pool.is_empty(): break
-		var eligible: Array = pool
+		if loose.is_empty(): break
+		var eligible: Array = loose
 		if section == "numbers":
 			var rarity: String = pick(rarities, rng).rarity
-			eligible = pool.filter(func(item): return item.rarity == rarity)
+			eligible = loose.filter(func(item): return item.rarity == rarity)
 		elif staged:
-			eligible = staged_coin_pool(pool, tables, rng)
+			eligible = staged_coin_pool(loose, tables, rng)
 		elif section == "stickers":
 			var kind := "sticker" if index == 0 else "pack"
-			eligible = pool.filter(func(item): return item.kind == kind)
+			eligible = loose.filter(func(item): return item.kind == kind)
 		var offer := pick(eligible, rng)
-		if section == "coins" and (offer.effect.coin_id in Coins.PASSIVES or Coins.once_per_run(offer.effect.coin_id)):
+		if coin_section and (offer.effect.coin_id in Coins.PASSIVES or Coins.once_per_run(offer.effect.coin_id)):
 			var chosen_id: String = offer.effect.coin_id
 			pool = pool.filter(func(item): return item.effect.coin_id != chosen_id)
+			loose = loose.filter(func(item): return item.effect.coin_id != chosen_id)
 			if Coins.once_per_run(chosen_id) and chosen_id not in seen: seen.append(chosen_id)
 		offer.erase("weight")
 		if offer.kind == "pack":
