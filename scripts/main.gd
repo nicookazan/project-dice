@@ -2350,14 +2350,16 @@ func render_purchase_target() -> void:
 					render())
 	shop_caption(modal, description, Rect2(32, 282, 796, 32), 17)
 	if offer.kind != "face":
-		var summary := label(modal, text[1], Vector2(64, 347), 18, cream, 732)
+		# Con el dado elegido se ven sus seis caras; para Fuego y Agua se marcan las que cumplen.
+		if target.has("die_id"): die_face_row(modal, game.dice[target.die_id], offer, 318)
+		var summary := label(modal, text[1], Vector2(64, 454 if target.has("die_id") else 347), 18, cream, 732)
 		summary.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	elif not target.has("die_id"):
 		shop_caption(modal, "Después elegí qué cara cambiar por un %d." % offer.effect.number, Rect2(32, 378, 796, 40), 19)
 	var preview: Dictionary = game.purchase_preview()
 	var hint := "Reemplaza solo esta familia. Las otras mejoras se conservan."
 	if offer.kind == "face": hint = "La cara elegida pasará a tener un %d." % offer.effect.number
-	shop_caption(modal, hint, Rect2(32, 500, 796, 32), 17)
+	shop_caption(modal, hint, Rect2(32, 512, 796, 32), 17)
 	button(modal, "Confirmar · $%d" % game.charged_price(offer), Rect2(64, 554, 732, 46), func():
 		var result: Dictionary = game.confirm_purchase()
 		purchase_error = "" if result.ok else result.message
@@ -2408,7 +2410,8 @@ func render_reward_choice() -> void:
 				purchase_die_choice(modal, "RewardFace_%d" % index, face_state, Rect2(72 + index * 120, 382, 116, 116), "CARA %d" % [index + 1], target.get("face_index", -1) == index, func():
 					game.set_reward_target({"die_id": die.id, "face_index": face_index})
 					render())
-	var summary := label(modal, text[1], Vector2(64, 200 if compact else (512 if offer.kind == "face" else 360)), 18, cream, 732)
+	if targeted and offer.kind != "face" and target.has("die_id"): die_face_row(modal, game.dice[target.die_id], offer, 350)
+	var summary := label(modal, text[1], Vector2(64, 200 if compact else (512 if offer.kind == "face" or target.has("die_id") else 360)), 18, cream, 732)
 	summary.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	var preview: Dictionary = game.reward_preview()
 	var take := button(modal, "Tomar recompensa", Rect2(64, 304 if compact else 574, 732, 46), func():
@@ -2420,10 +2423,46 @@ func render_reward_choice() -> void:
 	skip.name = "SkipReward"
 	if preview.ok: take.grab_focus()
 
+## Las seis caras del dado elegido, para mirar (no se tocan). Con Fuego (4, 5, 6) o Agua (1, 2, 3) las caras que cumplen
+## llevan borde dorado y abajo se cuenta cuántas sirven, para saber si conviene ponerlo en ese dado.
+func die_face_row(parent: Control, die: Dictionary, offer: Dictionary, y: float) -> void:
+	var wanted: Array = []
+	var element_id: String = offer.get("effect", {}).get("id", "") if offer.get("kind") == "element" else ""
+	if element_id == "fire": wanted = [4, 5, 6]
+	elif element_id == "water": wanted = [1, 2, 3]
+	var row := Control.new()
+	row.name = "DieFaces"
+	row.position = Vector2(100, y)
+	row.size = Vector2(660, 96)
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	parent.add_child(row)
+	var matching := 0
+	for index in range(6):
+		var good: bool = die.faces[index] in wanted
+		if good: matching += 1
+		var cell := panel(row, Rect2(index * 112, 0, 100, 96), Color("153c50") if good else Color("091923"), gold if good else Color("785335"))
+		cell.name = "Face_%d" % index
+		cell.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		var face_state: Dictionary = die.duplicate(true)
+		face_state.value = die.faces[index]
+		var icon := Die.new()
+		icon.configure_appearance(face_state)
+		icon.position = Vector2(19, 6)
+		icon.locked = true
+		icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		for mode in ["normal", "hover", "pressed", "disabled"]: icon.add_theme_stylebox_override(mode, StyleBoxEmpty.new())
+		cell.add_child(icon)
+		shop_caption(cell, "CARA %d" % (index + 1), Rect2(0, 72, 100, 20), 13, gold if good else cream)
+	var caption := "Las seis caras del dado %d." % (die.id + 1)
+	if not wanted.is_empty():
+		var name: String = Elements.definition(element_id).get("name", "")
+		caption = "%s: %s de 6 caras sirven (%s)." % [name, "ninguna" if matching == 0 else str(matching), "4, 5 o 6" if element_id == "fire" else "1, 2 o 3"]
+	var note := shop_caption(parent, caption, Rect2(32, y + 100, 796, 24), 16, gold if matching > 0 or wanted.is_empty() else Color("f0a080"))
+	note.name = "DieFacesNote"
+
 func purchase_die_choice(parent: Control, node_name: String, state: Dictionary, rect: Rect2, caption: String, picked: bool, action: Callable) -> Button:
 	var choice := button(parent, "", rect, action)
 	choice.name = node_name
-	choice.tooltip_text = caption.capitalize()
 	for mode in ["normal", "hover", "pressed"]:
 		choice.add_theme_stylebox_override(mode, box(Color("153c50") if picked else Color("091923"), Color("68d8ef") if picked else gold if mode != "normal" else Color("785335"), 2))
 	var icon := Die.new()

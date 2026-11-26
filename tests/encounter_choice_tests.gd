@@ -260,6 +260,7 @@ static func _boss_help(scene, check: Callable) -> void:
 	scene.game.return_to_menu()
 	scene.session_started = false
 	_table_and_shop(scene, check)
+	run_face_preview(scene, check)
 
 ## Ajustes de la mesa y la tienda: Desarmar no tapa los dados, Opciones en la esquina y la ayuda de la tienda arriba.
 static func _table_and_shop(scene, check: Callable) -> void:
@@ -327,3 +328,18 @@ static func _table_and_shop(scene, check: Callable) -> void:
 	scene.cancel_navigation()
 	scene.game.return_to_menu()
 	scene.session_started = false
+
+## Elegir dado para un elemento (25/11): se ven las seis caras del dado y, con Fuego o Agua, cuántas cumplen.
+static func run_face_preview(scene, check: Callable) -> void:
+	var game = preload("res://tests/purchase_tests.gd").fixture("element", {"id": "fire"}, 3)
+	game.dice[4].faces = [1, 2, 3, 4, 2, 6]
+	scene.game = game
+	game.begin_purchase("components", game.shop_state.components.slots[0].offer_id)
+	game.set_purchase_target({"die_id": 4})
+	scene.render()
+	var row: Control = scene.ui.find_child("DieFaces", true, false)
+	var note: Label = scene.ui.find_child("DieFacesNote", true, false)
+	check.call(row != null and row.get_child_count() == 6 and note != null and note.text == "Fuego: 2 de 6 caras sirven (4, 5 o 6).", "Compra: al elegir dado se ven sus caras y cuántas sirven para Fuego")
+	var choice: Control = scene.ui.find_child("Die_0", true, false)
+	check.call(choice != null and choice.tooltip_text == "", "Compra: los dados para elegir no abren un cartel al costado")
+	game.cancel_purchase()
